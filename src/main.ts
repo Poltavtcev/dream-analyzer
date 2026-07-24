@@ -2,7 +2,7 @@ import { Plugin, TFile, Notice } from "obsidian";
 import { DreamAnalyzerSettings, DEFAULT_SETTINGS } from "./types";
 import { DreamAnalyzerSettingTab } from "./settings";
 import { analyzeDream } from "./analyzer";
-import { updateEntityEmbeddings, clearMemoryCache, handleFileRename } from "./embeddings";
+import { updateEntityEmbeddings, clearMemoryCache, handleFileRename, getDreamsSubfolder } from "./embeddings";
 import { createTodayDreamNote, createDreamNoteForDate, DatePickerModal, ensureDreamDashboard, ensureEntityIndexes } from "./dreamCreator";
 import { ConfirmResetModal, resetAllDreamData } from "./resetManager";
 import { getOpenAiApiKey } from "./api";
@@ -119,11 +119,11 @@ export default class DreamAnalyzerPlugin extends Plugin {
 			}
 		});
 
-		// Context menu item restricted ONLY to files inside dreamsFolder
+		// Context menu item restricted STRICTLY to dream files inside the 'Сни' / 'Dreams' subfolder
 		this.registerEvent(
 			this.app.workspace.on("file-menu", (menu, file) => {
-				const dreamsFolder = (this.settings?.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
-				if (file instanceof TFile && file.extension === "md" && file.path.startsWith(dreamsFolder)) {
+				const dreamsSubfolder = getDreamsSubfolder(this.settings);
+				if (file instanceof TFile && file.extension === "md" && file.path.startsWith(dreamsSubfolder)) {
 					menu.addItem((item) => {
 						item.setTitle(t("contextMenuAnalyze"))
 							.setIcon("brain")

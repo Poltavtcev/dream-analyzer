@@ -1811,8 +1811,8 @@ var DreamAnalyzerPlugin = class extends import_obsidian9.Plugin {
     });
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
-        const dreamsFolder = (this.settings?.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
-        if (file instanceof import_obsidian9.TFile && file.extension === "md" && file.path.startsWith(dreamsFolder)) {
+        const dreamsSubfolder = getDreamsSubfolder(this.settings);
+        if (file instanceof import_obsidian9.TFile && file.extension === "md" && file.path.startsWith(dreamsSubfolder)) {
           menu.addItem((item) => {
             item.setTitle(t("contextMenuAnalyze")).setIcon("brain").onClick(async () => {
               await analyzeDream(this.app, file, this.settings);

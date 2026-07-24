@@ -91,7 +91,7 @@ export async function analyzeDream(app: App, file: TFile, settings: DreamAnalyze
 
 ${entityContext}
 
-Використовуй їх, якщо вони підходять.
+Використовуй їх, якщо вони підходят.
 Не створюй нову сутність, якщо вже існує така сама або дуже близька.
 
 Поверни тільки JSON.
@@ -453,6 +453,7 @@ WHERE contains(characters, this.file.link)
    OR contains(symbols, this.file.link)
    OR contains(concepts, this.file.link)
 SORT file.name DESC
+LIMIT 20
 \`\`\`
 
 ## Пов'язані сутності
@@ -466,6 +467,7 @@ FROM "${entitiesFolder}"
 WHERE length(filter(created_from, (d) => contains(this.created_from, d))) > 0
 AND file.path != this.file.path
 SORT length(filter(created_from, (d) => contains(this.created_from, d))) DESC
+LIMIT 20
 \`\`\`
 
 ## Нотатки

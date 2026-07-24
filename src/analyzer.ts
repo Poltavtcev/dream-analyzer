@@ -275,31 +275,35 @@ function normalizeEntityArray(value: any): EntityItem[] {
 	if (!Array.isArray(value)) return [];
 	return value.map(item => {
 		if (typeof item === "string") {
-			return { name: item, description: "", aliases: [] };
+			const cleaned = cleanEntityName(item);
+			return { name: cleaned, description: "", aliases: [] };
 		} else if (typeof item === "object" && item !== null) {
+			const cleaned = cleanEntityName(item.name);
 			return {
-				name: String(item.name || ""),
+				name: cleaned,
 				description: String(item.description || ""),
-				aliases: Array.isArray(item.aliases) ? item.aliases.map(a => String(a)) : []
+				aliases: Array.isArray(item.aliases) ? item.aliases.map(a => cleanEntityName(a)).filter(Boolean) : []
 			};
 		}
 		return { name: "", description: "", aliases: [] };
-	}).filter(item => cleanEntityName(item.name).length > 0);
+	}).filter(item => item.name.length > 0);
 }
 
 function normalizeStringArray(value: any): string[] {
 	if (!Array.isArray(value)) return [];
-	return value.map(x => String(x || "").trim()).filter(Boolean);
+	return value.map(x => cleanEntityName(x)).filter(Boolean);
 }
 
 export function cleanEntityName(item: any): string {
 	let name = typeof item === "object" && item !== null ? item.name : item;
-	return String(name || "")
+	let str = String(name || "")
 		.replace(/\[\[/g, "")
 		.replace(/\]\]/g, "")
 		.replace(/[\/\\:*?"<>|]/g, "")
 		.replace(/\s+/g, " ")
 		.trim();
+	if (!str) return "";
+	return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
 async function createOrUpdateEntities(
@@ -442,7 +446,12 @@ WHERE file.path = this.file.path
 \`\`\`dataview
 LIST
 FROM "${dreamsFolder}"
-WHERE contains(file.text, this.file.link)
+WHERE contains(characters, this.file.link)
+   OR contains(places, this.file.link)
+   OR contains(objects, this.file.link)
+   OR contains(emotions, this.file.link)
+   OR contains(symbols, this.file.link)
+   OR contains(concepts, this.file.link)
 SORT file.name DESC
 \`\`\`
 
@@ -454,7 +463,7 @@ file.link AS "Сутність",
 entity_type AS "Тип",
 length(created_from) AS "Появ"
 FROM "${entitiesFolder}"
-WHERE contains(file.text, this.file.link)
+WHERE contains(created_from, this.file.link)
 AND file.path != this.file.path
 SORT length(created_from) DESC
 \`\`\`

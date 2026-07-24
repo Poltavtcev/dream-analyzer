@@ -14,7 +14,7 @@ export default class DreamAnalyzerPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// Auto-ensure Dashboard & Entity Indexes exist
+		// Auto-ensure Dashboard & Entity Indexes exist on startup
 		this.app.workspace.onLayoutReady(async () => {
 			try {
 				await ensureEntityIndexes(this.app, this.settings);
@@ -152,11 +152,5 @@ export default class DreamAnalyzerPlugin extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 		clearMemoryCache();
-		try {
-			await ensureEntityIndexes(this.app, this.settings);
-			await ensureDreamDashboard(this.app, this.settings);
-		} catch (e) {
-			console.warn("Could not ensure dream dashboard/indexes on saveSettings:", e);
-		}
 	}
 }

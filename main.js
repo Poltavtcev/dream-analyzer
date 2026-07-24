@@ -1228,13 +1228,29 @@ var DreamAnalyzerSettingTab = class extends import_obsidian7.PluginSettingTab {
     }));
     containerEl.createEl("h3", { text: "\u0421\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u0430 / Journal Folder" });
     new import_obsidian7.Setting(containerEl).setName(t("dreamsFolderName")).setDesc(t("dreamsFolderDesc")).addText((text) => {
+      const applyFolderChange = async (val) => {
+        const cleaned = val.trim().replace(/\/$/, "");
+        if (cleaned) {
+          this.plugin.settings.dreamsFolder = cleaned;
+          await this.plugin.saveSettings();
+          try {
+            await ensureEntityIndexes(this.app, this.plugin.settings);
+            await ensureDreamDashboard(this.app, this.plugin.settings);
+          } catch (e) {
+            console.warn("Could not ensure dream dashboard/indexes on folder change:", e);
+          }
+        }
+      };
       new FolderSuggest(this.app, text, async (val) => {
-        this.plugin.settings.dreamsFolder = val.trim().replace(/\/$/, "");
-        await this.plugin.saveSettings();
+        text.setValue(val);
+        await applyFolderChange(val);
       });
       text.setPlaceholder("Dreams").setValue(this.plugin.settings.dreamsFolder).onChange(async (value) => {
         this.plugin.settings.dreamsFolder = value.trim().replace(/\/$/, "");
         await this.plugin.saveSettings();
+      });
+      text.inputEl.addEventListener("blur", async () => {
+        await applyFolderChange(text.getValue());
       });
     });
     containerEl.createEl("h3", { text: t("templateExportName") });
@@ -1834,11 +1850,5 @@ var DreamAnalyzerPlugin = class extends import_obsidian9.Plugin {
   async saveSettings() {
     await this.saveData(this.settings);
     clearMemoryCache();
-    try {
-      await ensureEntityIndexes(this.app, this.settings);
-      await ensureDreamDashboard(this.app, this.settings);
-    } catch (e) {
-      console.warn("Could not ensure dream dashboard/indexes on saveSettings:", e);
-    }
   }
 };

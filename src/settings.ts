@@ -1,7 +1,7 @@
 import { App, PluginSettingTab, Setting, Notice } from "obsidian";
 import DreamAnalyzerPlugin from "./main";
 import { updateEntityEmbeddings } from "./embeddings";
-import { exportTemplaterTemplate } from "./dreamCreator";
+import { exportTemplaterTemplate, ensureDreamDashboard, ensureEntityIndexes } from "./dreamCreator";
 import { ConfirmResetModal, resetAllDreamData } from "./resetManager";
 import { getOpenAiApiKey } from "./api";
 import { FolderSuggest, FileSuggest } from "./suggest";
@@ -60,10 +60,25 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 			.setName(t("dreamsFolderName"))
 			.setDesc(t("dreamsFolderDesc"))
 			.addText(text => {
+				const applyFolderChange = async (val: string) => {
+					const cleaned = val.trim().replace(/\/$/, "");
+					if (cleaned) {
+						this.plugin.settings.dreamsFolder = cleaned;
+						await this.plugin.saveSettings();
+						try {
+							await ensureEntityIndexes(this.app, this.plugin.settings);
+							await ensureDreamDashboard(this.app, this.plugin.settings);
+						} catch (e) {
+							console.warn("Could not ensure dream dashboard/indexes on folder change:", e);
+						}
+					}
+				};
+
 				new FolderSuggest(this.app, text, async (val) => {
-					this.plugin.settings.dreamsFolder = val.trim().replace(/\/$/, "");
-					await this.plugin.saveSettings();
+					text.setValue(val);
+					await applyFolderChange(val);
 				});
+
 				text
 					.setPlaceholder("Dreams")
 					.setValue(this.plugin.settings.dreamsFolder)
@@ -71,6 +86,10 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 						this.plugin.settings.dreamsFolder = value.trim().replace(/\/$/, "");
 						await this.plugin.saveSettings();
 					});
+
+				text.inputEl.addEventListener("blur", async () => {
+					await applyFolderChange(text.getValue());
+				});
 			});
 
 		containerEl.createEl("h3", { text: t("templateExportName") });

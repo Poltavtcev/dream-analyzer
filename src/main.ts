@@ -3,7 +3,7 @@ import { DreamAnalyzerSettings, DEFAULT_SETTINGS } from "./types";
 import { DreamAnalyzerSettingTab } from "./settings";
 import { analyzeDream } from "./analyzer";
 import { updateEntityEmbeddings, clearMemoryCache, handleFileRename } from "./embeddings";
-import { createTodayDreamNote, createDreamNoteForDate, DatePickerModal, ensureDreamDashboard } from "./dreamCreator";
+import { createTodayDreamNote, createDreamNoteForDate, DatePickerModal, ensureDreamDashboard, ensureEntityIndexes } from "./dreamCreator";
 import { ConfirmResetModal, resetAllDreamData } from "./resetManager";
 import { getOpenAiApiKey } from "./api";
 import { t } from "./i18n";
@@ -14,12 +14,13 @@ export default class DreamAnalyzerPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// Auto-ensure Dashboard file exists inside Dreams folder
+		// Auto-ensure Dashboard & Entity Indexes exist
 		this.app.workspace.onLayoutReady(async () => {
 			try {
+				await ensureEntityIndexes(this.app, this.settings);
 				await ensureDreamDashboard(this.app, this.settings);
 			} catch (e) {
-				console.warn("Could not ensure dream dashboard:", e);
+				console.warn("Could not ensure dream dashboard/indexes:", e);
 			}
 		});
 
@@ -152,9 +153,10 @@ export default class DreamAnalyzerPlugin extends Plugin {
 		await this.saveData(this.settings);
 		clearMemoryCache();
 		try {
+			await ensureEntityIndexes(this.app, this.settings);
 			await ensureDreamDashboard(this.app, this.settings);
 		} catch (e) {
-			console.warn("Could not ensure dream dashboard on saveSettings:", e);
+			console.warn("Could not ensure dream dashboard/indexes on saveSettings:", e);
 		}
 	}
 }

@@ -890,15 +890,69 @@ keywords: []
   }
   new import_obsidian4.Notice(t("templateExportSuccess", { path: templatePath }));
 }
+async function ensureEntityIndexes(app, settings) {
+  const entitiesFolder = (settings.entitiesFolder || "Entities").trim().replace(/\/$/, "");
+  const locale = getLocale();
+  const indexFolderName = locale === "uk" ? "\u0406\u043D\u0434\u0435\u043A\u0441" : "Indexes";
+  const indexesFolderPath = `${entitiesFolder}/${indexFolderName}`;
+  await ensureFolder(app, indexesFolderPath);
+  for (const type of ENTITY_TYPES) {
+    const categoryFolder = `${entitiesFolder}/${type.folder}`;
+    await ensureFolder(app, categoryFolder);
+    const fileName = locale === "uk" ? `\u0406\u043D\u0434\u0435\u043A\u0441 - ${type.folder}.md` : `Index - ${type.folder}.md`;
+    const filePath = `${indexesFolderPath}/${fileName}`;
+    const title = locale === "uk" ? `\u0406\u043D\u0434\u0435\u043A\u0441 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439: ${type.folder}` : `Entity Index: ${type.folder}`;
+    const desc = locale === "uk" ? `\u041A\u0430\u0442\u0430\u043B\u043E\u0433 \u0443\u0441\u0456\u0445 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 **${type.folder}** \u0437 \u0457\u0445\u043D\u0456\u043C\u0438 \u043E\u043F\u0438\u0441\u0430\u043C\u0438 \u0442\u0430 \u0447\u0430\u0441\u0442\u043E\u0442\u043E\u044E \u043F\u043E\u044F\u0432 \u0443 \u0441\u043D\u0430\u0445.` : `Catalog of all saved **${type.folder}** entities with descriptions and dream frequency.`;
+    const content = `# \u{1F4CB} ${title}
+
+> [!INFO] ${title}
+> ${desc}
+
+---
+
+\`\`\`dataview
+TABLE WITHOUT ID
+file.link AS "${locale === "uk" ? "\u0421\u0443\u0442\u043D\u0456\u0441\u0442\u044C" : "Entity"}",
+description AS "${locale === "uk" ? "\u041E\u043F\u0438\u0441" : "Description"}",
+dream_count AS "${locale === "uk" ? "\u041F\u043E\u044F\u0432 \u0443 \u0441\u043D\u0430\u0445" : "Dream Count"}",
+last_seen AS "${locale === "uk" ? "\u041E\u0441\u0442\u0430\u043D\u043D\u044F \u043F\u043E\u044F\u0432\u0430" : "Last Seen"}"
+FROM "${categoryFolder}"
+WHERE file.name != "${fileName.replace(/\.md$/, "")}"
+SORT dream_count DESC
+\`\`\`
+`;
+    const existing = app.vault.getAbstractFileByPath(filePath);
+    if (existing instanceof import_obsidian4.TFile) {
+      const currentContent = await app.vault.read(existing);
+      if (currentContent !== content) {
+        await app.vault.modify(existing, content);
+      }
+    } else {
+      await app.vault.create(filePath, content);
+    }
+  }
+}
 async function ensureDreamDashboard(app, settings) {
   const dreamsFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
   const entitiesFolder = (settings.entitiesFolder || "Entities").trim().replace(/\/$/, "");
+  const locale = getLocale();
+  const indexFolder = locale === "uk" ? "\u0406\u043D\u0434\u0435\u043A\u0441" : "Indexes";
   await ensureFolder(app, dreamsFolder);
+  await ensureEntityIndexes(app, settings);
   const fileName = t("dashboardFileName");
   const dashboardPath = `${dreamsFolder}/${fileName}`;
+  const indexLinks = ENTITY_TYPES.map((tObj) => {
+    const idxName = locale === "uk" ? `\u0406\u043D\u0434\u0435\u043A\u0441 - ${tObj.folder}` : `Index - ${tObj.folder}`;
+    return `[[${idxName}]]`;
+  }).join(" | ");
   const content = `${t("dashboardTitle")}
 
 ${t("dashboardCallout")}
+
+---
+
+## \u{1F4CB} ${locale === "uk" ? "\u0406\u043D\u0434\u0435\u043A\u0441\u0438 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439" : "Entity Category Indexes"}
+${indexLinks}
 
 ---
 
@@ -1671,9 +1725,10 @@ var DreamAnalyzerPlugin = class extends import_obsidian9.Plugin {
     await this.loadSettings();
     this.app.workspace.onLayoutReady(async () => {
       try {
+        await ensureEntityIndexes(this.app, this.settings);
         await ensureDreamDashboard(this.app, this.settings);
       } catch (e) {
-        console.warn("Could not ensure dream dashboard:", e);
+        console.warn("Could not ensure dream dashboard/indexes:", e);
       }
     });
     this.registerEvent(
@@ -1781,9 +1836,10 @@ var DreamAnalyzerPlugin = class extends import_obsidian9.Plugin {
     await this.saveData(this.settings);
     clearMemoryCache();
     try {
+      await ensureEntityIndexes(this.app, this.settings);
       await ensureDreamDashboard(this.app, this.settings);
     } catch (e) {
-      console.warn("Could not ensure dream dashboard on saveSettings:", e);
+      console.warn("Could not ensure dream dashboard/indexes on saveSettings:", e);
     }
   }
 };

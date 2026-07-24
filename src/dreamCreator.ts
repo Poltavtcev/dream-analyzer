@@ -1,5 +1,5 @@
 import { App, TFile, Notice, Modal, Setting, moment } from "obsidian";
-import { DreamAnalyzerSettings } from "./types";
+import { DreamAnalyzerSettings, ENTITY_TYPES } from "./types";
 import { t, getLocale } from "./i18n";
 
 async function ensureFolder(app: App, path: string): Promise<void> {
@@ -236,18 +236,82 @@ keywords: []
 	new Notice(t("templateExportSuccess", { path: templatePath }));
 }
 
+export async function ensureEntityIndexes(app: App, settings: DreamAnalyzerSettings): Promise<void> {
+	const entitiesFolder = (settings.entitiesFolder || "Entities").trim().replace(/\/$/, "");
+	const locale = getLocale();
+
+	const indexFolderName = locale === "uk" ? "Індекс" : "Indexes";
+	const indexesFolderPath = `${entitiesFolder}/${indexFolderName}`;
+	await ensureFolder(app, indexesFolderPath);
+
+	for (const type of ENTITY_TYPES) {
+		const categoryFolder = `${entitiesFolder}/${type.folder}`;
+		await ensureFolder(app, categoryFolder);
+
+		const fileName = locale === "uk" ? `Індекс - ${type.folder}.md` : `Index - ${type.folder}.md`;
+		const filePath = `${indexesFolderPath}/${fileName}`;
+
+		const title = locale === "uk" ? `Індекс сутностей: ${type.folder}` : `Entity Index: ${type.folder}`;
+		const desc = locale === "uk"
+			? `Каталог усіх збережених сутностей категорії **${type.folder}** з їхніми описами та частотою появ у снах.`
+			: `Catalog of all saved **${type.folder}** entities with descriptions and dream frequency.`;
+
+		const content = `# 📋 ${title}
+
+> [!INFO] ${title}
+> ${desc}
+
+---
+
+\`\`\`dataview
+TABLE WITHOUT ID
+file.link AS "${locale === "uk" ? "Сутність" : "Entity"}",
+description AS "${locale === "uk" ? "Опис" : "Description"}",
+dream_count AS "${locale === "uk" ? "Появ у снах" : "Dream Count"}",
+last_seen AS "${locale === "uk" ? "Остання поява" : "Last Seen"}"
+FROM "${categoryFolder}"
+WHERE file.name != "${fileName.replace(/\.md$/, "")}"
+SORT dream_count DESC
+\`\`\`
+`;
+
+		const existing = app.vault.getAbstractFileByPath(filePath);
+		if (existing instanceof TFile) {
+			const currentContent = await app.vault.read(existing);
+			if (currentContent !== content) {
+				await app.vault.modify(existing, content);
+			}
+		} else {
+			await app.vault.create(filePath, content);
+		}
+	}
+}
+
 export async function ensureDreamDashboard(app: App, settings: DreamAnalyzerSettings): Promise<void> {
 	const dreamsFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
 	const entitiesFolder = (settings.entitiesFolder || "Entities").trim().replace(/\/$/, "");
+	const locale = getLocale();
+	const indexFolder = locale === "uk" ? "Індекс" : "Indexes";
 
 	await ensureFolder(app, dreamsFolder);
+	await ensureEntityIndexes(app, settings);
 
 	const fileName = t("dashboardFileName");
 	const dashboardPath = `${dreamsFolder}/${fileName}`;
 
+	const indexLinks = ENTITY_TYPES.map(tObj => {
+		const idxName = locale === "uk" ? `Індекс - ${tObj.folder}` : `Index - ${tObj.folder}`;
+		return `[[${idxName}]]`;
+	}).join(" | ");
+
 	const content = `${t("dashboardTitle")}
 
 ${t("dashboardCallout")}
+
+---
+
+## 📋 ${locale === "uk" ? "Індекси сутностей" : "Entity Category Indexes"}
+${indexLinks}
 
 ---
 

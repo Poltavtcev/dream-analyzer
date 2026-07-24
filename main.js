@@ -1623,11 +1623,11 @@ SORT file.name DESC
 TABLE WITHOUT ID
 file.link AS "\u0421\u0443\u0442\u043D\u0456\u0441\u0442\u044C",
 entity_type AS "\u0422\u0438\u043F",
-length(created_from) AS "\u041F\u043E\u044F\u0432"
+length(filter(created_from, (d) => contains(this.created_from, d))) AS "\u0421\u043F\u0456\u043B\u044C\u043D\u0438\u0445 \u0441\u043D\u0456\u0432"
 FROM "${entitiesFolder}"
-WHERE contains(created_from, this.file.link)
+WHERE length(filter(created_from, (d) => contains(this.created_from, d))) > 0
 AND file.path != this.file.path
-SORT length(created_from) DESC
+SORT length(filter(created_from, (d) => contains(this.created_from, d))) DESC
 \`\`\`
 
 ## \u041D\u043E\u0442\u0430\u0442\u043A\u0438

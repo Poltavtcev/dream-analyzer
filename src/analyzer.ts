@@ -461,11 +461,11 @@ SORT file.name DESC
 TABLE WITHOUT ID
 file.link AS "Сутність",
 entity_type AS "Тип",
-length(created_from) AS "Появ"
+length(filter(created_from, (d) => contains(this.created_from, d))) AS "Спільних снів"
 FROM "${entitiesFolder}"
-WHERE contains(created_from, this.file.link)
+WHERE length(filter(created_from, (d) => contains(this.created_from, d))) > 0
 AND file.path != this.file.path
-SORT length(created_from) DESC
+SORT length(filter(created_from, (d) => contains(this.created_from, d))) DESC
 \`\`\`
 
 ## Нотатки

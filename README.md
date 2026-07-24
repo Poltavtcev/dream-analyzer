@@ -9,7 +9,7 @@
 - **🧠 AI-Powered Dream Analysis**: Generates structured dream summaries and extracts entities using OpenAI API (`gpt-5-mini`, `gpt-4o-mini`, `gpt-4o`, `gpt-4.1-mini`).
 - **👤 Automatic Entity Management**: Creates and updates note files in `Characters`, `Places`, `Objects`, `Emotions`, `Symbols`, and `Concepts` folders, preserving appearance history and dream contexts.
 - **⚡ Vector Embeddings & Similarity Matching**: Calculates combined similarity scores between dreams (50% Cosine Similarity + 50% Shared Entities) and displays TOP-5 connected dreams.
-- **📊 Automated Dream Analytics Dashboard (`Дашборд снів.md`)**: Tracks lucid dreaming metrics (% Lucid Dreams), Dream Signs / Reality Check triggers, emotional trends, and creative writing ideas.
+- **📊 Automated Dream Analytics Dashboard (`Dream Dashboard.md`)**: Tracks lucid dreaming metrics (% Lucid Dreams), Dream Signs / Reality Check triggers, emotional trends, and creative writing ideas.
 - **📅 Calendar & Templater Integration**: Exports a ready-to-use template file compatible with Templater and Calendar plugins.
 - **🗓 Flexible Date Picker**: Commands to create today's dream note or pick any custom date via an interactive date-picker modal.
 - **🧹 Native Reset & Cleanup**: Native Obsidian Frontmatter processing (zero regex string manipulation) and a full data reset utility for fresh testing.
@@ -46,7 +46,7 @@
    - Open a dream note and click the brain ribbon icon 🧠 or run `🧠 Analyze Active Dream`.
    - Alternatively, right-click any dream file in the File Explorer and select `🧠 Analyze Dream`.
 3. **View Dashboard**:
-   - Open `Дашборд снів.md` inside your Dreams folder to view live Dataview analytics.
+   - Open `Dream Dashboard.md` (or `Дашборд снів.md` depending on your Obsidian language) inside your Dreams folder to view live Dataview analytics.
 
 ---
 

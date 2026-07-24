@@ -1,0 +1,31 @@
+{
+  "name": "dream-analyzer",
+  "version": "1.0.0",
+  "description": "AI-powered dream analysis, entity extraction, vector similarity connections, and lucid dreaming dashboard for Obsidian.",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "node esbuild.config.mjs production"
+  },
+  "keywords": [
+    "obsidian",
+    "obsidian-plugin",
+    "ai",
+    "openai",
+    "dream-journal",
+    "lucid-dreaming"
+  ],
+  "author": "Poltavtcev",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Poltavtcev/dream-analyzer.git"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.28.1",
+    "obsidian": "^1.5.7",
+    "tslib": "^2.6.2",
+    "typescript": "^5.3.3"
+  }
+}

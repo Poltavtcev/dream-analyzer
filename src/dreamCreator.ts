@@ -79,7 +79,7 @@ export async function createDreamNoteForDate(
 	const monthFolder = locale === "uk" ? monthsUk[monthIdx] : `${monthNum} - ${now.format("MMMM")}`;
 
 	const rootFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
-	const dreamsSubfolder = getDreamsSubfolder(settings);
+	const dreamsSubfolder = getDreamsSubfolder(app, settings);
 
 	const yearFolder = `${dreamsSubfolder}/${year}`;
 	const folderPath = `${yearFolder}/${monthFolder}`;
@@ -146,7 +146,7 @@ export async function createTodayDreamNote(app: App, settings: DreamAnalyzerSett
 
 export async function exportTemplaterTemplate(app: App, settings: DreamAnalyzerSettings): Promise<void> {
 	const templatePath = (settings.templateFilePath || "Templates/Dream Template.md").trim();
-	const dreamsSubfolder = getDreamsSubfolder(settings);
+	const dreamsSubfolder = getDreamsSubfolder(app, settings);
 
 	const dirIndex = templatePath.lastIndexOf("/");
 	if (dirIndex > 0) {
@@ -241,7 +241,7 @@ keywords: []
 }
 
 export async function ensureEntityIndexes(app: App, settings: DreamAnalyzerSettings): Promise<void> {
-	const entitiesFolder = getEntitiesSubfolder(settings);
+	const entitiesFolder = getEntitiesSubfolder(app, settings);
 	const locale = getLocale();
 
 	const indexFolderName = locale === "uk" ? "! Індекс" : "! Indexes";
@@ -293,8 +293,8 @@ SORT dream_count DESC
 
 export async function ensureDreamDashboard(app: App, settings: DreamAnalyzerSettings): Promise<void> {
 	const rootFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
-	const dreamsSubfolder = getDreamsSubfolder(settings);
-	const entitiesFolder = getEntitiesSubfolder(settings);
+	const dreamsSubfolder = getDreamsSubfolder(app, settings);
+	const entitiesFolder = getEntitiesSubfolder(app, settings);
 	const locale = getLocale();
 
 	await ensureFolder(app, rootFolder);

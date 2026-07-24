@@ -17,27 +17,37 @@ export function clearMemoryCache(): void {
 	cachedDreamDb = null;
 }
 
-export function getDreamsSubfolder(settings: DreamAnalyzerSettings): string {
+export function getDreamsSubfolder(app: App, settings: DreamAnalyzerSettings): string {
 	const root = (settings?.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
+	// Smart check: if 'Сни' or 'Dreams' folder already exists in root, preserve existing structure
+	if (app && app.vault) {
+		if (app.vault.getAbstractFileByPath(`${root}/Сни`)) return `${root}/Сни`;
+		if (app.vault.getAbstractFileByPath(`${root}/Dreams`)) return `${root}/Dreams`;
+	}
 	const locale = getLocale();
 	const sub = locale === "uk" ? "Сни" : "Dreams";
 	return `${root}/${sub}`;
 }
 
-export function getEntitiesSubfolder(settings: DreamAnalyzerSettings): string {
+export function getEntitiesSubfolder(app: App, settings: DreamAnalyzerSettings): string {
 	const root = (settings?.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
+	// Smart check: if 'Сутності' or 'Entities' folder already exists in root, preserve existing structure
+	if (app && app.vault) {
+		if (app.vault.getAbstractFileByPath(`${root}/Сутності`)) return `${root}/Сутності`;
+		if (app.vault.getAbstractFileByPath(`${root}/Entities`)) return `${root}/Entities`;
+	}
 	const locale = getLocale();
 	const sub = locale === "uk" ? "Сутності" : "Entities";
 	return `${root}/${sub}`;
 }
 
-export function getEntityEmbeddingsDbPath(settings: DreamAnalyzerSettings): string {
-	const folder = getDreamsSubfolder(settings);
+export function getEntityEmbeddingsDbPath(app: App, settings: DreamAnalyzerSettings): string {
+	const folder = getDreamsSubfolder(app, settings);
 	return `${folder}/embeddings.json`;
 }
 
-export function getDreamEmbeddingsDbPath(settings: DreamAnalyzerSettings): string {
-	const folder = getDreamsSubfolder(settings);
+export function getDreamEmbeddingsDbPath(app: App, settings: DreamAnalyzerSettings): string {
+	const folder = getDreamsSubfolder(app, settings);
 	return `${folder}/dream_embeddings.json`;
 }
 
@@ -79,7 +89,7 @@ export async function loadEmbeddingsDatabase(
 	settings: DreamAnalyzerSettings,
 	forceReload: boolean = false
 ): Promise<VectorDatabaseItem[]> {
-	const dbPath = getEntityEmbeddingsDbPath(settings);
+	const dbPath = getEntityEmbeddingsDbPath(app, settings);
 
 	if (!forceReload && cachedEntityDb && cachedEntityDb.dbPath === dbPath) {
 		return cachedEntityDb.data;
@@ -116,7 +126,7 @@ export async function saveEmbeddingsDatabase(
 	settings: DreamAnalyzerSettings,
 	database: VectorDatabaseItem[]
 ): Promise<void> {
-	const dbPath = getEntityEmbeddingsDbPath(settings);
+	const dbPath = getEntityEmbeddingsDbPath(app, settings);
 	await ensureParentDirectory(app, dbPath);
 	await app.vault.adapter.write(dbPath, JSON.stringify(database, null, 2));
 	cachedEntityDb = { dbPath, data: database };
@@ -127,7 +137,7 @@ export async function loadDreamEmbeddingsDatabase(
 	settings: DreamAnalyzerSettings,
 	forceReload: boolean = false
 ): Promise<DreamVectorDatabaseItem[]> {
-	const dbPath = getDreamEmbeddingsDbPath(settings);
+	const dbPath = getDreamEmbeddingsDbPath(app, settings);
 
 	if (!forceReload && cachedDreamDb && cachedDreamDb.dbPath === dbPath) {
 		return cachedDreamDb.data;
@@ -164,7 +174,7 @@ export async function saveDreamEmbeddingsDatabase(
 	settings: DreamAnalyzerSettings,
 	database: DreamVectorDatabaseItem[]
 ): Promise<void> {
-	const dbPath = getDreamEmbeddingsDbPath(settings);
+	const dbPath = getDreamEmbeddingsDbPath(app, settings);
 	await ensureParentDirectory(app, dbPath);
 	await app.vault.adapter.write(dbPath, JSON.stringify(database, null, 2));
 	cachedDreamDb = { dbPath, data: database };
@@ -178,8 +188,8 @@ export async function handleFileRename(
 ): Promise<void> {
 	if (!(file instanceof TFile) || file.extension !== "md") return;
 
-	const entitiesFolder = getEntitiesSubfolder(settings);
-	const dreamsFolder = getDreamsSubfolder(settings);
+	const entitiesFolder = getEntitiesSubfolder(app, settings);
+	const dreamsFolder = getDreamsSubfolder(app, settings);
 
 	let updated = false;
 
@@ -380,7 +390,7 @@ export async function updateEntityEmbeddings(
 	forceRebuild: boolean = false,
 	specificPaths?: string[]
 ): Promise<number> {
-	const entitiesFolder = getEntitiesSubfolder(settings);
+	const entitiesFolder = getEntitiesSubfolder(app, settings);
 	const allFiles = app.vault.getMarkdownFiles().filter(f => f.path.startsWith(entitiesFolder));
 	let database = await loadEmbeddingsDatabase(app, settings, forceRebuild);
 

@@ -322,7 +322,7 @@ async function createOrUpdateEntities(
 		? String(cache.frontmatter.date)
 		: createdDate;
 
-	const baseFolder = getEntitiesSubfolder(settings);
+	const baseFolder = getEntitiesSubfolder(app, settings);
 	await ensureFolder(app, baseFolder);
 
 	const modifiedPaths: string[] = [];
@@ -375,6 +375,7 @@ async function createOrUpdateEntities(
 				modifiedPaths.push(path);
 			} else {
 				const bodyContent = makeEntityBodyContent(
+					app,
 					safeName,
 					item,
 					dreamName,
@@ -416,13 +417,14 @@ async function ensureFolder(app: App, path: string): Promise<void> {
 }
 
 function makeEntityBodyContent(
+	app: App,
 	name: string,
 	item: EntityItem,
 	dreamName: string,
 	settings: DreamAnalyzerSettings
 ): string {
-	const dreamsFolder = getDreamsSubfolder(settings);
-	const entitiesFolder = getEntitiesSubfolder(settings);
+	const dreamsFolder = getDreamsSubfolder(app, settings);
+	const entitiesFolder = getEntitiesSubfolder(app, settings);
 
 	return `# ${name}
 

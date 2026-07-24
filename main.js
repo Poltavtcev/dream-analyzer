@@ -369,24 +369,32 @@ function clearMemoryCache() {
   cachedEntityDb = null;
   cachedDreamDb = null;
 }
-function getDreamsSubfolder(settings) {
+function getDreamsSubfolder(app, settings) {
   const root = (settings?.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
+  if (app && app.vault) {
+    if (app.vault.getAbstractFileByPath(`${root}/\u0421\u043D\u0438`)) return `${root}/\u0421\u043D\u0438`;
+    if (app.vault.getAbstractFileByPath(`${root}/Dreams`)) return `${root}/Dreams`;
+  }
   const locale = getLocale();
   const sub = locale === "uk" ? "\u0421\u043D\u0438" : "Dreams";
   return `${root}/${sub}`;
 }
-function getEntitiesSubfolder(settings) {
+function getEntitiesSubfolder(app, settings) {
   const root = (settings?.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
+  if (app && app.vault) {
+    if (app.vault.getAbstractFileByPath(`${root}/\u0421\u0443\u0442\u043D\u043E\u0441\u0442\u0456`)) return `${root}/\u0421\u0443\u0442\u043D\u043E\u0441\u0442\u0456`;
+    if (app.vault.getAbstractFileByPath(`${root}/Entities`)) return `${root}/Entities`;
+  }
   const locale = getLocale();
   const sub = locale === "uk" ? "\u0421\u0443\u0442\u043D\u043E\u0441\u0442\u0456" : "Entities";
   return `${root}/${sub}`;
 }
-function getEntityEmbeddingsDbPath(settings) {
-  const folder = getDreamsSubfolder(settings);
+function getEntityEmbeddingsDbPath(app, settings) {
+  const folder = getDreamsSubfolder(app, settings);
   return `${folder}/embeddings.json`;
 }
-function getDreamEmbeddingsDbPath(settings) {
-  const folder = getDreamsSubfolder(settings);
+function getDreamEmbeddingsDbPath(app, settings) {
+  const folder = getDreamsSubfolder(app, settings);
   return `${folder}/dream_embeddings.json`;
 }
 function cosineSimilarity(a, b) {
@@ -417,7 +425,7 @@ async function ensureParentDirectory(app, filePath) {
   }
 }
 async function loadEmbeddingsDatabase(app, settings, forceReload = false) {
-  const dbPath = getEntityEmbeddingsDbPath(settings);
+  const dbPath = getEntityEmbeddingsDbPath(app, settings);
   if (!forceReload && cachedEntityDb && cachedEntityDb.dbPath === dbPath) {
     return cachedEntityDb.data;
   }
@@ -442,13 +450,13 @@ async function loadEmbeddingsDatabase(app, settings, forceReload = false) {
   }
 }
 async function saveEmbeddingsDatabase(app, settings, database) {
-  const dbPath = getEntityEmbeddingsDbPath(settings);
+  const dbPath = getEntityEmbeddingsDbPath(app, settings);
   await ensureParentDirectory(app, dbPath);
   await app.vault.adapter.write(dbPath, JSON.stringify(database, null, 2));
   cachedEntityDb = { dbPath, data: database };
 }
 async function loadDreamEmbeddingsDatabase(app, settings, forceReload = false) {
-  const dbPath = getDreamEmbeddingsDbPath(settings);
+  const dbPath = getDreamEmbeddingsDbPath(app, settings);
   if (!forceReload && cachedDreamDb && cachedDreamDb.dbPath === dbPath) {
     return cachedDreamDb.data;
   }
@@ -473,15 +481,15 @@ async function loadDreamEmbeddingsDatabase(app, settings, forceReload = false) {
   }
 }
 async function saveDreamEmbeddingsDatabase(app, settings, database) {
-  const dbPath = getDreamEmbeddingsDbPath(settings);
+  const dbPath = getDreamEmbeddingsDbPath(app, settings);
   await ensureParentDirectory(app, dbPath);
   await app.vault.adapter.write(dbPath, JSON.stringify(database, null, 2));
   cachedDreamDb = { dbPath, data: database };
 }
 async function handleFileRename(app, settings, file, oldPath) {
   if (!(file instanceof import_obsidian3.TFile) || file.extension !== "md") return;
-  const entitiesFolder = getEntitiesSubfolder(settings);
-  const dreamsFolder = getDreamsSubfolder(settings);
+  const entitiesFolder = getEntitiesSubfolder(app, settings);
+  const dreamsFolder = getDreamsSubfolder(app, settings);
   let updated = false;
   if (oldPath.startsWith(entitiesFolder) || file.path.startsWith(entitiesFolder)) {
     let entityDb = await loadEmbeddingsDatabase(app, settings);
@@ -629,7 +637,7 @@ function formatDreamConnectionsMarkdown(connections) {
   }).join("\n\n");
 }
 async function updateEntityEmbeddings(app, apiKey, settings, forceRebuild = false, specificPaths) {
-  const entitiesFolder = getEntitiesSubfolder(settings);
+  const entitiesFolder = getEntitiesSubfolder(app, settings);
   const allFiles = app.vault.getMarkdownFiles().filter((f) => f.path.startsWith(entitiesFolder));
   let database = await loadEmbeddingsDatabase(app, settings, forceRebuild);
   const targets = [];
@@ -752,7 +760,7 @@ async function createDreamNoteForDate(app, settings, targetDateInput) {
   const dayName = locale === "uk" ? daysUk[dayIdx] : now.format("dddd");
   const monthFolder = locale === "uk" ? monthsUk[monthIdx] : `${monthNum} - ${now.format("MMMM")}`;
   const rootFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
-  const dreamsSubfolder = getDreamsSubfolder(settings);
+  const dreamsSubfolder = getDreamsSubfolder(app, settings);
   const yearFolder = `${dreamsSubfolder}/${year}`;
   const folderPath = `${yearFolder}/${monthFolder}`;
   await ensureFolder(app, rootFolder);
@@ -808,7 +816,7 @@ async function createTodayDreamNote(app, settings) {
 }
 async function exportTemplaterTemplate(app, settings) {
   const templatePath = (settings.templateFilePath || "Templates/Dream Template.md").trim();
-  const dreamsSubfolder = getDreamsSubfolder(settings);
+  const dreamsSubfolder = getDreamsSubfolder(app, settings);
   const dirIndex = templatePath.lastIndexOf("/");
   if (dirIndex > 0) {
     const dirPath = templatePath.substring(0, dirIndex);
@@ -898,7 +906,7 @@ keywords: []
   new import_obsidian4.Notice(t("templateExportSuccess", { path: templatePath }));
 }
 async function ensureEntityIndexes(app, settings) {
-  const entitiesFolder = getEntitiesSubfolder(settings);
+  const entitiesFolder = getEntitiesSubfolder(app, settings);
   const locale = getLocale();
   const indexFolderName = locale === "uk" ? "! \u0406\u043D\u0434\u0435\u043A\u0441" : "! Indexes";
   const indexesFolderPath = `${entitiesFolder}/${indexFolderName}`;
@@ -941,8 +949,8 @@ SORT dream_count DESC
 }
 async function ensureDreamDashboard(app, settings) {
   const rootFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
-  const dreamsSubfolder = getDreamsSubfolder(settings);
-  const entitiesFolder = getEntitiesSubfolder(settings);
+  const dreamsSubfolder = getDreamsSubfolder(app, settings);
+  const entitiesFolder = getEntitiesSubfolder(app, settings);
   const locale = getLocale();
   await ensureFolder(app, rootFolder);
   await ensureFolder(app, dreamsSubfolder);
@@ -1575,7 +1583,7 @@ async function createOrUpdateEntities(app, result, dreamFile, settings) {
   const createdDate = (0, import_obsidian8.moment)().format("YYYY-MM-DD");
   const cache = app.metadataCache.getFileCache(dreamFile);
   const dreamDate = cache && cache.frontmatter && cache.frontmatter.date ? String(cache.frontmatter.date) : createdDate;
-  const baseFolder = getEntitiesSubfolder(settings);
+  const baseFolder = getEntitiesSubfolder(app, settings);
   await ensureFolder2(app, baseFolder);
   const modifiedPaths = [];
   for (const type of ENTITY_TYPES) {
@@ -1618,6 +1626,7 @@ async function createOrUpdateEntities(app, result, dreamFile, settings) {
         modifiedPaths.push(path);
       } else {
         const bodyContent = makeEntityBodyContent(
+          app,
           safeName,
           item,
           dreamName,
@@ -1650,9 +1659,9 @@ async function ensureFolder2(app, path) {
     await app.vault.createFolder(normalizedPath);
   }
 }
-function makeEntityBodyContent(name, item, dreamName, settings) {
-  const dreamsFolder = getDreamsSubfolder(settings);
-  const entitiesFolder = getEntitiesSubfolder(settings);
+function makeEntityBodyContent(app, name, item, dreamName, settings) {
+  const dreamsFolder = getDreamsSubfolder(app, settings);
+  const entitiesFolder = getEntitiesSubfolder(app, settings);
   return `# ${name}
 
 ## \u041E\u043F\u0438\u0441

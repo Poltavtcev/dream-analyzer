@@ -240,7 +240,7 @@ export async function ensureEntityIndexes(app: App, settings: DreamAnalyzerSetti
 	const entitiesFolder = (settings.entitiesFolder || "Entities").trim().replace(/\/$/, "");
 	const locale = getLocale();
 
-	const indexFolderName = locale === "uk" ? "Індекс" : "Indexes";
+	const indexFolderName = locale === "uk" ? "! Індекс" : "! Indexes";
 	const indexesFolderPath = `${entitiesFolder}/${indexFolderName}`;
 	await ensureFolder(app, indexesFolderPath);
 
@@ -291,7 +291,6 @@ export async function ensureDreamDashboard(app: App, settings: DreamAnalyzerSett
 	const dreamsFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
 	const entitiesFolder = (settings.entitiesFolder || "Entities").trim().replace(/\/$/, "");
 	const locale = getLocale();
-	const indexFolder = locale === "uk" ? "Індекс" : "Indexes";
 
 	await ensureFolder(app, dreamsFolder);
 	await ensureEntityIndexes(app, settings);

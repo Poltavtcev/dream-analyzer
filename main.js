@@ -893,7 +893,7 @@ keywords: []
 async function ensureEntityIndexes(app, settings) {
   const entitiesFolder = (settings.entitiesFolder || "Entities").trim().replace(/\/$/, "");
   const locale = getLocale();
-  const indexFolderName = locale === "uk" ? "\u0406\u043D\u0434\u0435\u043A\u0441" : "Indexes";
+  const indexFolderName = locale === "uk" ? "! \u0406\u043D\u0434\u0435\u043A\u0441" : "! Indexes";
   const indexesFolderPath = `${entitiesFolder}/${indexFolderName}`;
   await ensureFolder(app, indexesFolderPath);
   for (const type of ENTITY_TYPES) {
@@ -936,7 +936,6 @@ async function ensureDreamDashboard(app, settings) {
   const dreamsFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
   const entitiesFolder = (settings.entitiesFolder || "Entities").trim().replace(/\/$/, "");
   const locale = getLocale();
-  const indexFolder = locale === "uk" ? "\u0406\u043D\u0434\u0435\u043A\u0441" : "Indexes";
   await ensureFolder(app, dreamsFolder);
   await ensureEntityIndexes(app, settings);
   const fileName = t("dashboardFileName");

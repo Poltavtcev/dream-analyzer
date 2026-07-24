@@ -1,6 +1,6 @@
 import { App, TFile, Notice, Modal, Setting } from "obsidian";
 import { DreamAnalyzerSettings } from "./types";
-import { saveEmbeddingsDatabase, saveDreamEmbeddingsDatabase } from "./embeddings";
+import { saveEmbeddingsDatabase, saveDreamEmbeddingsDatabase, getDreamsSubfolder, getEntitiesSubfolder } from "./embeddings";
 import { t } from "./i18n";
 
 export class ConfirmResetModal extends Modal {
@@ -41,8 +41,8 @@ export async function resetAllDreamData(
 	app: App,
 	settings: DreamAnalyzerSettings
 ): Promise<{ dreamsReset: number; entitiesDeleted: number }> {
-	const dreamsFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
-	const entitiesFolder = (settings.entitiesFolder || "Entities").trim().replace(/\/$/, "");
+	const dreamsFolder = getDreamsSubfolder(settings);
+	const entitiesFolder = getEntitiesSubfolder(settings);
 
 	let entitiesDeleted = 0;
 	let dreamsReset = 0;

@@ -7,6 +7,7 @@ import {
 	DreamConnectionResult
 } from "./types";
 import { getEmbedding, getBatchEmbeddings } from "./api";
+import { getLocale } from "./i18n";
 
 let cachedEntityDb: { dbPath: string; data: VectorDatabaseItem[] } | null = null;
 let cachedDreamDb: { dbPath: string; data: DreamVectorDatabaseItem[] } | null = null;
@@ -16,13 +17,27 @@ export function clearMemoryCache(): void {
 	cachedDreamDb = null;
 }
 
+export function getDreamsSubfolder(settings: DreamAnalyzerSettings): string {
+	const root = (settings?.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
+	const locale = getLocale();
+	const sub = locale === "uk" ? "Сни" : "Dreams";
+	return `${root}/${sub}`;
+}
+
+export function getEntitiesSubfolder(settings: DreamAnalyzerSettings): string {
+	const root = (settings?.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
+	const locale = getLocale();
+	const sub = locale === "uk" ? "Сутності" : "Entities";
+	return `${root}/${sub}`;
+}
+
 export function getEntityEmbeddingsDbPath(settings: DreamAnalyzerSettings): string {
-	const folder = (settings?.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
+	const folder = getDreamsSubfolder(settings);
 	return `${folder}/embeddings.json`;
 }
 
 export function getDreamEmbeddingsDbPath(settings: DreamAnalyzerSettings): string {
-	const folder = (settings?.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
+	const folder = getDreamsSubfolder(settings);
 	return `${folder}/dream_embeddings.json`;
 }
 
@@ -163,8 +178,8 @@ export async function handleFileRename(
 ): Promise<void> {
 	if (!(file instanceof TFile) || file.extension !== "md") return;
 
-	const entitiesFolder = (settings.entitiesFolder || "Entities").trim().replace(/\/$/, "");
-	const dreamsFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
+	const entitiesFolder = getEntitiesSubfolder(settings);
+	const dreamsFolder = getDreamsSubfolder(settings);
 
 	let updated = false;
 
@@ -365,7 +380,7 @@ export async function updateEntityEmbeddings(
 	forceRebuild: boolean = false,
 	specificPaths?: string[]
 ): Promise<number> {
-	const entitiesFolder = settings.entitiesFolder;
+	const entitiesFolder = getEntitiesSubfolder(settings);
 	const allFiles = app.vault.getMarkdownFiles().filter(f => f.path.startsWith(entitiesFolder));
 	let database = await loadEmbeddingsDatabase(app, settings, forceRebuild);
 

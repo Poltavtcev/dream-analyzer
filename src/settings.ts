@@ -53,9 +53,9 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		containerEl.createEl("h3", { text: "Папки снів та сутностей / Folders" });
+		containerEl.createEl("h3", { text: "Структура щоденника / Journal Folder" });
 
-		// Dreams folder
+		// Dreams folder (Main Root Folder)
 		new Setting(containerEl)
 			.setName(t("dreamsFolderName"))
 			.setDesc(t("dreamsFolderDesc"))
@@ -69,24 +69,6 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.dreamsFolder)
 					.onChange(async (value) => {
 						this.plugin.settings.dreamsFolder = value.trim().replace(/\/$/, "");
-						await this.plugin.saveSettings();
-					});
-			});
-
-		// Entities folder
-		new Setting(containerEl)
-			.setName(t("entitiesFolderName"))
-			.setDesc(t("entitiesFolderDesc"))
-			.addText(text => {
-				new FolderSuggest(this.app, text, async (val) => {
-					this.plugin.settings.entitiesFolder = val.trim().replace(/\/$/, "");
-					await this.plugin.saveSettings();
-				});
-				text
-					.setPlaceholder("Entities")
-					.setValue(this.plugin.settings.entitiesFolder)
-					.onChange(async (value) => {
-						this.plugin.settings.entitiesFolder = value.trim().replace(/\/$/, "");
 						await this.plugin.saveSettings();
 					});
 			});
@@ -184,7 +166,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					try {
 						const apiKey = await getOpenAiApiKey(this.app, this.plugin.settings);
 						const notice = new Notice(t("rebuildStart"), 0);
-						const count = await updateEntityEmbeddings(this.app, apiKey, this.plugin.settings, false);
+						const count = await updateEntityEmbeddings(this.app, apiKey, this.plugin.settings, true);
 						notice.hide();
 						new Notice(t("rebuildSuccess", { count }));
 					} catch (e: any) {

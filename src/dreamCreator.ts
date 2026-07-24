@@ -1,6 +1,7 @@
 import { App, TFile, Notice, Modal, Setting, moment } from "obsidian";
 import { DreamAnalyzerSettings, ENTITY_TYPES } from "./types";
 import { t, getLocale } from "./i18n";
+import { getDreamsSubfolder, getEntitiesSubfolder } from "./embeddings";
 
 async function ensureFolder(app: App, path: string): Promise<void> {
 	const normalizedPath = path.trim().replace(/\/$/, "");
@@ -77,11 +78,14 @@ export async function createDreamNoteForDate(
 	const dayName = locale === "uk" ? daysUk[dayIdx] : now.format("dddd");
 	const monthFolder = locale === "uk" ? monthsUk[monthIdx] : `${monthNum} - ${now.format("MMMM")}`;
 
-	const baseFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
-	const yearFolder = `${baseFolder}/${year}`;
+	const rootFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
+	const dreamsSubfolder = getDreamsSubfolder(settings);
+
+	const yearFolder = `${dreamsSubfolder}/${year}`;
 	const folderPath = `${yearFolder}/${monthFolder}`;
 
-	await ensureFolder(app, baseFolder);
+	await ensureFolder(app, rootFolder);
+	await ensureFolder(app, dreamsSubfolder);
 	await ensureFolder(app, yearFolder);
 	await ensureFolder(app, folderPath);
 
@@ -142,7 +146,7 @@ export async function createTodayDreamNote(app: App, settings: DreamAnalyzerSett
 
 export async function exportTemplaterTemplate(app: App, settings: DreamAnalyzerSettings): Promise<void> {
 	const templatePath = (settings.templateFilePath || "Templates/Dream Template.md").trim();
-	const baseFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
+	const dreamsSubfolder = getDreamsSubfolder(settings);
 
 	const dirIndex = templatePath.lastIndexOf("/");
 	if (dirIndex > 0) {
@@ -181,7 +185,7 @@ const monthIdx = parseInt(dateObj.format("M"), 10) - 1;
 const dayName = daysUk[dayIdx];
 const monthFolder = monthsUk[monthIdx];
 
-const baseFolder = "${baseFolder}";
+const baseFolder = "${dreamsSubfolder}";
 const yearFolder = \`\${baseFolder}/\${year}\`;
 const folder = \`\${yearFolder}/\${monthFolder}\`;
 
@@ -237,7 +241,7 @@ keywords: []
 }
 
 export async function ensureEntityIndexes(app: App, settings: DreamAnalyzerSettings): Promise<void> {
-	const entitiesFolder = (settings.entitiesFolder || "Entities").trim().replace(/\/$/, "");
+	const entitiesFolder = getEntitiesSubfolder(settings);
 	const locale = getLocale();
 
 	const indexFolderName = locale === "uk" ? "! Індекс" : "! Indexes";
@@ -288,20 +292,24 @@ SORT dream_count DESC
 }
 
 export async function ensureDreamDashboard(app: App, settings: DreamAnalyzerSettings): Promise<void> {
-	const dreamsFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
-	const entitiesFolder = (settings.entitiesFolder || "Entities").trim().replace(/\/$/, "");
+	const rootFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
+	const dreamsSubfolder = getDreamsSubfolder(settings);
+	const entitiesFolder = getEntitiesSubfolder(settings);
 	const locale = getLocale();
 
-	await ensureFolder(app, dreamsFolder);
+	await ensureFolder(app, rootFolder);
+	await ensureFolder(app, dreamsSubfolder);
+	await ensureFolder(app, entitiesFolder);
+
 	await ensureEntityIndexes(app, settings);
 
 	const fileName = t("dashboardFileName");
-	const dashboardPath = `${dreamsFolder}/${fileName}`;
+	const dashboardPath = `${rootFolder}/${fileName}`;
 
 	const indexLinks = ENTITY_TYPES.map(tObj => {
 		const idxName = locale === "uk" ? `Індекс - ${tObj.folder}` : `Index - ${tObj.folder}`;
-		return `[[${idxName}]]`;
-	}).join(" | ");
+		return `- ${tObj.icon} [[${idxName}]]`;
+	}).join("\n");
 
 	const content = `${t("dashboardTitle")}
 
@@ -321,7 +329,7 @@ TABLE WITHOUT ID
   length(rows) AS "Всього снів",
   length(filter(rows, (r) => r.lucid = true)) AS "Усвідомлених (ОС)",
   round((length(filter(rows, (r) => r.lucid = true)) / length(rows)) * 100, 1) + "%" AS "% Усвідомленості"
-FROM "${dreamsFolder}"
+FROM "${dreamsSubfolder}"
 WHERE file.name != "${fileName.replace(/\.md$/, "")}" AND file.name != "Дашборд снів" AND file.name != "Dream Dashboard"
 GROUP BY true
 \`\`\`
@@ -382,7 +390,7 @@ TABLE WITHOUT ID
   file.link AS "Назва сну",
   date AS "Дата",
   length(characters) + length(places) + length(objects) AS "Сутностей у сні"
-FROM "${dreamsFolder}"
+FROM "${dreamsSubfolder}"
 WHERE lucid = true
 SORT date DESC
 LIMIT 20
@@ -398,7 +406,7 @@ TABLE WITHOUT ID
   date AS "Дата",
   choice(lucid, "✨ Усвідомлений (ОС)", "🌙 Звичайний") AS "Тип сну",
   length(keywords) AS "Ключових слів"
-FROM "${dreamsFolder}"
+FROM "${dreamsSubfolder}"
 WHERE file.name != "${fileName.replace(/\.md$/, "")}" AND file.name != "Дашборд снів" AND file.name != "Dream Dashboard"
 SORT file.name DESC
 LIMIT 15

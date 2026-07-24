@@ -3,7 +3,6 @@ export interface DreamAnalyzerSettings {
 	openaiModel: string;
 	embeddingModel: string;
 	dreamsFolder: string;
-	entitiesFolder: string;
 	templateFilePath: string;
 	similarityThreshold: number;
 	similarityLimit: number;
@@ -15,7 +14,6 @@ export const DEFAULT_SETTINGS: DreamAnalyzerSettings = {
 	openaiModel: "gpt-5-mini",
 	embeddingModel: "text-embedding-3-small",
 	dreamsFolder: "Dreams",
-	entitiesFolder: "Entities",
 	templateFilePath: "Templates/Dream Template.md",
 	similarityThreshold: 0.35,
 	similarityLimit: 40,
@@ -80,13 +78,14 @@ export interface EntityTypeConfig {
 	field: keyof Omit<DreamAnalysisResult, "summary" | "keywords">;
 	folder: string;
 	entity_type: string;
+	icon: string;
 }
 
 export const ENTITY_TYPES: EntityTypeConfig[] = [
-	{ field: "characters", folder: "Персонажі", entity_type: "character" },
-	{ field: "places", folder: "Місця", entity_type: "place" },
-	{ field: "objects", folder: "Предмети", entity_type: "object" },
-	{ field: "symbols", folder: "Символи", entity_type: "symbol" },
-	{ field: "emotions", folder: "Емоції", entity_type: "emotion" },
-	{ field: "concepts", folder: "Концепти", entity_type: "concept" }
+	{ field: "characters", folder: "Персонажі", entity_type: "character", icon: "👤" },
+	{ field: "places", folder: "Місця", entity_type: "place", icon: "📍" },
+	{ field: "objects", folder: "Предмети", entity_type: "object", icon: "📦" },
+	{ field: "symbols", folder: "Символи", entity_type: "symbol", icon: "✨" },
+	{ field: "emotions", folder: "Емоції", entity_type: "emotion", icon: "🧘" },
+	{ field: "concepts", folder: "Концепти", entity_type: "concept", icon: "💡" }
 ];

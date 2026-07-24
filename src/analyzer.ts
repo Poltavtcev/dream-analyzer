@@ -12,7 +12,9 @@ import {
 	loadDreamEmbeddingsDatabase,
 	saveDreamEmbeddingsDatabase,
 	analyzeDreamConnections,
-	formatDreamConnectionsMarkdown
+	formatDreamConnectionsMarkdown,
+	getDreamsSubfolder,
+	getEntitiesSubfolder
 } from "./embeddings";
 
 class ProgressNotice {
@@ -91,7 +93,7 @@ export async function analyzeDream(app: App, file: TFile, settings: DreamAnalyze
 
 ${entityContext}
 
-Використовуй їх, якщо вони підходят.
+Використовуй їх, якщо вони підходять.
 Не створюй нову сутність, якщо вже існує така сама або дуже близька.
 
 Поверни тільки JSON.
@@ -320,7 +322,7 @@ async function createOrUpdateEntities(
 		? String(cache.frontmatter.date)
 		: createdDate;
 
-	const baseFolder = settings.entitiesFolder;
+	const baseFolder = getEntitiesSubfolder(settings);
 	await ensureFolder(app, baseFolder);
 
 	const modifiedPaths: string[] = [];
@@ -419,8 +421,8 @@ function makeEntityBodyContent(
 	dreamName: string,
 	settings: DreamAnalyzerSettings
 ): string {
-	const dreamsFolder = settings?.dreamsFolder || "Dreams";
-	const entitiesFolder = settings?.entitiesFolder || "Entities";
+	const dreamsFolder = getDreamsSubfolder(settings);
+	const entitiesFolder = getEntitiesSubfolder(settings);
 
 	return `# ${name}
 

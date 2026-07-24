@@ -242,16 +242,16 @@ export async function ensureDreamDashboard(app: App, settings: DreamAnalyzerSett
 
 	await ensureFolder(app, dreamsFolder);
 
-	const dashboardPath = `${dreamsFolder}/Дашборд снів.md`;
+	const fileName = t("dashboardFileName");
+	const dashboardPath = `${dreamsFolder}/${fileName}`;
 
-	const content = `# 🌙 Дашборд сновидінь та аналітики
+	const content = `${t("dashboardTitle")}
 
-> [!INFO] Аналітика та статистика
-> Цей дашборд автоматично створено плагіном **Dream Analyzer**. Він містить ключові Dataview-запити для відстеження статистики снів, маркерів усвідомленості (Dream Signs), емоційного фону та ідей для творчості.
+${t("dashboardCallout")}
 
 ---
 
-## 📊 Статистика щоденника та усвідомленості (ОС)
+${t("dashboardSectionStats")}
 
 \`\`\`dataview
 TABLE WITHOUT ID
@@ -259,14 +259,13 @@ TABLE WITHOUT ID
   length(filter(rows, (r) => r.lucid = true)) AS "Усвідомлених (ОС)",
   round((length(filter(rows, (r) => r.lucid = true)) / length(rows)) * 100, 1) + "%" AS "% Усвідомленості"
 FROM "${dreamsFolder}"
-WHERE file.name != "Дашборд снів"
+WHERE file.name != "${fileName.replace(/\.md$/, "")}" AND file.name != "Дашборд снів" AND file.name != "Dream Dashboard"
 GROUP BY true
 \`\`\`
 
 ---
 
-## ✨ Маркери снів для усвідомлення (Dream Signs)
-*Найчастіші символи, персонажі та місця — ваші тригери для перевірки реальності у сні.*
+${t("dashboardSectionSigns")}
 
 \`\`\`dataview
 TABLE WITHOUT ID
@@ -282,8 +281,7 @@ LIMIT 15
 
 ---
 
-## 🧘 Емоційний фон та психологічні стани
-*Емоції та внутрішні стани, які найчастіше виникають у сновидіннях.*
+${t("dashboardSectionEmotions")}
 
 \`\`\`dataview
 TABLE WITHOUT ID
@@ -298,8 +296,7 @@ LIMIT 10
 
 ---
 
-## 📚 Світ снів: Концепти & Ідеї для творчості та книг
-*Абстрактні ідеї, унікальні локації та яскраві персонажі з описом.*
+${t("dashboardSectionCreative")}
 
 \`\`\`dataview
 TABLE WITHOUT ID
@@ -315,8 +312,7 @@ LIMIT 15
 
 ---
 
-## 🌟 Усвідомлені сновидіння (ОС)
-*Журнал ваших успішних усвідомлених снів.*
+${t("dashboardSectionLucid")}
 
 \`\`\`dataview
 TABLE WITHOUT ID
@@ -331,7 +327,7 @@ LIMIT 20
 
 ---
 
-## 📜 Останні записи щоденника
+${t("dashboardSectionRecent")}
 
 \`\`\`dataview
 TABLE WITHOUT ID
@@ -340,7 +336,7 @@ TABLE WITHOUT ID
   choice(lucid, "✨ Усвідомлений (ОС)", "🌙 Звичайний") AS "Тип сну",
   length(keywords) AS "Ключових слів"
 FROM "${dreamsFolder}"
-WHERE file.name != "Дашборд снів"
+WHERE file.name != "${fileName.replace(/\.md$/, "")}" AND file.name != "Дашборд снів" AND file.name != "Dream Dashboard"
 SORT file.name DESC
 LIMIT 15
 \`\`\`

@@ -260,7 +260,7 @@ export async function ensureEntityIndexes(app: App, settings: DreamAnalyzerSetti
 			? `Каталог усіх збережених сутностей категорії **${type.folder}** з їхніми описами та частотою появ у снах.`
 			: `Catalog of all saved **${type.folder}** entities with descriptions and dream frequency.`;
 
-		const content = `# 📋 ${title}
+		const content = `# ${title}
 
 > [!INFO] ${title}
 > ${desc}
@@ -308,7 +308,7 @@ export async function ensureDreamDashboard(app: App, settings: DreamAnalyzerSett
 
 	const indexLinks = ENTITY_TYPES.map(tObj => {
 		const idxName = locale === "uk" ? `Індекс - ${tObj.folder}` : `Index - ${tObj.folder}`;
-		return `- ${tObj.icon} [[${idxName}]]`;
+		return `- [[${idxName}]]`;
 	}).join("\n");
 
 	const content = `${t("dashboardTitle")}
@@ -317,7 +317,7 @@ ${t("dashboardCallout")}
 
 ---
 
-## 📋 ${locale === "uk" ? "Індекси сутностей" : "Entity Category Indexes"}
+## ${locale === "uk" ? "Індекси сутностей" : "Entity Category Indexes"}
 ${indexLinks}
 
 ---
@@ -404,7 +404,7 @@ ${t("dashboardSectionRecent")}
 TABLE WITHOUT ID
   file.link AS "Запис сну",
   date AS "Дата",
-  choice(lucid, "✨ Усвідомлений (ОС)", "🌙 Звичайний") AS "Тип сну",
+  choice(lucid, "Усвідомлений (ОС)", "Ззвичайний") AS "Тип сну",
   length(keywords) AS "Ключових слів"
 FROM "${dreamsSubfolder}"
 WHERE file.name != "${fileName.replace(/\.md$/, "")}" AND file.name != "Дашборд снів" AND file.name != "Dream Dashboard"

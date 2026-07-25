@@ -48,7 +48,7 @@ class ProgressNotice {
 
 	private updateText() {
 		const elapsedSec = Math.floor((Date.now() - this.startTime) / 1000);
-		this.notice.setMessage(`⏳ [${this.step}/${this.totalSteps}] ${this.currentMessage} (${elapsedSec}s)`);
+		this.notice.setMessage(`[${this.step}/${this.totalSteps}] ${this.currentMessage} (${elapsedSec}s)`);
 	}
 
 	close() {
@@ -265,10 +265,10 @@ ${connectionsMarkdown}
 
 		const totalSec = progress.getElapsedSeconds();
 		progress.close();
-		new Notice(`✨ Сон успішно проаналізовано за ${totalSec}с!`);
+		new Notice(`Сон успішно проаналізовано за ${totalSec}с!`);
 	} catch (error: any) {
 		progress.close();
-		new Notice("❌ Помилка аналізу сну: " + (error.message || error));
+		new Notice("Помилка аналізу сну: " + (error.message || error));
 		console.error("Dream analysis failed:", error);
 	}
 }

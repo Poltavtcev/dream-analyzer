@@ -41,12 +41,12 @@ var DEFAULT_SETTINGS = {
   autoUpdateEmbeddings: true
 };
 var ENTITY_TYPES = [
-  { field: "characters", folder: "\u041F\u0435\u0440\u0441\u043E\u043D\u0430\u0436\u0456", entity_type: "character", icon: "\u{1F464}" },
-  { field: "places", folder: "\u041C\u0456\u0441\u0446\u044F", entity_type: "place", icon: "\u{1F4CD}" },
-  { field: "objects", folder: "\u041F\u0440\u0435\u0434\u043C\u0435\u0442\u0438", entity_type: "object", icon: "\u{1F4E6}" },
-  { field: "symbols", folder: "\u0421\u0438\u043C\u0432\u043E\u043B\u0438", entity_type: "symbol", icon: "\u2728" },
-  { field: "emotions", folder: "\u0415\u043C\u043E\u0446\u0456\u0457", entity_type: "emotion", icon: "\u{1F9D8}" },
-  { field: "concepts", folder: "\u041A\u043E\u043D\u0446\u0435\u043F\u0442\u0438", entity_type: "concept", icon: "\u{1F4A1}" }
+  { field: "characters", folder: "\u041F\u0435\u0440\u0441\u043E\u043D\u0430\u0436\u0456", entity_type: "character" },
+  { field: "places", folder: "\u041C\u0456\u0441\u0446\u044F", entity_type: "place" },
+  { field: "objects", folder: "\u041F\u0440\u0435\u0434\u043C\u0435\u0442\u0438", entity_type: "object" },
+  { field: "symbols", folder: "\u0421\u0438\u043C\u0432\u043E\u043B\u0438", entity_type: "symbol" },
+  { field: "emotions", folder: "\u0415\u043C\u043E\u0446\u0456\u0457", entity_type: "emotion" },
+  { field: "concepts", folder: "\u041A\u043E\u043D\u0446\u0435\u043F\u0442\u0438", entity_type: "concept" }
 ];
 
 // src/settings.ts
@@ -171,43 +171,43 @@ var strings = {
   uk: {
     // Dashboard
     dashboardFileName: "\u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0441\u043D\u0456\u0432.md",
-    dashboardTitle: "# \u{1F319} \u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0441\u043D\u043E\u0432\u0438\u0434\u0456\u043D\u044C \u0442\u0430 \u0430\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0438",
+    dashboardTitle: "# \u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0441\u043D\u043E\u0432\u0438\u0434\u0456\u043D\u044C \u0442\u0430 \u0430\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0438",
     dashboardCallout: "> [!INFO] \u0410\u043D\u0430\u043B\u0456\u0442\u0438\u043A\u0430 \u0442\u0430 \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430\n> \u0426\u0435\u0439 \u0434\u0430\u0448\u0431\u043E\u0440\u0434 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E \u043F\u043B\u0430\u0433\u0456\u043D\u043E\u043C **Dream Analyzer**. \u0412\u0456\u043D \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u043A\u043B\u044E\u0447\u043E\u0432\u0456 Dataview-\u0437\u0430\u043F\u0438\u0442\u0438 \u0434\u043B\u044F \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0435\u043D\u043D\u044F \u0441\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0438 \u0441\u043D\u0456\u0432, \u043C\u0430\u0440\u043A\u0435\u0440\u0456\u0432 \u0443\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043E\u0441\u0442\u0456 (Dream Signs), \u0435\u043C\u043E\u0446\u0456\u0439\u043D\u043E\u0433\u043E \u0444\u043E\u043D\u0443 \u0442\u0430 \u0456\u0434\u0435\u0439 \u0434\u043B\u044F \u0442\u0432\u043E\u0440\u0447\u043E\u0441\u0442\u0456.",
-    dashboardSectionStats: "## \u{1F4CA} \u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u0430 \u0442\u0430 \u0443\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043E\u0441\u0442\u0456 (\u041E\u0421)",
-    dashboardSectionSigns: "## \u2728 \u041C\u0430\u0440\u043A\u0435\u0440\u0438 \u0441\u043D\u0456\u0432 \u0434\u043B\u044F \u0443\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F (Dream Signs)\n*\u041D\u0430\u0439\u0447\u0430\u0441\u0442\u0456\u0448\u0456 \u0441\u0438\u043C\u0432\u043E\u043B\u0438, \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u0436\u0456 \u0442\u0430 \u043C\u0456\u0441\u0446\u044F \u2014 \u0432\u0430\u0448\u0456 \u0442\u0440\u0438\u0433\u0435\u0440\u0438 \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u043E\u0441\u0442\u0456 \u0443 \u0441\u043D\u0456.*",
-    dashboardSectionEmotions: "## \u{1F9D8} \u0415\u043C\u043E\u0446\u0456\u0439\u043D\u0438\u0439 \u0444\u043E\u043D \u0442\u0430 \u043F\u0441\u0438\u0445\u043E\u043B\u043E\u0433\u0456\u0447\u043D\u0456 \u0441\u0442\u0430\u043D\u0438\n*\u0415\u043C\u043E\u0446\u0456\u0457 \u0442\u0430 \u0432\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u0441\u0442\u0430\u043D\u0438, \u044F\u043A\u0456 \u043D\u0430\u0439\u0447\u0430\u0441\u0442\u0456\u0448\u0435 \u0432\u0438\u043D\u0438\u043A\u0430\u044E\u0442\u044C \u0443 \u0441\u043D\u043E\u0432\u0438\u0434\u0456\u043D\u043D\u044F\u0445.*",
-    dashboardSectionCreative: "## \u{1F4DA} \u0421\u0432\u0456\u0442 \u0441\u043D\u0456\u0432: \u041A\u043E\u043D\u0446\u0435\u043F\u0442\u0438 & \u0406\u0434\u0435\u0457 \u0434\u043B\u044F \u0442\u0432\u043E\u0440\u0447\u043E\u0441\u0442\u0456 \u0442\u0430 \u043A\u043D\u0438\u0433\n*\u0410\u0431\u0441\u0442\u0440\u0430\u043A\u0442\u043D\u0456 \u0456\u0434\u0435\u0457, \u0443\u043D\u0456\u043A\u0430\u043B\u044C\u043D\u0456 \u043B\u043E\u043A\u0430\u0446\u0456\u0457 \u0442\u0430 \u044F\u0441\u043A\u0440\u0430\u0432\u0456 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u0436\u0456 \u0437 \u043E\u043F\u0438\u0441\u043E\u043C.*",
-    dashboardSectionLucid: "## \u{1F31F} \u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0456 \u0441\u043D\u043E\u0432\u0438\u0434\u0456\u043D\u043D\u044F (\u041E\u0421)\n*\u0416\u0443\u0440\u043D\u0430\u043B \u0432\u0430\u0448\u0438\u0445 \u0443\u0441\u043F\u0456\u0448\u043D\u0438\u0445 \u0443\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u0445 \u0441\u043D\u0456\u0432.*",
-    dashboardSectionRecent: "## \u{1F4DC} \u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0437\u0430\u043F\u0438\u0441\u0438 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u0430",
+    dashboardSectionStats: "## \u0421\u0442\u0430\u0442\u0438\u0441\u0442\u0438\u043A\u0430 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u0430 \u0442\u0430 \u0443\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043E\u0441\u0442\u0456 (\u041E\u0421)",
+    dashboardSectionSigns: "## \u041C\u0430\u0440\u043A\u0435\u0440\u0438 \u0441\u043D\u0456\u0432 \u0434\u043B\u044F \u0443\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F (Dream Signs)\n*\u041D\u0430\u0439\u0447\u0430\u0441\u0442\u0456\u0448\u0456 \u0441\u0438\u043C\u0432\u043E\u043B\u0438, \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u0436\u0456 \u0442\u0430 \u043C\u0456\u0441\u0446\u044F \u2014 \u0432\u0430\u0448\u0456 \u0442\u0440\u0438\u0433\u0435\u0440\u0438 \u0434\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438 \u0440\u0435\u0430\u043B\u044C\u043D\u043E\u0441\u0442\u0456 \u0443 \u0441\u043D\u0456.*",
+    dashboardSectionEmotions: "## \u0415\u043C\u043E\u0446\u0456\u0439\u043D\u0438\u0439 \u0444\u043E\u043D \u0442\u0430 \u043F\u0441\u0438\u0445\u043E\u043B\u043E\u0433\u0456\u0447\u043D\u0456 \u0441\u0442\u0430\u043D\u0438\n*\u0415\u043C\u043E\u0446\u0456\u0457 \u0442\u0430 \u0432\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u0441\u0442\u0430\u043D\u0438, \u044F\u043A\u0456 \u043D\u0430\u0439\u0447\u0430\u0441\u0442\u0456\u0448\u0435 \u0432\u0438\u043D\u0438\u043A\u0430\u044E\u0442\u044C \u0443 \u0441\u043D\u043E\u0432\u0438\u0434\u0456\u043D\u043D\u044F\u0445.*",
+    dashboardSectionCreative: "## \u0421\u0432\u0456\u0442 \u0441\u043D\u0456\u0432: \u041A\u043E\u043D\u0446\u0435\u043F\u0442\u0438 & \u0406\u0434\u0435\u0457 \u0434\u043B\u044F \u0442\u0432\u043E\u0440\u0447\u043E\u0441\u0442\u0456 \u0442\u0430 \u043A\u043D\u0438\u0433\n*\u0410\u0431\u0441\u0442\u0440\u0430\u043A\u0442\u043D\u0456 \u0456\u0434\u0435\u0457, \u0443\u043D\u0456\u043A\u0430\u043B\u044C\u043D\u0456 \u043B\u043E\u043A\u0430\u0446\u0456\u0457 \u0442\u0430 \u044F\u0441\u043A\u0440\u0430\u0432\u0456 \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u0436\u0456 \u0437 \u043E\u043F\u0438\u0441\u043E\u043C.*",
+    dashboardSectionLucid: "## \u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0456 \u0441\u043D\u043E\u0432\u0438\u0434\u0456\u043D\u043D\u044F (\u041E\u0421)\n*\u0416\u0443\u0440\u043D\u0430\u043B \u0432\u0430\u0448\u0438\u0445 \u0443\u0441\u043F\u0456\u0448\u043D\u0438\u0445 \u0443\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u0445 \u0441\u043D\u0456\u0432.*",
+    dashboardSectionRecent: "## \u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u0437\u0430\u043F\u0438\u0441\u0438 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u0430",
     // Ribbon & Commands
-    ribbonAnalyze: "\u{1F9E0} \u0410\u043D\u0430\u043B\u0456\u0437\u0443\u0432\u0430\u0442\u0438 \u0441\u043E\u043D (Dream Analyzer)",
-    ribbonCreateDream: "\u{1F319} \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0441\u043E\u043D \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456",
-    cmdAnalyze: "\u{1F9E0} \u0410\u043D\u0430\u043B\u0456\u0437\u0443\u0432\u0430\u0442\u0438 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0441\u043E\u043D",
-    cmdCreateDream: "\u{1F319} \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0441\u043E\u043D \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456",
-    cmdCreateCustomDateDream: "\u{1F4C5} \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0441\u043E\u043D \u0437\u0430 \u043E\u0431\u0440\u0430\u043D\u0443 \u0434\u0430\u0442\u0443...",
-    cmdRebuildEmbeddings: "\u26A1 \u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0435\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0438 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439",
-    cmdResetAllData: "\u{1F9F9} \u0421\u043A\u0438\u043D\u0443\u0442\u0438 \u0432\u0441\u0456 \u043F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u043E\u0432\u0430\u043D\u0456 \u0434\u0430\u043D\u0456 \u0442\u0430 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456...",
-    contextMenuAnalyze: "\u{1F9E0} \u0410\u043D\u0430\u043B\u0456\u0437\u0443\u0432\u0430\u0442\u0438 \u0441\u043E\u043D",
+    ribbonAnalyze: "\u0410\u043D\u0430\u043B\u0456\u0437\u0443\u0432\u0430\u0442\u0438 \u0441\u043E\u043D (Dream Analyzer)",
+    ribbonCreateDream: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0441\u043E\u043D \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456",
+    cmdAnalyze: "\u0410\u043D\u0430\u043B\u0456\u0437\u0443\u0432\u0430\u0442\u0438 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0439 \u0441\u043E\u043D",
+    cmdCreateDream: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0441\u043E\u043D \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456",
+    cmdCreateCustomDateDream: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0441\u043E\u043D \u0437\u0430 \u043E\u0431\u0440\u0430\u043D\u0443 \u0434\u0430\u0442\u0443...",
+    cmdRebuildEmbeddings: "\u041E\u043D\u043E\u0432\u0438\u0442\u0438 \u0435\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0438 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439",
+    cmdResetAllData: "\u0421\u043A\u0438\u043D\u0443\u0442\u0438 \u0432\u0441\u0456 \u043F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u043E\u0432\u0430\u043D\u0456 \u0434\u0430\u043D\u0456 \u0442\u0430 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456...",
+    contextMenuAnalyze: "\u0410\u043D\u0430\u043B\u0456\u0437\u0443\u0432\u0430\u0442\u0438 \u0441\u043E\u043D",
     // Date Modal
     dateModalTitle: "\u041E\u0431\u0435\u0440\u0456\u0442\u044C \u0434\u0430\u0442\u0443 \u0441\u043D\u0443",
     dateModalLabel: "\u0414\u0430\u0442\u0430 \u0441\u043D\u0443",
     dateModalButton: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 / \u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0441\u043E\u043D",
     // Reset Modal & Settings
-    resetModalTitle: "\u26A0\uFE0F \u041E\u0447\u0438\u0449\u0435\u043D\u043D\u044F \u0432\u0441\u0456\u0445 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0438\u0445 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439 \u0442\u0430 \u0432\u0435\u043A\u0442\u043E\u0440\u043D\u043E\u0457 \u0431\u0430\u0437\u0438",
+    resetModalTitle: "\u041E\u0447\u0438\u0449\u0435\u043D\u043D\u044F \u0432\u0441\u0456\u0445 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0438\u0445 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439 \u0442\u0430 \u0432\u0435\u043A\u0442\u043E\u0440\u043D\u043E\u0457 \u0431\u0430\u0437\u0438",
     resetModalDesc: "\u0426\u0435 \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u044C \u0443\u0441\u0456 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439, \u043E\u0431\u043D\u0443\u043B\u0438\u0442\u044C \u0432\u0435\u043A\u0442\u043E\u0440\u043D\u0456 \u0431\u0430\u0437\u0438 (embeddings.json) \u0442\u0430 \u0441\u043A\u0438\u043D\u0435 \u043F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u043E\u0432\u0430\u043D\u0438\u0439 AI-\u0432\u043C\u0456\u0441\u0442 \u0443\u0441\u0456\u0445 \u0441\u043D\u0456\u0432 \u0434\u043E \u043F\u043E\u0447\u0430\u0442\u043A\u043E\u0432\u043E\u0433\u043E \u0441\u0442\u0430\u043D\u0443. \u0422\u0435\u043A\u0441\u0442\u0438 \u0441\u0430\u043C\u0438\u0445 \u0441\u043D\u0456\u0432 \u0437\u0430\u043B\u0438\u0448\u0430\u0442\u044C\u0441\u044F \u043D\u0435\u0434\u043E\u0442\u043E\u0440\u043A\u0430\u043D\u0438\u043C\u0438.",
     resetModalConfirmButton: "\u0421\u043A\u0438\u043D\u0443\u0442\u0438 \u0432\u0441\u0435",
     resetModalCancelButton: "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438",
-    resetSuccess: "\u2728 \u0421\u043A\u0438\u043D\u0443\u0442\u043E \u0441\u043D\u0456\u0432: {dreams}, \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E \u0444\u0430\u0439\u043B\u0456\u0432 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439: {entities}.",
+    resetSuccess: "\u0421\u043A\u0438\u043D\u0443\u0442\u043E \u0441\u043D\u0456\u0432: {dreams}, \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E \u0444\u0430\u0439\u043B\u0456\u0432 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439: {entities}.",
     resetSectionTitle: "\u0421\u043A\u0438\u043D\u0443\u0442\u0438 \u0442\u0430 \u043E\u0447\u0438\u0441\u0442\u0438\u0442\u0438 \u0434\u0430\u043D\u0456",
     resetSectionDesc: "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0432\u0441\u0456 \u0437\u0433\u0435\u043D\u0435\u0440\u043E\u0432\u0430\u043D\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0442\u0430 \u0441\u043A\u0438\u043D\u0443\u0442\u0438 \u0441\u043D\u0438 \u0434\u043E \u043F\u043E\u0447\u0430\u0442\u043A\u043E\u0432\u043E\u0433\u043E \u0441\u0442\u0430\u043D\u0443 \u0434\u043B\u044F \u043F\u043E\u0432\u0442\u043E\u0440\u043D\u043E\u0433\u043E \u0430\u043D\u0430\u043B\u0456\u0437\u0443",
-    resetButtonText: "\u{1F9F9} \u041E\u0447\u0438\u0441\u0442\u0438\u0442\u0438 \u0432\u0441\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0442\u0430 \u0430\u043D\u0430\u043B\u0456\u0437",
+    resetButtonText: "\u041E\u0447\u0438\u0441\u0442\u0438\u0442\u0438 \u0432\u0441\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0442\u0430 \u0430\u043D\u0430\u043B\u0456\u0437",
     // Templater Exporter
     templateExportSuccess: "\u0428\u0430\u0431\u043B\u043E\u043D \u0434\u043B\u044F Templater / Calendar \u0443\u0441\u043F\u0456\u0448\u043D\u043E \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0443 {path}!",
     templateExportName: "\u0428\u0430\u0431\u043B\u043E\u043D \u0434\u043B\u044F Templater & Calendar",
     templateExportDesc: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0441\u0443\u043C\u0456\u0441\u043D\u0438\u0439 \u0448\u0430\u0431\u043B\u043E\u043D \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0441\u043D\u0443 \u0443 Vault \u0434\u043B\u044F \u043F\u043B\u0430\u0433\u0456\u043D\u0456\u0432 Templater \u0442\u0430 Calendar",
     templatePathName: "\u0428\u043B\u044F\u0445 \u0434\u043E \u0444\u0430\u0439\u043B\u0443 \u0448\u0430\u0431\u043B\u043E\u043D\u0443",
     templatePathDesc: "\u0424\u0430\u0439\u043B \u0443 \u0441\u0445\u043E\u0432\u0438\u0449\u0456, \u043A\u0443\u0434\u0438 \u0431\u0443\u0434\u0435 \u0437\u0430\u043F\u0438\u0441\u0430\u043D\u043E \u0448\u0430\u0431\u043B\u043E\u043D (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434, Templates/Dream Template.md)",
-    templateExportButtonText: "\u{1F4BE} \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 / \u043E\u043D\u043E\u0432\u0438\u0442\u0438 \u0444\u0430\u0439\u043B \u0448\u0430\u0431\u043B\u043E\u043D\u0443",
+    templateExportButtonText: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 / \u043E\u043D\u043E\u0432\u0438\u0442\u0438 \u0444\u0430\u0439\u043B \u0448\u0430\u0431\u043B\u043E\u043D\u0443",
     // Notices
     noActiveNote: "\u041D\u0435\u043C\u0430\u0454 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u043E\u0457 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0441\u043D\u0443",
     openDreamNoteFirst: "\u0411\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430, \u0432\u0456\u0434\u043A\u0440\u0438\u0439\u0442\u0435 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u0441\u043D\u0443 \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0456\u0437\u0443.",
@@ -217,8 +217,8 @@ var strings = {
     analyzingStep3: "\u0410\u043D\u0430\u043B\u0456\u0437\u0443\u044E \u0441\u043E\u043D: \u0437\u0430\u043F\u0438\u0442 \u0434\u043E OpenAI ({model})...",
     analyzingStep4: "\u0421\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439 \u0442\u0430 \u0440\u043E\u0437\u0440\u0430\u0445\u0443\u043D\u043E\u043A \u0437\u0432'\u044F\u0437\u043A\u0456\u0432...",
     analyzingStep5: "\u041F\u0430\u043A\u0435\u0442\u043D\u0435 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0432\u0435\u043A\u0442\u043E\u0440\u043D\u0438\u0445 \u0435\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0456\u0432...",
-    analysisSuccess: "\u2728 \u0421\u043E\u043D \u0443\u0441\u043F\u0456\u0448\u043D\u043E \u043F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u043E\u0432\u0430\u043D\u043E \u0437\u0430 {sec}\u0441!",
-    analysisError: "\u274C \u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0430\u043D\u0430\u043B\u0456\u0437\u0443 \u0441\u043D\u0443: ",
+    analysisSuccess: "\u0421\u043E\u043D \u0443\u0441\u043F\u0456\u0448\u043D\u043E \u043F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u043E\u0432\u0430\u043D\u043E \u0437\u0430 {sec}\u0441!",
+    analysisError: "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0430\u043D\u0430\u043B\u0456\u0437\u0443 \u0441\u043D\u0443: ",
     rebuildStart: "\u0413\u0435\u043D\u0435\u0440\u0430\u0446\u0456\u044F \u0432\u0435\u043A\u0442\u043E\u0440\u043D\u0438\u0445 \u0435\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0456\u0432...",
     rebuildSuccess: "\u0413\u043E\u0442\u043E\u0432\u043E! \u0417\u0433\u0435\u043D\u0435\u0440\u043E\u0432\u0430\u043D\u043E/\u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E \u0435\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0456\u0432: {count}",
     dreamAlreadyExists: "\u041D\u043E\u0442\u0430\u0442\u043A\u0430 \u0441\u043D\u0443 \u043D\u0430 \u0446\u044E \u0434\u0430\u0442\u0443 \u0432\u0436\u0435 \u0456\u0441\u043D\u0443\u0454!",
@@ -262,43 +262,43 @@ var strings = {
   en: {
     // Dashboard
     dashboardFileName: "Dream Dashboard.md",
-    dashboardTitle: "# \u{1F319} Dream Analytics Dashboard",
+    dashboardTitle: "# Dream Analytics Dashboard",
     dashboardCallout: "> [!INFO] Analytics & Statistics\n> This dashboard is automatically generated by **Dream Analyzer**. It contains key Dataview queries for tracking dream stats, Dream Signs (reality checks), emotional trends, and creative ideas.",
-    dashboardSectionStats: "## \u{1F4CA} Journal & Lucid Dreaming Statistics",
-    dashboardSectionSigns: "## \u2728 Dream Signs & Reality Check Triggers\n*Most frequent symbols, characters, and places \u2014 your reality check triggers in dreams.*",
-    dashboardSectionEmotions: "## \u{1F9D8} Emotional Background & Psychological States\n*Emotions and internal mental states most frequently experienced in dreams.*",
-    dashboardSectionCreative: "## \u{1F4DA} Dream World: Concepts & Creative Ideas\n*Abstract concepts, unique locations, and vivid characters with descriptions.*",
-    dashboardSectionLucid: "## \u{1F31F} Lucid Dreams (LD)\n*Journal of your successful lucid dreams.*",
-    dashboardSectionRecent: "## \u{1F4DC} Recent Dream Journal Entries",
+    dashboardSectionStats: "## Journal & Lucid Dreaming Statistics",
+    dashboardSectionSigns: "## Dream Signs & Reality Check Triggers\n*Most frequent symbols, characters, and places \u2014 your reality check triggers in dreams.*",
+    dashboardSectionEmotions: "## Emotional Background & Psychological States\n*Emotions and internal mental states most frequently experienced in dreams.*",
+    dashboardSectionCreative: "## Dream World: Concepts & Creative Ideas\n*Abstract concepts, unique locations, and vivid characters with descriptions.*",
+    dashboardSectionLucid: "## Lucid Dreams (LD)\n*Journal of your successful lucid dreams.*",
+    dashboardSectionRecent: "## Recent Dream Journal Entries",
     // Ribbon & Commands
-    ribbonAnalyze: "\u{1F9E0} Analyze Dream (Dream Analyzer)",
-    ribbonCreateDream: "\u{1F319} Create Dream Note for Today",
-    cmdAnalyze: "\u{1F9E0} Analyze Active Dream",
-    cmdCreateDream: "\u{1F319} Create Dream Note for Today",
-    cmdCreateCustomDateDream: "\u{1F4C5} Create Dream Note for Selected Date...",
-    cmdRebuildEmbeddings: "\u26A1 Rebuild Entity Embeddings",
-    cmdResetAllData: "\u{1F9F9} Reset All Analyzed Data and Entities...",
-    contextMenuAnalyze: "\u{1F9E0} Analyze Dream",
+    ribbonAnalyze: "Analyze dream (Dream Analyzer)",
+    ribbonCreateDream: "Create dream note for today",
+    cmdAnalyze: "Analyze active dream",
+    cmdCreateDream: "Create dream note for today",
+    cmdCreateCustomDateDream: "Create dream note for selected date...",
+    cmdRebuildEmbeddings: "Rebuild entity embeddings",
+    cmdResetAllData: "Reset all analyzed data and entities...",
+    contextMenuAnalyze: "Analyze dream",
     // Date Modal
     dateModalTitle: "Select Dream Date",
     dateModalLabel: "Dream Date",
     dateModalButton: "Create / Open Dream",
     // Reset Modal & Settings
-    resetModalTitle: "\u26A0\uFE0F Reset All Analyzed Data and Entities",
+    resetModalTitle: "Reset All Analyzed Data and Entities",
     resetModalDesc: "This will delete all created entity notes, clear vector database files (embeddings.json), and reset analyzed AI content in all dreams to their initial template state. Your original dream texts will remain untouched.",
     resetModalConfirmButton: "Reset All",
     resetModalCancelButton: "Cancel",
-    resetSuccess: "\u2728 Reset dreams: {dreams}, deleted entity files: {entities}.",
+    resetSuccess: "Reset dreams: {dreams}, deleted entity files: {entities}.",
     resetSectionTitle: "Reset & Clear Data",
     resetSectionDesc: "Delete all generated entities and reset dream notes to initial template state for re-analysis",
-    resetButtonText: "\u{1F9F9} Clear All Entities & Analysis",
+    resetButtonText: "Clear All Entities & Analysis",
     // Templater Exporter
     templateExportSuccess: "Templater / Calendar template successfully saved to {path}!",
     templateExportName: "Templater & Calendar Template",
     templateExportDesc: "Save a compatible dream note template file in Vault for Templater and Calendar plugins",
     templatePathName: "Template File Path",
     templatePathDesc: "Vault file path where template will be written (e.g. Templates/Dream Template.md)",
-    templateExportButtonText: "\u{1F4BE} Create / Update Template File",
+    templateExportButtonText: "Create / Update Template File",
     // Notices
     noActiveNote: "No active dream note open",
     openDreamNoteFirst: "Please open a dream note to analyze.",
@@ -308,8 +308,8 @@ var strings = {
     analyzingStep3: "Analyzing dream: sending request to OpenAI ({model})...",
     analyzingStep4: "Creating entities and connections...",
     analyzingStep5: "Batch updating vector embeddings...",
-    analysisSuccess: "\u2728 Dream analyzed successfully in {sec}s!",
-    analysisError: "\u274C Dream analysis error: ",
+    analysisSuccess: "Dream analyzed successfully in {sec}s!",
+    analysisError: "Dream analysis error: ",
     rebuildStart: "Generating vector embeddings...",
     rebuildSuccess: "Done! Generated/updated embeddings: {count}",
     dreamAlreadyExists: "Dream note for this date already exists!",
@@ -918,7 +918,7 @@ async function ensureEntityIndexes(app, settings) {
     const filePath = `${indexesFolderPath}/${fileName}`;
     const title = locale === "uk" ? `\u0406\u043D\u0434\u0435\u043A\u0441 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439: ${type.folder}` : `Entity Index: ${type.folder}`;
     const desc = locale === "uk" ? `\u041A\u0430\u0442\u0430\u043B\u043E\u0433 \u0443\u0441\u0456\u0445 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 **${type.folder}** \u0437 \u0457\u0445\u043D\u0456\u043C\u0438 \u043E\u043F\u0438\u0441\u0430\u043C\u0438 \u0442\u0430 \u0447\u0430\u0441\u0442\u043E\u0442\u043E\u044E \u043F\u043E\u044F\u0432 \u0443 \u0441\u043D\u0430\u0445.` : `Catalog of all saved **${type.folder}** entities with descriptions and dream frequency.`;
-    const content = `# \u{1F4CB} ${title}
+    const content = `# ${title}
 
 > [!INFO] ${title}
 > ${desc}
@@ -960,7 +960,7 @@ async function ensureDreamDashboard(app, settings) {
   const dashboardPath = `${rootFolder}/${fileName}`;
   const indexLinks = ENTITY_TYPES.map((tObj) => {
     const idxName = locale === "uk" ? `\u0406\u043D\u0434\u0435\u043A\u0441 - ${tObj.folder}` : `Index - ${tObj.folder}`;
-    return `- ${tObj.icon} [[${idxName}]]`;
+    return `- [[${idxName}]]`;
   }).join("\n");
   const content = `${t("dashboardTitle")}
 
@@ -968,7 +968,7 @@ ${t("dashboardCallout")}
 
 ---
 
-## \u{1F4CB} ${locale === "uk" ? "\u0406\u043D\u0434\u0435\u043A\u0441\u0438 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439" : "Entity Category Indexes"}
+## ${locale === "uk" ? "\u0406\u043D\u0434\u0435\u043A\u0441\u0438 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439" : "Entity Category Indexes"}
 ${indexLinks}
 
 ---
@@ -1055,7 +1055,7 @@ ${t("dashboardSectionRecent")}
 TABLE WITHOUT ID
   file.link AS "\u0417\u0430\u043F\u0438\u0441 \u0441\u043D\u0443",
   date AS "\u0414\u0430\u0442\u0430",
-  choice(lucid, "\u2728 \u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u0439 (\u041E\u0421)", "\u{1F319} \u0417\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0439") AS "\u0422\u0438\u043F \u0441\u043D\u0443",
+  choice(lucid, "\u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u0439 (\u041E\u0421)", "\u0417\u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0439") AS "\u0422\u0438\u043F \u0441\u043D\u0443",
   length(keywords) AS "\u041A\u043B\u044E\u0447\u043E\u0432\u0438\u0445 \u0441\u043B\u0456\u0432"
 FROM "${dreamsSubfolder}"
 WHERE file.name != "${fileName.replace(/\.md$/, "")}" AND file.name != "\u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0441\u043D\u0456\u0432" AND file.name != "Dream Dashboard"
@@ -1352,7 +1352,7 @@ var ProgressNotice = class {
   }
   updateText() {
     const elapsedSec = Math.floor((Date.now() - this.startTime) / 1e3);
-    this.notice.setMessage(`\u23F3 [${this.step}/${this.totalSteps}] ${this.currentMessage} (${elapsedSec}s)`);
+    this.notice.setMessage(`[${this.step}/${this.totalSteps}] ${this.currentMessage} (${elapsedSec}s)`);
   }
   close() {
     if (this.timerId) clearInterval(this.timerId);
@@ -1544,10 +1544,10 @@ ${aiText.trim()}`;
     }
     const totalSec = progress.getElapsedSeconds();
     progress.close();
-    new import_obsidian8.Notice(`\u2728 \u0421\u043E\u043D \u0443\u0441\u043F\u0456\u0448\u043D\u043E \u043F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u043E\u0432\u0430\u043D\u043E \u0437\u0430 ${totalSec}\u0441!`);
+    new import_obsidian8.Notice(`\u0421\u043E\u043D \u0443\u0441\u043F\u0456\u0448\u043D\u043E \u043F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u043E\u0432\u0430\u043D\u043E \u0437\u0430 ${totalSec}\u0441!`);
   } catch (error) {
     progress.close();
-    new import_obsidian8.Notice("\u274C \u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0430\u043D\u0430\u043B\u0456\u0437\u0443 \u0441\u043D\u0443: " + (error.message || error));
+    new import_obsidian8.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0430\u043D\u0430\u043B\u0456\u0437\u0443 \u0441\u043D\u0443: " + (error.message || error));
     console.error("Dream analysis failed:", error);
   }
 }

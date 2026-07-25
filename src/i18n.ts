@@ -16,24 +16,24 @@ const strings = {
 	uk: {
 		// Dashboard
 		dashboardFileName: "Дашборд снів.md",
-		dashboardTitle: "# 🌙 Дашборд сновидінь та аналітики",
+		dashboardTitle: "# Дашборд сновидінь та аналітики",
 		dashboardCallout: "> [!INFO] Аналітика та статистика\n> Цей дашборд автоматично створено плагіном **Dream Analyzer**. Він містить ключові Dataview-запити для відстеження статистики снів, маркерів усвідомленості (Dream Signs), емоційного фону та ідей для творчості.",
-		dashboardSectionStats: "## 📊 Статистика щоденника та усвідомленості (ОС)",
-		dashboardSectionSigns: "## ✨ Маркери снів для усвідомлення (Dream Signs)\n*Найчастіші символи, персонажі та місця — ваші тригери для перевірки реальності у сні.*",
-		dashboardSectionEmotions: "## 🧘 Емоційний фон та психологічні стани\n*Емоції та внутрішні стани, які найчастіше виникають у сновидіннях.*",
-		dashboardSectionCreative: "## 📚 Світ снів: Концепти & Ідеї для творчості та книг\n*Абстрактні ідеї, унікальні локації та яскраві персонажі з описом.*",
-		dashboardSectionLucid: "## 🌟 Усвідомлені сновидіння (ОС)\n*Журнал ваших успішних усвідомлених снів.*",
-		dashboardSectionRecent: "## 📜 Останні записи щоденника",
+		dashboardSectionStats: "## Статистика щоденника та усвідомленості (ОС)",
+		dashboardSectionSigns: "## Маркери снів для усвідомлення (Dream Signs)\n*Найчастіші символи, персонажі та місця — ваші тригери для перевірки реальності у сні.*",
+		dashboardSectionEmotions: "## Емоційний фон та психологічні стани\n*Емоції та внутрішні стани, які найчастіше виникають у сновидіннях.*",
+		dashboardSectionCreative: "## Світ снів: Концепти & Ідеї для творчості та книг\n*Абстрактні ідеї, унікальні локації та яскраві персонажі з описом.*",
+		dashboardSectionLucid: "## Усвідомлені сновидіння (ОС)\n*Журнал ваших успішних усвідомлених снів.*",
+		dashboardSectionRecent: "## Останні записи щоденника",
 
 		// Ribbon & Commands
-		ribbonAnalyze: "🧠 Аналізувати сон (Dream Analyzer)",
-		ribbonCreateDream: "🌙 Створити сон на сьогодні",
-		cmdAnalyze: "🧠 Аналізувати активний сон",
-		cmdCreateDream: "🌙 Створити сон на сьогодні",
-		cmdCreateCustomDateDream: "📅 Створити сон за обрану дату...",
-		cmdRebuildEmbeddings: "⚡ Оновити ембедінги сутностей",
-		cmdResetAllData: "🧹 Скинути всі проаналізовані дані та сутності...",
-		contextMenuAnalyze: "🧠 Аналізувати сон",
+		ribbonAnalyze: "Аналізувати сон (Dream Analyzer)",
+		ribbonCreateDream: "Створити сон на сьогодні",
+		cmdAnalyze: "Аналізувати активний сон",
+		cmdCreateDream: "Створити сон на сьогодні",
+		cmdCreateCustomDateDream: "Створити сон за обрану дату...",
+		cmdRebuildEmbeddings: "Оновити ембедінги сутностей",
+		cmdResetAllData: "Скинути всі проаналізовані дані та сутності...",
+		contextMenuAnalyze: "Аналізувати сон",
 
 		// Date Modal
 		dateModalTitle: "Оберіть дату сну",
@@ -41,14 +41,14 @@ const strings = {
 		dateModalButton: "Створити / Відкрити сон",
 
 		// Reset Modal & Settings
-		resetModalTitle: "⚠️ Очищення всіх знайдених сутностей та векторної бази",
+		resetModalTitle: "Очищення всіх знайдених сутностей та векторної бази",
 		resetModalDesc: "Це видалить усі нотатки сутностей, обнулить векторні бази (embeddings.json) та скине проаналізований AI-вміст усіх снів до початкового стану. Тексти самих снів залишаться недоторканими.",
 		resetModalConfirmButton: "Скинути все",
 		resetModalCancelButton: "Скасувати",
-		resetSuccess: "✨ Скинуто снів: {dreams}, видалено файлів сутностей: {entities}.",
+		resetSuccess: "Скинуто снів: {dreams}, видалено файлів сутностей: {entities}.",
 		resetSectionTitle: "Скинути та очистити дані",
 		resetSectionDesc: "Видалити всі згенеровані сутності та скинути сни до початкового стану для повторного аналізу",
-		resetButtonText: "🧹 Очистити всі сутності та аналіз",
+		resetButtonText: "Очистити всі сутності та аналіз",
 
 		// Templater Exporter
 		templateExportSuccess: "Шаблон для Templater / Calendar успішно збережено у {path}!",
@@ -56,7 +56,7 @@ const strings = {
 		templateExportDesc: "Зберегти сумісний шаблон нотатки сну у Vault для плагінів Templater та Calendar",
 		templatePathName: "Шлях до файлу шаблону",
 		templatePathDesc: "Файл у сховищі, куди буде записано шаблон (наприклад, Templates/Dream Template.md)",
-		templateExportButtonText: "💾 Створити / оновити файл шаблону",
+		templateExportButtonText: "Створити / оновити файл шаблону",
 
 		// Notices
 		noActiveNote: "Немає відкритої нотатки сну",
@@ -67,8 +67,8 @@ const strings = {
 		analyzingStep3: "Аналізую сон: запит до OpenAI ({model})...",
 		analyzingStep4: "Створення сутностей та розрахунок зв'язків...",
 		analyzingStep5: "Пакетне оновлення векторних ембедінгів...",
-		analysisSuccess: "✨ Сон успішно проаналізовано за {sec}с!",
-		analysisError: "❌ Помилка аналізу сну: ",
+		analysisSuccess: "Сон успішно проаналізовано за {sec}с!",
+		analysisError: "Помилка аналізу сну: ",
 		rebuildStart: "Генерація векторних ембедінгів...",
 		rebuildSuccess: "Готово! Згенеровано/оновлено ембедінгів: {count}",
 		dreamAlreadyExists: "Нотатка сну на цю дату вже існує!",
@@ -105,24 +105,24 @@ const strings = {
 	en: {
 		// Dashboard
 		dashboardFileName: "Dream Dashboard.md",
-		dashboardTitle: "# 🌙 Dream Analytics Dashboard",
+		dashboardTitle: "# Dream Analytics Dashboard",
 		dashboardCallout: "> [!INFO] Analytics & Statistics\n> This dashboard is automatically generated by **Dream Analyzer**. It contains key Dataview queries for tracking dream stats, Dream Signs (reality checks), emotional trends, and creative ideas.",
-		dashboardSectionStats: "## 📊 Journal & Lucid Dreaming Statistics",
-		dashboardSectionSigns: "## ✨ Dream Signs & Reality Check Triggers\n*Most frequent symbols, characters, and places — your reality check triggers in dreams.*",
-		dashboardSectionEmotions: "## 🧘 Emotional Background & Psychological States\n*Emotions and internal mental states most frequently experienced in dreams.*",
-		dashboardSectionCreative: "## 📚 Dream World: Concepts & Creative Ideas\n*Abstract concepts, unique locations, and vivid characters with descriptions.*",
-		dashboardSectionLucid: "## 🌟 Lucid Dreams (LD)\n*Journal of your successful lucid dreams.*",
-		dashboardSectionRecent: "## 📜 Recent Dream Journal Entries",
+		dashboardSectionStats: "## Journal & Lucid Dreaming Statistics",
+		dashboardSectionSigns: "## Dream Signs & Reality Check Triggers\n*Most frequent symbols, characters, and places — your reality check triggers in dreams.*",
+		dashboardSectionEmotions: "## Emotional Background & Psychological States\n*Emotions and internal mental states most frequently experienced in dreams.*",
+		dashboardSectionCreative: "## Dream World: Concepts & Creative Ideas\n*Abstract concepts, unique locations, and vivid characters with descriptions.*",
+		dashboardSectionLucid: "## Lucid Dreams (LD)\n*Journal of your successful lucid dreams.*",
+		dashboardSectionRecent: "## Recent Dream Journal Entries",
 
 		// Ribbon & Commands
-		ribbonAnalyze: "🧠 Analyze Dream (Dream Analyzer)",
-		ribbonCreateDream: "🌙 Create Dream Note for Today",
-		cmdAnalyze: "🧠 Analyze Active Dream",
-		cmdCreateDream: "🌙 Create Dream Note for Today",
-		cmdCreateCustomDateDream: "📅 Create Dream Note for Selected Date...",
-		cmdRebuildEmbeddings: "⚡ Rebuild Entity Embeddings",
-		cmdResetAllData: "🧹 Reset All Analyzed Data and Entities...",
-		contextMenuAnalyze: "🧠 Analyze Dream",
+		ribbonAnalyze: "Analyze dream (Dream Analyzer)",
+		ribbonCreateDream: "Create dream note for today",
+		cmdAnalyze: "Analyze active dream",
+		cmdCreateDream: "Create dream note for today",
+		cmdCreateCustomDateDream: "Create dream note for selected date...",
+		cmdRebuildEmbeddings: "Rebuild entity embeddings",
+		cmdResetAllData: "Reset all analyzed data and entities...",
+		contextMenuAnalyze: "Analyze dream",
 
 		// Date Modal
 		dateModalTitle: "Select Dream Date",
@@ -130,14 +130,14 @@ const strings = {
 		dateModalButton: "Create / Open Dream",
 
 		// Reset Modal & Settings
-		resetModalTitle: "⚠️ Reset All Analyzed Data and Entities",
+		resetModalTitle: "Reset All Analyzed Data and Entities",
 		resetModalDesc: "This will delete all created entity notes, clear vector database files (embeddings.json), and reset analyzed AI content in all dreams to their initial template state. Your original dream texts will remain untouched.",
 		resetModalConfirmButton: "Reset All",
 		resetModalCancelButton: "Cancel",
-		resetSuccess: "✨ Reset dreams: {dreams}, deleted entity files: {entities}.",
+		resetSuccess: "Reset dreams: {dreams}, deleted entity files: {entities}.",
 		resetSectionTitle: "Reset & Clear Data",
 		resetSectionDesc: "Delete all generated entities and reset dream notes to initial template state for re-analysis",
-		resetButtonText: "🧹 Clear All Entities & Analysis",
+		resetButtonText: "Clear All Entities & Analysis",
 
 		// Templater Exporter
 		templateExportSuccess: "Templater / Calendar template successfully saved to {path}!",
@@ -145,7 +145,7 @@ const strings = {
 		templateExportDesc: "Save a compatible dream note template file in Vault for Templater and Calendar plugins",
 		templatePathName: "Template File Path",
 		templatePathDesc: "Vault file path where template will be written (e.g. Templates/Dream Template.md)",
-		templateExportButtonText: "💾 Create / Update Template File",
+		templateExportButtonText: "Create / Update Template File",
 
 		// Notices
 		noActiveNote: "No active dream note open",
@@ -156,8 +156,8 @@ const strings = {
 		analyzingStep3: "Analyzing dream: sending request to OpenAI ({model})...",
 		analyzingStep4: "Creating entities and connections...",
 		analyzingStep5: "Batch updating vector embeddings...",
-		analysisSuccess: "✨ Dream analyzed successfully in {sec}s!",
-		analysisError: "❌ Dream analysis error: ",
+		analysisSuccess: "Dream analyzed successfully in {sec}s!",
+		analysisError: "Dream analysis error: ",
 		rebuildStart: "Generating vector embeddings...",
 		rebuildSuccess: "Done! Generated/updated embeddings: {count}",
 		dreamAlreadyExists: "Dream note for this date already exists!",

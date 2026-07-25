@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, Notice } from "obsidian";
+import { App, PluginSettingTab, Setting, Notice, normalizePath } from "obsidian";
 import DreamAnalyzerPlugin from "./main";
 import { updateEntityEmbeddings } from "./embeddings";
 import { exportTemplaterTemplate, ensureDreamDashboard, ensureEntityIndexes } from "./dreamCreator";
@@ -19,7 +19,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl("h2", { text: t("settingsTitle") });
+		new Setting(containerEl).setName(t("settingsTitle")).setHeading();
 
 		// API Key Setting
 		new Setting(containerEl)
@@ -53,7 +53,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		containerEl.createEl("h3", { text: "Структура щоденника / Journal Folder" });
+		new Setting(containerEl).setName("Структура щоденника / Journal Folder").setHeading();
 
 		// Dreams folder (Main Root Folder)
 		new Setting(containerEl)
@@ -61,7 +61,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 			.setDesc(t("dreamsFolderDesc"))
 			.addText(text => {
 				const applyFolderChange = async (val: string) => {
-					const cleaned = val.trim().replace(/\/$/, "");
+					const cleaned = normalizePath(val.trim());
 					if (cleaned) {
 						this.plugin.settings.dreamsFolder = cleaned;
 						await this.plugin.saveSettings();
@@ -83,7 +83,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					.setPlaceholder("Dreams")
 					.setValue(this.plugin.settings.dreamsFolder)
 					.onChange(async (value) => {
-						this.plugin.settings.dreamsFolder = value.trim().replace(/\/$/, "");
+						this.plugin.settings.dreamsFolder = normalizePath(value.trim());
 						await this.plugin.saveSettings();
 					});
 
@@ -92,21 +92,21 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 				});
 			});
 
-		containerEl.createEl("h3", { text: t("templateExportName") });
+		new Setting(containerEl).setName(t("templateExportName")).setHeading();
 
 		new Setting(containerEl)
 			.setName(t("templatePathName"))
 			.setDesc(t("templatePathDesc"))
 			.addText(text => {
 				new FileSuggest(this.app, text, async (val) => {
-					this.plugin.settings.templateFilePath = val.trim();
+					this.plugin.settings.templateFilePath = normalizePath(val.trim());
 					await this.plugin.saveSettings();
 				});
 				text
 					.setPlaceholder("Templates/Dream Template.md")
 					.setValue(this.plugin.settings.templateFilePath || "Templates/Dream Template.md")
 					.onChange(async (value) => {
-						this.plugin.settings.templateFilePath = value.trim();
+						this.plugin.settings.templateFilePath = normalizePath(value.trim());
 						await this.plugin.saveSettings();
 					});
 			});
@@ -125,7 +125,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					}
 				}));
 
-		containerEl.createEl("h3", { text: "Векторний пошук та Ембедінги / Vector Search" });
+		new Setting(containerEl).setName("Векторний пошук та Ембедінги / Vector Search").setHeading();
 
 		new Setting(containerEl)
 			.setName(t("autoEmbeddingsName"))
@@ -193,7 +193,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					}
 				}));
 
-		containerEl.createEl("h3", { text: t("resetSectionTitle") });
+		new Setting(containerEl).setName(t("resetSectionTitle")).setHeading();
 
 		new Setting(containerEl)
 			.setName(t("resetSectionTitle"))

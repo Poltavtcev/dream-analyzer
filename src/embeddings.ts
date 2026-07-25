@@ -1,4 +1,4 @@
-import { App, TFile, Notice } from "obsidian";
+import { App, TFile, Notice, normalizePath } from "obsidian";
 import {
 	DreamAnalyzerSettings,
 	VectorDatabaseItem,
@@ -18,37 +18,35 @@ export function clearMemoryCache(): void {
 }
 
 export function getDreamsSubfolder(app: App, settings: DreamAnalyzerSettings): string {
-	const root = (settings?.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
-	// Smart check: if 'Сни' or 'Dreams' folder already exists in root, preserve existing structure
+	const root = normalizePath((settings?.dreamsFolder || "Dreams").trim());
 	if (app && app.vault) {
-		if (app.vault.getAbstractFileByPath(`${root}/Сни`)) return `${root}/Сни`;
-		if (app.vault.getAbstractFileByPath(`${root}/Dreams`)) return `${root}/Dreams`;
+		if (app.vault.getAbstractFileByPath(normalizePath(`${root}/Сни`))) return normalizePath(`${root}/Сни`);
+		if (app.vault.getAbstractFileByPath(normalizePath(`${root}/Dreams`))) return normalizePath(`${root}/Dreams`);
 	}
 	const locale = getLocale();
 	const sub = locale === "uk" ? "Сни" : "Dreams";
-	return `${root}/${sub}`;
+	return normalizePath(`${root}/${sub}`);
 }
 
 export function getEntitiesSubfolder(app: App, settings: DreamAnalyzerSettings): string {
-	const root = (settings?.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
-	// Smart check: if 'Сутності' or 'Entities' folder already exists in root, preserve existing structure
+	const root = normalizePath((settings?.dreamsFolder || "Dreams").trim());
 	if (app && app.vault) {
-		if (app.vault.getAbstractFileByPath(`${root}/Сутності`)) return `${root}/Сутності`;
-		if (app.vault.getAbstractFileByPath(`${root}/Entities`)) return `${root}/Entities`;
+		if (app.vault.getAbstractFileByPath(normalizePath(`${root}/Сутності`))) return normalizePath(`${root}/Сутності`);
+		if (app.vault.getAbstractFileByPath(normalizePath(`${root}/Entities`))) return normalizePath(`${root}/Entities`);
 	}
 	const locale = getLocale();
 	const sub = locale === "uk" ? "Сутності" : "Entities";
-	return `${root}/${sub}`;
+	return normalizePath(`${root}/${sub}`);
 }
 
 export function getEntityEmbeddingsDbPath(app: App, settings: DreamAnalyzerSettings): string {
 	const folder = getDreamsSubfolder(app, settings);
-	return `${folder}/embeddings.json`;
+	return normalizePath(`${folder}/embeddings.json`);
 }
 
 export function getDreamEmbeddingsDbPath(app: App, settings: DreamAnalyzerSettings): string {
 	const folder = getDreamsSubfolder(app, settings);
-	return `${folder}/dream_embeddings.json`;
+	return normalizePath(`${folder}/dream_embeddings.json`);
 }
 
 export function cosineSimilarity(a: number[], b: number[]): number | null {
@@ -74,7 +72,7 @@ export function cosineSimilarity(a: number[], b: number[]): number | null {
 }
 
 async function ensureParentDirectory(app: App, filePath: string): Promise<void> {
-	const normalizedPath = filePath.trim();
+	const normalizedPath = normalizePath(filePath.trim());
 	const dirIndex = normalizedPath.lastIndexOf("/");
 	if (dirIndex > 0) {
 		const dir = normalizedPath.substring(0, dirIndex);

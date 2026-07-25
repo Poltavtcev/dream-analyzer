@@ -159,13 +159,20 @@ async function requestChatCompletion(apiKey, model, systemPrompt, userPrompt) {
 var import_obsidian2 = require("obsidian");
 function getLocale() {
   try {
-    const lang = (window.localStorage.getItem("language") || import_obsidian2.moment.locale() || "").toLowerCase();
-    if (lang.startsWith("uk") || lang.startsWith("ua")) {
+    const obsLang = (window.localStorage.getItem("language") || "").toLowerCase();
+    if (obsLang) {
+      if (obsLang.startsWith("uk") || obsLang.startsWith("ua")) {
+        return "uk";
+      }
+      return "en";
+    }
+    const momentLang = (import_obsidian2.moment.locale() || "").toLowerCase();
+    if (momentLang.startsWith("uk") || momentLang.startsWith("ua")) {
       return "uk";
     }
   } catch (e) {
   }
-  return "uk";
+  return "en";
 }
 var strings = {
   uk: {
@@ -245,6 +252,9 @@ var strings = {
     apiKeyDesc: "\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u0441\u0432\u0456\u0439 \u0441\u0435\u043A\u0440\u0435\u0442\u043D\u0438\u0439 API \u043A\u043B\u044E\u0447 OpenAI (sk-...)",
     modelName: "\u041C\u043E\u0434\u0435\u043B\u044C OpenAI Chat",
     modelDesc: "\u0412\u0438\u0431\u0435\u0440\u0456\u0442\u044C \u043C\u043E\u0434\u0435\u043B\u044C AI \u0434\u043B\u044F \u0430\u043D\u0430\u043B\u0456\u0437\u0443 \u0441\u043D\u0443",
+    gptDefaultLabel: "GPT-5 mini (\u0417\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C)",
+    sectionJournalFolder: "\u0421\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u0430 \u0441\u043D\u0456\u0432",
+    sectionVectorSearch: "\u0412\u0435\u043A\u0442\u043E\u0440\u043D\u0438\u0439 \u043F\u043E\u0448\u0443\u043A \u0442\u0430 \u0415\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0438",
     dreamsFolderName: "\u0413\u043E\u043B\u043E\u0432\u043D\u0430 \u043F\u0430\u043F\u043A\u0430 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u0430 \u0441\u043D\u0456\u0432",
     dreamsFolderDesc: "\u0417\u0430\u0433\u0430\u043B\u044C\u043D\u0430 \u043F\u0430\u043F\u043A\u0430 (\u043D\u0430\u043F\u0440\u0438\u043A\u043B\u0430\u0434, \u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0456 \u0441\u043D\u043E\u0432\u0438\u0434\u0456\u043D\u043D\u044F \u0430\u0431\u043E Dreams). \u041F\u043B\u0430\u0433\u0456\u043D \u0441\u0430\u043C \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u044C \u043F\u0430\u043F\u043A\u0438 '\u0421\u043D\u0438', '\u0421\u0443\u0442\u043D\u043E\u0441\u0442\u0456' \u0442\u0430 \u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0432\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456.",
     autoEmbeddingsName: "\u0410\u0432\u0442\u043E-\u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u044F \u0435\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0456\u0432",
@@ -336,6 +346,9 @@ var strings = {
     apiKeyDesc: "Enter your secret OpenAI API Key (sk-...)",
     modelName: "OpenAI Chat Model",
     modelDesc: "Select AI model for dream analysis",
+    gptDefaultLabel: "GPT-5 mini (Default)",
+    sectionJournalFolder: "Dream Journal Folder Structure",
+    sectionVectorSearch: "Vector Search & Embeddings",
     dreamsFolderName: "Main Dream Journal Folder",
     dreamsFolderDesc: "Main folder (e.g. Dreams or Lucid Dreaming). The plugin will automatically manage 'Dreams', 'Entities', and Dashboard subfolders inside.",
     autoEmbeddingsName: "Auto-update Embeddings",
@@ -353,7 +366,7 @@ var strings = {
 };
 function t(key, vars) {
   const locale = getLocale();
-  let template = strings[locale] && strings[locale][key] || strings["uk"][key] || "";
+  let template = strings[locale] && strings[locale][key] || strings["en"][key] || strings["uk"][key] || "";
   if (typeof template === "string" && vars) {
     for (const [k, v] of Object.entries(vars)) {
       template = template.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
@@ -1230,11 +1243,11 @@ var DreamAnalyzerSettingTab = class extends import_obsidian7.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian7.Setting(containerEl).setName(t("modelName")).setDesc(t("modelDesc")).addDropdown((dropdown) => dropdown.addOption("gpt-5-mini", "GPT-5 mini (\u0417\u0430 \u0437\u0430\u043C\u043E\u0432\u0447\u0443\u0432\u0430\u043D\u043D\u044F\u043C / Default)").addOption("gpt-4.1-mini", "GPT-4.1 mini").addOption("gpt-5", "GPT-5").addOption("gpt-4o-mini", "GPT-4o mini").addOption("gpt-4o", "GPT-4o").addOption("o3-mini", "o3-mini").setValue(this.plugin.settings.openaiModel || "gpt-5-mini").onChange(async (value) => {
+    new import_obsidian7.Setting(containerEl).setName(t("modelName")).setDesc(t("modelDesc")).addDropdown((dropdown) => dropdown.addOption("gpt-5-mini", t("gptDefaultLabel")).addOption("gpt-4.1-mini", "GPT-4.1 mini").addOption("gpt-5", "GPT-5").addOption("gpt-4o-mini", "GPT-4o mini").addOption("gpt-4o", "GPT-4o").addOption("o3-mini", "o3-mini").setValue(this.plugin.settings.openaiModel || "gpt-5-mini").onChange(async (value) => {
       this.plugin.settings.openaiModel = value;
       await this.plugin.saveSettings();
     }));
-    new import_obsidian7.Setting(containerEl).setName("\u0421\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u0430 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A\u0430 / Journal Folder").setHeading();
+    new import_obsidian7.Setting(containerEl).setName(t("sectionJournalFolder")).setHeading();
     new import_obsidian7.Setting(containerEl).setName(t("dreamsFolderName")).setDesc(t("dreamsFolderDesc")).addText((text) => {
       const applyFolderChange = async (val) => {
         const cleaned = (0, import_obsidian7.normalizePath)(val.trim());
@@ -1279,7 +1292,7 @@ var DreamAnalyzerSettingTab = class extends import_obsidian7.PluginSettingTab {
         new import_obsidian7.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0448\u0430\u0431\u043B\u043E\u043D\u0443: " + (e.message || e));
       }
     }));
-    new import_obsidian7.Setting(containerEl).setName("\u0412\u0435\u043A\u0442\u043E\u0440\u043D\u0438\u0439 \u043F\u043E\u0448\u0443\u043A \u0442\u0430 \u0415\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0438 / Vector Search").setHeading();
+    new import_obsidian7.Setting(containerEl).setName(t("sectionVectorSearch")).setHeading();
     new import_obsidian7.Setting(containerEl).setName(t("autoEmbeddingsName")).setDesc(t("autoEmbeddingsDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.autoUpdateEmbeddings).onChange(async (value) => {
       this.plugin.settings.autoUpdateEmbeddings = value;
       await this.plugin.saveSettings();

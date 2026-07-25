@@ -4,12 +4,20 @@ export type Locale = "uk" | "en";
 
 export function getLocale(): Locale {
 	try {
-		const lang = (window.localStorage.getItem("language") || moment.locale() || "").toLowerCase();
-		if (lang.startsWith("uk") || lang.startsWith("ua")) {
+		const obsLang = (window.localStorage.getItem("language") || "").toLowerCase();
+		if (obsLang) {
+			if (obsLang.startsWith("uk") || obsLang.startsWith("ua")) {
+				return "uk";
+			}
+			return "en";
+		}
+
+		const momentLang = (moment.locale() || "").toLowerCase();
+		if (momentLang.startsWith("uk") || momentLang.startsWith("ua")) {
 			return "uk";
 		}
 	} catch (e) {}
-	return "uk";
+	return "en";
 }
 
 const strings = {
@@ -88,6 +96,9 @@ const strings = {
 		apiKeyDesc: "Введіть свій секретний API ключ OpenAI (sk-...)",
 		modelName: "Модель OpenAI Chat",
 		modelDesc: "Виберіть модель AI для аналізу сну",
+		gptDefaultLabel: "GPT-5 mini (За замовчуванням)",
+		sectionJournalFolder: "Структура щоденника снів",
+		sectionVectorSearch: "Векторний пошук та Ембедінги",
 		dreamsFolderName: "Головна папка щоденника снів",
 		dreamsFolderDesc: "Загальна папка (наприклад, Усвідомлені сновидіння або Dreams). Плагін сам створить папки 'Сни', 'Сутності' та Дашборд всередині.",
 		autoEmbeddingsName: "Авто-оновлення ембедінгів",
@@ -177,6 +188,9 @@ const strings = {
 		apiKeyDesc: "Enter your secret OpenAI API Key (sk-...)",
 		modelName: "OpenAI Chat Model",
 		modelDesc: "Select AI model for dream analysis",
+		gptDefaultLabel: "GPT-5 mini (Default)",
+		sectionJournalFolder: "Dream Journal Folder Structure",
+		sectionVectorSearch: "Vector Search & Embeddings",
 		dreamsFolderName: "Main Dream Journal Folder",
 		dreamsFolderDesc: "Main folder (e.g. Dreams or Lucid Dreaming). The plugin will automatically manage 'Dreams', 'Entities', and Dashboard subfolders inside.",
 		autoEmbeddingsName: "Auto-update Embeddings",
@@ -195,7 +209,7 @@ const strings = {
 
 export function t(key: keyof typeof strings["uk"], vars?: Record<string, string | number>): any {
 	const locale = getLocale();
-	let template = (strings[locale] && strings[locale][key]) || strings["uk"][key] || "";
+	let template = (strings[locale] && strings[locale][key]) || strings["en"][key] || strings["uk"][key] || "";
 	if (typeof template === "string" && vars) {
 		for (const [k, v] of Object.entries(vars)) {
 			template = template.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));

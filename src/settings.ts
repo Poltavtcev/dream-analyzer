@@ -41,7 +41,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 			.setName(t("modelName"))
 			.setDesc(t("modelDesc"))
 			.addDropdown(dropdown => dropdown
-				.addOption("gpt-5-mini", "GPT-5 mini (За замовчуванням / Default)")
+				.addOption("gpt-5-mini", t("gptDefaultLabel"))
 				.addOption("gpt-4.1-mini", "GPT-4.1 mini")
 				.addOption("gpt-5", "GPT-5")
 				.addOption("gpt-4o-mini", "GPT-4o mini")
@@ -53,7 +53,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
-		new Setting(containerEl).setName("Структура щоденника / Journal Folder").setHeading();
+		new Setting(containerEl).setName(t("sectionJournalFolder")).setHeading();
 
 		// Dreams folder (Main Root Folder)
 		new Setting(containerEl)
@@ -125,7 +125,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					}
 				}));
 
-		new Setting(containerEl).setName("Векторний пошук та Ембедінги / Vector Search").setHeading();
+		new Setting(containerEl).setName(t("sectionVectorSearch")).setHeading();
 
 		new Setting(containerEl)
 			.setName(t("autoEmbeddingsName"))

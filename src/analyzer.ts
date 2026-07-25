@@ -17,6 +17,19 @@ import {
 	getEntitiesSubfolder
 } from "./embeddings";
 
+const STOP_ENTITIES_LOWER = new Set([
+	// Ukrainian
+	"оповідач", "я", "сновидець", "моє тіло", "власне тіло", "себе", "автор", "моя особа", "самість",
+	// English
+	"narrator", "i", "me", "myself", "dreamer", "my body", "self", "own body"
+]);
+
+export function isStopEntity(name: string): boolean {
+	if (!name) return true;
+	const lower = name.trim().toLowerCase();
+	return STOP_ENTITIES_LOWER.has(lower);
+}
+
 class ProgressNotice {
 	private notice: Notice;
 	private step: number;
@@ -84,20 +97,28 @@ export async function analyzeDream(app: App, file: TFile, settings: DreamAnalyze
 
 		progress.setStep(2, "Пошук схожих сутностей...");
 		const similarEntities = await getSimilarEntitiesContext(app, apiKey, settings, dreamEmbedding);
-		const entityContext = similarEntities || "Немає знайдених схожих сутностей.";
+		const entityContext = similarEntities || "No existing similar entities found.";
 
 		progress.setStep(3, `Запит до OpenAI (${settings.openaiModel})...`);
 		const systemPrompt = `
-Ти аналізуєш особистий щоденник снів для створення структурованої бази знань Obsidian.
-Ось список вже існуючих сутностей, які можуть відповідати цьому сну:
+You analyze a personal dream journal for creating a structured Obsidian knowledge base.
+Here is a list of existing entities that might match this dream:
 
 ${entityContext}
 
-Використовуй їх, якщо вони підходять.
-Не створюй нову сутність, якщо вже існує така сама або дуже близька.
+Use existing entities if they fit. Do not create a new entity if an identical or very close entity already exists.
 
-Поверни тільки JSON.
-Формат:
+CRITICAL LANGUAGE REQUIREMENT:
+- Automatically detect the language of the provided dream text (e.g., Ukrainian, English, etc.).
+- ALL returned text fields ("summary", "name", "description", "aliases", "keywords") MUST be in the EXACT SAME LANGUAGE as the dream text.
+- Do NOT translate the dream content, entity names, descriptions, or keywords into another language.
+
+STOP ENTITIES & SELF-REFERENCE RULES:
+- Do NOT create trivial self-referential entities representing the dreamer or narrator (e.g., "Narrator", "Dreamer", "I", "Me", "My body", "Myself", "Оповідач", "Я", "Сновидець", "Моє тіло", "Власне тіло", "Себе").
+- If the dreamer's identity, body transformation, or state of self is an important plot point, record this via appropriate "concepts" (e.g., "Body Transformation", "Identity Change", "Трансформація тіла", "Зміна особистості"), NOT via a "Narrator" character entity.
+
+Return JSON ONLY.
+Format:
 
 {
 "summary":"",
@@ -110,17 +131,15 @@ ${entityContext}
 "keywords":[]
 }
 
-ВАЖЛИВО:
-- Не використовуй [[ ]] у відповіді.
-- Не створюй сутності, яких немає у тексті сну.
-- Не додавай сутності лише для заповнення категорій.
-- Якщо немає достатньо інформації — залишай масив порожнім.
-- Одна й та сама сутність повинна мати стабільну назву у різних снах.
+CRITICAL FORMAT RULES:
+- Do NOT use [[ ]] brackets in JSON values.
+- Do NOT invent entities that are not present in the dream text.
+- Do NOT add entities just to fill up categories.
+- If there is not enough information for a category — keep the array empty.
+- The same entity must maintain a stable name across different dreams.
 
-ФОРМАТ СУТНОСТЕЙ:
-
-У масивах characters, places, objects, emotions, symbols, concepts повертай не рядки, а об'єкти:
-
+ENTITY OBJECT FORMAT:
+In characters, places, objects, emotions, symbols, concepts arrays, return objects:
 {
 "name":"",
 "description":"",
@@ -128,46 +147,31 @@ ${entityContext}
 }
 
 name:
-Коротка стабільна назва сутності.
+Short, stable entity name in the same language as the dream text.
 
 description:
-Короткий фактичний опис сутності саме у цьому сні.
-Без психології і трактувань.
+Short factual description of the entity in this specific dream. No psychology or subjective interpretations.
 
 aliases:
-Інші можливі назви. Якщо немає — [].
+Alternative names in the same language. Empty [] if none.
 
-ПРАВИЛА НАЗВ СУТНОСТЕЙ:
-- Назва повинна бути короткою.
-- Назва повинна бути стабільною між різними снами.
-- Назва повинна бути придатною для використання як назва файлу Obsidian.
-- Використовуй одну найбільш загальну форму.
-- Не додавай пояснення, описи або контекст ситуації.
-- Не використовуй символи: / \\ : * ? " < > |
+ENTITY NAMING RULES:
+- Keep the name short and concise.
+- Use one standard form across dreams.
+- Ensure names are suitable as Obsidian note titles.
+- Do NOT include symbols: / \\ : * ? " < > |
 
-characters:
-Включай тільки конкретних людей, істот або персонажів, які мають окрему роль у сні.
-
-places:
-Включай тільки самостійні локації, простори або географічні місця.
-
-objects:
-Включай тільки фізичні предмети, які існують у сні як окремі об'єкти.
-
-emotions:
-Включай тільки емоції, почуття або внутрішні психічні стани.
-
-symbols:
-Включай тільки потенційно повторювані образи, мотиви або символічні елементи.
-
-concepts:
-Включай тільки широкі абстрактні теми.
-
-keywords:
-Створи 5-15 ключових слів для пошуку. Окремі слова.
+CATEGORIES:
+characters: Specific people, creatures, or characters with a role in the dream (EXCLUDING the narrator/dreamer).
+places: Independent locations, spaces, or geographic places.
+objects: Physical items that exist in the dream as distinct objects.
+emotions: Feelings, emotions, or internal mental states.
+symbols: Potentially recurring motifs, symbols, or imagery.
+concepts: Broad abstract themes, plot events, or transformations.
+keywords: 5-15 search keywords in the dream's language.
 
 summary:
-Створи короткий опис сну у 2-5 реченнях.
+A short summary of the dream in 2-5 sentences in the dream's language.
 `;
 
 		const rawResult = await requestChatCompletion(
@@ -288,12 +292,13 @@ function normalizeEntityArray(value: any): EntityItem[] {
 			};
 		}
 		return { name: "", description: "", aliases: [] };
-	}).filter(item => item.name.length > 0);
+	})
+	.filter(item => item.name.length > 0 && !isStopEntity(item.name));
 }
 
 function normalizeStringArray(value: any): string[] {
 	if (!Array.isArray(value)) return [];
-	return value.map(x => cleanEntityName(x)).filter(Boolean);
+	return value.map(x => cleanEntityName(x)).filter(x => x.length > 0 && !isStopEntity(x));
 }
 
 export function cleanEntityName(item: any): string {
@@ -335,7 +340,7 @@ async function createOrUpdateEntities(
 
 		for (const item of items) {
 			const safeName = cleanEntityName(item.name);
-			if (!safeName) continue;
+			if (!safeName || isStopEntity(safeName)) continue;
 
 			const path = `${folderPath}/${safeName}.md`;
 			const existingFile = app.vault.getAbstractFileByPath(path);
@@ -359,7 +364,7 @@ async function createOrUpdateEntities(
 						if (!Array.isArray(fm.aliases)) fm.aliases = fm.aliases ? [fm.aliases] : [];
 						for (const alias of item.aliases) {
 							const cleanAlias = cleanEntityName(alias);
-							if (cleanAlias && !fm.aliases.includes(cleanAlias)) {
+							if (cleanAlias && !isStopEntity(cleanAlias) && !fm.aliases.includes(cleanAlias)) {
 								fm.aliases.push(cleanAlias);
 							}
 						}
@@ -392,7 +397,7 @@ async function createOrUpdateEntities(
 					fm.dream_count = 1;
 
 					const cleanAliases = Array.isArray(item.aliases)
-						? item.aliases.map(x => cleanEntityName(x)).filter(Boolean)
+						? item.aliases.map(x => cleanEntityName(x)).filter(x => x.length > 0 && !isStopEntity(x))
 						: [];
 					fm.aliases = cleanAliases;
 					fm.tags = [type.entity_type];

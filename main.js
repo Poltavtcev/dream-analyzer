@@ -1331,6 +1331,32 @@ var DreamAnalyzerSettingTab = class extends import_obsidian7.PluginSettingTab {
 
 // src/analyzer.ts
 var import_obsidian8 = require("obsidian");
+var STOP_ENTITIES_LOWER = /* @__PURE__ */ new Set([
+  // Ukrainian
+  "\u043E\u043F\u043E\u0432\u0456\u0434\u0430\u0447",
+  "\u044F",
+  "\u0441\u043D\u043E\u0432\u0438\u0434\u0435\u0446\u044C",
+  "\u043C\u043E\u0454 \u0442\u0456\u043B\u043E",
+  "\u0432\u043B\u0430\u0441\u043D\u0435 \u0442\u0456\u043B\u043E",
+  "\u0441\u0435\u0431\u0435",
+  "\u0430\u0432\u0442\u043E\u0440",
+  "\u043C\u043E\u044F \u043E\u0441\u043E\u0431\u0430",
+  "\u0441\u0430\u043C\u0456\u0441\u0442\u044C",
+  // English
+  "narrator",
+  "i",
+  "me",
+  "myself",
+  "dreamer",
+  "my body",
+  "self",
+  "own body"
+]);
+function isStopEntity(name) {
+  if (!name) return true;
+  const lower = name.trim().toLowerCase();
+  return STOP_ENTITIES_LOWER.has(lower);
+}
 var ProgressNotice = class {
   constructor(totalSteps = 5) {
     this.totalSteps = totalSteps;
@@ -1381,19 +1407,27 @@ async function analyzeDream(app, file, settings) {
     const dreamEmbedding = await getEmbedding(apiKey, settings.embeddingModel, dreamContent);
     progress.setStep(2, "\u041F\u043E\u0448\u0443\u043A \u0441\u0445\u043E\u0436\u0438\u0445 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439...");
     const similarEntities = await getSimilarEntitiesContext(app, apiKey, settings, dreamEmbedding);
-    const entityContext = similarEntities || "\u041D\u0435\u043C\u0430\u0454 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u0438\u0445 \u0441\u0445\u043E\u0436\u0438\u0445 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439.";
+    const entityContext = similarEntities || "No existing similar entities found.";
     progress.setStep(3, `\u0417\u0430\u043F\u0438\u0442 \u0434\u043E OpenAI (${settings.openaiModel})...`);
     const systemPrompt = `
-\u0422\u0438 \u0430\u043D\u0430\u043B\u0456\u0437\u0443\u0454\u0448 \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u0449\u043E\u0434\u0435\u043D\u043D\u0438\u043A \u0441\u043D\u0456\u0432 \u0434\u043B\u044F \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0441\u0442\u0440\u0443\u043A\u0442\u0443\u0440\u043E\u0432\u0430\u043D\u043E\u0457 \u0431\u0430\u0437\u0438 \u0437\u043D\u0430\u043D\u044C Obsidian.
-\u041E\u0441\u044C \u0441\u043F\u0438\u0441\u043E\u043A \u0432\u0436\u0435 \u0456\u0441\u043D\u0443\u044E\u0447\u0438\u0445 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439, \u044F\u043A\u0456 \u043C\u043E\u0436\u0443\u0442\u044C \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0442\u0438 \u0446\u044C\u043E\u043C\u0443 \u0441\u043D\u0443:
+You analyze a personal dream journal for creating a structured Obsidian knowledge base.
+Here is a list of existing entities that might match this dream:
 
 ${entityContext}
 
-\u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0457\u0445, \u044F\u043A\u0449\u043E \u0432\u043E\u043D\u0438 \u043F\u0456\u0434\u0445\u043E\u0434\u044F\u0442\u044C.
-\u041D\u0435 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u043D\u043E\u0432\u0443 \u0441\u0443\u0442\u043D\u0456\u0441\u0442\u044C, \u044F\u043A\u0449\u043E \u0432\u0436\u0435 \u0456\u0441\u043D\u0443\u0454 \u0442\u0430\u043A\u0430 \u0441\u0430\u043C\u0430 \u0430\u0431\u043E \u0434\u0443\u0436\u0435 \u0431\u043B\u0438\u0437\u044C\u043A\u0430.
+Use existing entities if they fit. Do not create a new entity if an identical or very close entity already exists.
 
-\u041F\u043E\u0432\u0435\u0440\u043D\u0438 \u0442\u0456\u043B\u044C\u043A\u0438 JSON.
-\u0424\u043E\u0440\u043C\u0430\u0442:
+CRITICAL LANGUAGE REQUIREMENT:
+- Automatically detect the language of the provided dream text (e.g., Ukrainian, English, etc.).
+- ALL returned text fields ("summary", "name", "description", "aliases", "keywords") MUST be in the EXACT SAME LANGUAGE as the dream text.
+- Do NOT translate the dream content, entity names, descriptions, or keywords into another language.
+
+STOP ENTITIES & SELF-REFERENCE RULES:
+- Do NOT create trivial self-referential entities representing the dreamer or narrator (e.g., "Narrator", "Dreamer", "I", "Me", "My body", "Myself", "\u041E\u043F\u043E\u0432\u0456\u0434\u0430\u0447", "\u042F", "\u0421\u043D\u043E\u0432\u0438\u0434\u0435\u0446\u044C", "\u041C\u043E\u0454 \u0442\u0456\u043B\u043E", "\u0412\u043B\u0430\u0441\u043D\u0435 \u0442\u0456\u043B\u043E", "\u0421\u0435\u0431\u0435").
+- If the dreamer's identity, body transformation, or state of self is an important plot point, record this via appropriate "concepts" (e.g., "Body Transformation", "Identity Change", "\u0422\u0440\u0430\u043D\u0441\u0444\u043E\u0440\u043C\u0430\u0446\u0456\u044F \u0442\u0456\u043B\u0430", "\u0417\u043C\u0456\u043D\u0430 \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u043E\u0441\u0442\u0456"), NOT via a "Narrator" character entity.
+
+Return JSON ONLY.
+Format:
 
 {
 "summary":"",
@@ -1406,17 +1440,15 @@ ${entityContext}
 "keywords":[]
 }
 
-\u0412\u0410\u0416\u041B\u0418\u0412\u041E:
-- \u041D\u0435 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 [[ ]] \u0443 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456.
-- \u041D\u0435 \u0441\u0442\u0432\u043E\u0440\u044E\u0439 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456, \u044F\u043A\u0438\u0445 \u043D\u0435\u043C\u0430\u0454 \u0443 \u0442\u0435\u043A\u0441\u0442\u0456 \u0441\u043D\u0443.
-- \u041D\u0435 \u0434\u043E\u0434\u0430\u0432\u0430\u0439 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u043B\u0438\u0448\u0435 \u0434\u043B\u044F \u0437\u0430\u043F\u043E\u0432\u043D\u0435\u043D\u043D\u044F \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0439.
-- \u042F\u043A\u0449\u043E \u043D\u0435\u043C\u0430\u0454 \u0434\u043E\u0441\u0442\u0430\u0442\u043D\u044C\u043E \u0456\u043D\u0444\u043E\u0440\u043C\u0430\u0446\u0456\u0457 \u2014 \u0437\u0430\u043B\u0438\u0448\u0430\u0439 \u043C\u0430\u0441\u0438\u0432 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C.
-- \u041E\u0434\u043D\u0430 \u0439 \u0442\u0430 \u0441\u0430\u043C\u0430 \u0441\u0443\u0442\u043D\u0456\u0441\u0442\u044C \u043F\u043E\u0432\u0438\u043D\u043D\u0430 \u043C\u0430\u0442\u0438 \u0441\u0442\u0430\u0431\u0456\u043B\u044C\u043D\u0443 \u043D\u0430\u0437\u0432\u0443 \u0443 \u0440\u0456\u0437\u043D\u0438\u0445 \u0441\u043D\u0430\u0445.
+CRITICAL FORMAT RULES:
+- Do NOT use [[ ]] brackets in JSON values.
+- Do NOT invent entities that are not present in the dream text.
+- Do NOT add entities just to fill up categories.
+- If there is not enough information for a category \u2014 keep the array empty.
+- The same entity must maintain a stable name across different dreams.
 
-\u0424\u041E\u0420\u041C\u0410\u0422 \u0421\u0423\u0422\u041D\u041E\u0421\u0422\u0415\u0419:
-
-\u0423 \u043C\u0430\u0441\u0438\u0432\u0430\u0445 characters, places, objects, emotions, symbols, concepts \u043F\u043E\u0432\u0435\u0440\u0442\u0430\u0439 \u043D\u0435 \u0440\u044F\u0434\u043A\u0438, \u0430 \u043E\u0431'\u0454\u043A\u0442\u0438:
-
+ENTITY OBJECT FORMAT:
+In characters, places, objects, emotions, symbols, concepts arrays, return objects:
 {
 "name":"",
 "description":"",
@@ -1424,46 +1456,31 @@ ${entityContext}
 }
 
 name:
-\u041A\u043E\u0440\u043E\u0442\u043A\u0430 \u0441\u0442\u0430\u0431\u0456\u043B\u044C\u043D\u0430 \u043D\u0430\u0437\u0432\u0430 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456.
+Short, stable entity name in the same language as the dream text.
 
 description:
-\u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u0444\u0430\u043A\u0442\u0438\u0447\u043D\u0438\u0439 \u043E\u043F\u0438\u0441 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456 \u0441\u0430\u043C\u0435 \u0443 \u0446\u044C\u043E\u043C\u0443 \u0441\u043D\u0456.
-\u0411\u0435\u0437 \u043F\u0441\u0438\u0445\u043E\u043B\u043E\u0433\u0456\u0457 \u0456 \u0442\u0440\u0430\u043A\u0442\u0443\u0432\u0430\u043D\u044C.
+Short factual description of the entity in this specific dream. No psychology or subjective interpretations.
 
 aliases:
-\u0406\u043D\u0448\u0456 \u043C\u043E\u0436\u043B\u0438\u0432\u0456 \u043D\u0430\u0437\u0432\u0438. \u042F\u043A\u0449\u043E \u043D\u0435\u043C\u0430\u0454 \u2014 [].
+Alternative names in the same language. Empty [] if none.
 
-\u041F\u0420\u0410\u0412\u0418\u041B\u0410 \u041D\u0410\u0417\u0412 \u0421\u0423\u0422\u041D\u041E\u0421\u0422\u0415\u0419:
-- \u041D\u0430\u0437\u0432\u0430 \u043F\u043E\u0432\u0438\u043D\u043D\u0430 \u0431\u0443\u0442\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u043E\u044E.
-- \u041D\u0430\u0437\u0432\u0430 \u043F\u043E\u0432\u0438\u043D\u043D\u0430 \u0431\u0443\u0442\u0438 \u0441\u0442\u0430\u0431\u0456\u043B\u044C\u043D\u043E\u044E \u043C\u0456\u0436 \u0440\u0456\u0437\u043D\u0438\u043C\u0438 \u0441\u043D\u0430\u043C\u0438.
-- \u041D\u0430\u0437\u0432\u0430 \u043F\u043E\u0432\u0438\u043D\u043D\u0430 \u0431\u0443\u0442\u0438 \u043F\u0440\u0438\u0434\u0430\u0442\u043D\u043E\u044E \u0434\u043B\u044F \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u0430\u043D\u043D\u044F \u044F\u043A \u043D\u0430\u0437\u0432\u0430 \u0444\u0430\u0439\u043B\u0443 Obsidian.
-- \u0412\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u043E\u0434\u043D\u0443 \u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448 \u0437\u0430\u0433\u0430\u043B\u044C\u043D\u0443 \u0444\u043E\u0440\u043C\u0443.
-- \u041D\u0435 \u0434\u043E\u0434\u0430\u0432\u0430\u0439 \u043F\u043E\u044F\u0441\u043D\u0435\u043D\u043D\u044F, \u043E\u043F\u0438\u0441\u0438 \u0430\u0431\u043E \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u0441\u0438\u0442\u0443\u0430\u0446\u0456\u0457.
-- \u041D\u0435 \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0439 \u0441\u0438\u043C\u0432\u043E\u043B\u0438: / \\ : * ? " < > |
+ENTITY NAMING RULES:
+- Keep the name short and concise.
+- Use one standard form across dreams.
+- Ensure names are suitable as Obsidian note titles.
+- Do NOT include symbols: / \\ : * ? " < > |
 
-characters:
-\u0412\u043A\u043B\u044E\u0447\u0430\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u0438\u0445 \u043B\u044E\u0434\u0435\u0439, \u0456\u0441\u0442\u043E\u0442 \u0430\u0431\u043E \u043F\u0435\u0440\u0441\u043E\u043D\u0430\u0436\u0456\u0432, \u044F\u043A\u0456 \u043C\u0430\u044E\u0442\u044C \u043E\u043A\u0440\u0435\u043C\u0443 \u0440\u043E\u043B\u044C \u0443 \u0441\u043D\u0456.
-
-places:
-\u0412\u043A\u043B\u044E\u0447\u0430\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u0441\u0430\u043C\u043E\u0441\u0442\u0456\u0439\u043D\u0456 \u043B\u043E\u043A\u0430\u0446\u0456\u0457, \u043F\u0440\u043E\u0441\u0442\u043E\u0440\u0438 \u0430\u0431\u043E \u0433\u0435\u043E\u0433\u0440\u0430\u0444\u0456\u0447\u043D\u0456 \u043C\u0456\u0441\u0446\u044F.
-
-objects:
-\u0412\u043A\u043B\u044E\u0447\u0430\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u0444\u0456\u0437\u0438\u0447\u043D\u0456 \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0438, \u044F\u043A\u0456 \u0456\u0441\u043D\u0443\u044E\u0442\u044C \u0443 \u0441\u043D\u0456 \u044F\u043A \u043E\u043A\u0440\u0435\u043C\u0456 \u043E\u0431'\u0454\u043A\u0442\u0438.
-
-emotions:
-\u0412\u043A\u043B\u044E\u0447\u0430\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u0435\u043C\u043E\u0446\u0456\u0457, \u043F\u043E\u0447\u0443\u0442\u0442\u044F \u0430\u0431\u043E \u0432\u043D\u0443\u0442\u0440\u0456\u0448\u043D\u0456 \u043F\u0441\u0438\u0445\u0456\u0447\u043D\u0456 \u0441\u0442\u0430\u043D\u0438.
-
-symbols:
-\u0412\u043A\u043B\u044E\u0447\u0430\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u043F\u043E\u0442\u0435\u043D\u0446\u0456\u0439\u043D\u043E \u043F\u043E\u0432\u0442\u043E\u0440\u044E\u0432\u0430\u043D\u0456 \u043E\u0431\u0440\u0430\u0437\u0438, \u043C\u043E\u0442\u0438\u0432\u0438 \u0430\u0431\u043E \u0441\u0438\u043C\u0432\u043E\u043B\u0456\u0447\u043D\u0456 \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u0438.
-
-concepts:
-\u0412\u043A\u043B\u044E\u0447\u0430\u0439 \u0442\u0456\u043B\u044C\u043A\u0438 \u0448\u0438\u0440\u043E\u043A\u0456 \u0430\u0431\u0441\u0442\u0440\u0430\u043A\u0442\u043D\u0456 \u0442\u0435\u043C\u0438.
-
-keywords:
-\u0421\u0442\u0432\u043E\u0440\u0438 5-15 \u043A\u043B\u044E\u0447\u043E\u0432\u0438\u0445 \u0441\u043B\u0456\u0432 \u0434\u043B\u044F \u043F\u043E\u0448\u0443\u043A\u0443. \u041E\u043A\u0440\u0435\u043C\u0456 \u0441\u043B\u043E\u0432\u0430.
+CATEGORIES:
+characters: Specific people, creatures, or characters with a role in the dream (EXCLUDING the narrator/dreamer).
+places: Independent locations, spaces, or geographic places.
+objects: Physical items that exist in the dream as distinct objects.
+emotions: Feelings, emotions, or internal mental states.
+symbols: Potentially recurring motifs, symbols, or imagery.
+concepts: Broad abstract themes, plot events, or transformations.
+keywords: 5-15 search keywords in the dream's language.
 
 summary:
-\u0421\u0442\u0432\u043E\u0440\u0438 \u043A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441 \u0441\u043D\u0443 \u0443 2-5 \u0440\u0435\u0447\u0435\u043D\u043D\u044F\u0445.
+A short summary of the dream in 2-5 sentences in the dream's language.
 `;
     const rawResult = await requestChatCompletion(
       apiKey,
@@ -1566,11 +1583,11 @@ function normalizeEntityArray(value) {
       };
     }
     return { name: "", description: "", aliases: [] };
-  }).filter((item) => item.name.length > 0);
+  }).filter((item) => item.name.length > 0 && !isStopEntity(item.name));
 }
 function normalizeStringArray(value) {
   if (!Array.isArray(value)) return [];
-  return value.map((x) => cleanEntityName(x)).filter(Boolean);
+  return value.map((x) => cleanEntityName(x)).filter((x) => x.length > 0 && !isStopEntity(x));
 }
 function cleanEntityName(item) {
   let name = typeof item === "object" && item !== null ? item.name : item;
@@ -1592,7 +1609,7 @@ async function createOrUpdateEntities(app, result, dreamFile, settings) {
     const items = result[type.field] || [];
     for (const item of items) {
       const safeName = cleanEntityName(item.name);
-      if (!safeName) continue;
+      if (!safeName || isStopEntity(safeName)) continue;
       const path = `${folderPath}/${safeName}.md`;
       const existingFile = app.vault.getAbstractFileByPath(path);
       if (existingFile instanceof import_obsidian8.TFile) {
@@ -1612,7 +1629,7 @@ async function createOrUpdateEntities(app, result, dreamFile, settings) {
             if (!Array.isArray(fm.aliases)) fm.aliases = fm.aliases ? [fm.aliases] : [];
             for (const alias of item.aliases) {
               const cleanAlias = cleanEntityName(alias);
-              if (cleanAlias && !fm.aliases.includes(cleanAlias)) {
+              if (cleanAlias && !isStopEntity(cleanAlias) && !fm.aliases.includes(cleanAlias)) {
                 fm.aliases.push(cleanAlias);
               }
             }
@@ -1640,7 +1657,7 @@ async function createOrUpdateEntities(app, result, dreamFile, settings) {
           fm.last_seen = dreamDate;
           fm.created_from = [`[[${dreamName}]]`];
           fm.dream_count = 1;
-          const cleanAliases = Array.isArray(item.aliases) ? item.aliases.map((x) => cleanEntityName(x)).filter(Boolean) : [];
+          const cleanAliases = Array.isArray(item.aliases) ? item.aliases.map((x) => cleanEntityName(x)).filter((x) => x.length > 0 && !isStopEntity(x)) : [];
           fm.aliases = cleanAliases;
           fm.tags = [type.entity_type];
           fm.description = item.description || "";

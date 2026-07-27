@@ -113,9 +113,10 @@ CRITICAL LANGUAGE REQUIREMENT:
 - ALL returned text fields ("summary", "name", "description", "aliases", "keywords") MUST be in the EXACT SAME LANGUAGE as the dream text.
 - Do NOT translate the dream content, entity names, descriptions, or keywords into another language.
 
-STOP ENTITIES & SELF-REFERENCE RULES:
+STOP ENTITIES & DEDUPLICATION RULES:
 - Do NOT create trivial self-referential entities representing the dreamer or narrator (e.g., "Narrator", "Dreamer", "I", "Me", "My body", "Myself", "Оповідач", "Я", "Сновидець", "Моє тіло", "Власне тіло", "Себе").
 - If the dreamer's identity, body transformation, or state of self is an important plot point, record this via appropriate "concepts" (e.g., "Body Transformation", "Identity Change", "Трансформація тіла", "Зміна особистості"), NOT via a "Narrator" character entity.
+- Each entity must have a SINGLE unique name across all categories. Do NOT return duplicate entity names in different categories (e.g. if an item is an Object "Ladder", do NOT also create a Symbol "Ladder").
 
 Return JSON ONLY.
 Format:
@@ -313,6 +314,18 @@ export function cleanEntityName(item: any): string {
 	return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+function findExistingEntityFile(app: App, baseFolder: string, safeName: string): TFile | null {
+	for (const type of ENTITY_TYPES) {
+		const categoryFolderPath = `${baseFolder}/${type.folder}`;
+		const candidatePath = `${categoryFolderPath}/${safeName}.md`;
+		const file = app.vault.getAbstractFileByPath(candidatePath);
+		if (file instanceof TFile) {
+			return file;
+		}
+	}
+	return null;
+}
+
 async function createOrUpdateEntities(
 	app: App,
 	result: DreamAnalysisResult,
@@ -342,13 +355,12 @@ async function createOrUpdateEntities(
 			const safeName = cleanEntityName(item.name);
 			if (!safeName || isStopEntity(safeName)) continue;
 
-			const path = `${folderPath}/${safeName}.md`;
-			const existingFile = app.vault.getAbstractFileByPath(path);
+			// Check if entity note with this name ALREADY EXISTS anywhere in baseFolder
+			const existingFile = findExistingEntityFile(app, baseFolder, safeName);
 
 			if (existingFile instanceof TFile) {
 				await app.fileManager.processFrontMatter(existingFile, (fm) => {
 					fm.last_seen = dreamDate;
-					fm.entity_type = type.entity_type;
 					fm.embedding_status = "pending";
 
 					const dreamLink = `[[${dreamName}]]`;
@@ -377,8 +389,9 @@ async function createOrUpdateEntities(
 					await app.vault.modify(existingFile, updatedText);
 				}
 
-				modifiedPaths.push(path);
+				modifiedPaths.push(existingFile.path);
 			} else {
+				const path = `${folderPath}/${safeName}.md`;
 				const bodyContent = makeEntityBodyContent(
 					app,
 					safeName,

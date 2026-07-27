@@ -921,13 +921,25 @@ keywords: []
 async function ensureEntityIndexes(app, settings) {
   const entitiesFolder = getEntitiesSubfolder(app, settings);
   const locale = getLocale();
-  const indexFolderName = locale === "uk" ? "! \u0406\u043D\u0434\u0435\u043A\u0441" : "! Indexes";
+  let indexFolderName = locale === "uk" ? "! \u0406\u043D\u0434\u0435\u043A\u0441" : "! Indexes";
+  if (app.vault.getAbstractFileByPath(`${entitiesFolder}/! \u0406\u043D\u0434\u0435\u043A\u0441`)) {
+    indexFolderName = "! \u0406\u043D\u0434\u0435\u043A\u0441";
+  } else if (app.vault.getAbstractFileByPath(`${entitiesFolder}/! Indexes`)) {
+    indexFolderName = "! Indexes";
+  }
   const indexesFolderPath = `${entitiesFolder}/${indexFolderName}`;
   await ensureFolder(app, indexesFolderPath);
   for (const type of ENTITY_TYPES) {
     const categoryFolder = `${entitiesFolder}/${type.folder}`;
     await ensureFolder(app, categoryFolder);
-    const fileName = locale === "uk" ? `\u0406\u043D\u0434\u0435\u043A\u0441 - ${type.folder}.md` : `Index - ${type.folder}.md`;
+    let fileName = locale === "uk" ? `\u0406\u043D\u0434\u0435\u043A\u0441 - ${type.folder}.md` : `Index - ${type.folder}.md`;
+    const ukFile = `${indexesFolderPath}/\u0406\u043D\u0434\u0435\u043A\u0441 - ${type.folder}.md`;
+    const enFile = `${indexesFolderPath}/Index - ${type.folder}.md`;
+    if (app.vault.getAbstractFileByPath(ukFile)) {
+      fileName = `\u0406\u043D\u0434\u0435\u043A\u0441 - ${type.folder}.md`;
+    } else if (app.vault.getAbstractFileByPath(enFile)) {
+      fileName = `Index - ${type.folder}.md`;
+    }
     const filePath = `${indexesFolderPath}/${fileName}`;
     const title = locale === "uk" ? `\u0406\u043D\u0434\u0435\u043A\u0441 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439: ${type.folder}` : `Entity Index: ${type.folder}`;
     const desc = locale === "uk" ? `\u041A\u0430\u0442\u0430\u043B\u043E\u0433 \u0443\u0441\u0456\u0445 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 **${type.folder}** \u0437 \u0457\u0445\u043D\u0456\u043C\u0438 \u043E\u043F\u0438\u0441\u0430\u043C\u0438 \u0442\u0430 \u0447\u0430\u0441\u0442\u043E\u0442\u043E\u044E \u043F\u043E\u044F\u0432 \u0443 \u0441\u043D\u0430\u0445.` : `Catalog of all saved **${type.folder}** entities with descriptions and dream frequency.`;
@@ -969,8 +981,14 @@ async function ensureDreamDashboard(app, settings) {
   await ensureFolder(app, dreamsSubfolder);
   await ensureFolder(app, entitiesFolder);
   await ensureEntityIndexes(app, settings);
-  const fileName = t("dashboardFileName");
-  const dashboardPath = `${rootFolder}/${fileName}`;
+  let dashboardPath = `${rootFolder}/${t("dashboardFileName")}`;
+  const ukPath = `${rootFolder}/\u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0441\u043D\u0456\u0432.md`;
+  const enPath = `${rootFolder}/Dream Dashboard.md`;
+  if (app.vault.getAbstractFileByPath(ukPath)) {
+    dashboardPath = ukPath;
+  } else if (app.vault.getAbstractFileByPath(enPath)) {
+    dashboardPath = enPath;
+  }
   const indexLinks = ENTITY_TYPES.map((tObj) => {
     const idxName = locale === "uk" ? `\u0406\u043D\u0434\u0435\u043A\u0441 - ${tObj.folder}` : `Index - ${tObj.folder}`;
     return `- [[${idxName}]]`;
@@ -994,7 +1012,7 @@ TABLE WITHOUT ID
   length(filter(rows, (r) => r.lucid = true)) AS "\u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u0445 (\u041E\u0421)",
   round((length(filter(rows, (r) => r.lucid = true)) / length(rows)) * 100, 1) + "%" AS "% \u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043E\u0441\u0442\u0456"
 FROM "${dreamsSubfolder}"
-WHERE file.name != "${fileName.replace(/\.md$/, "")}" AND file.name != "\u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0441\u043D\u0456\u0432" AND file.name != "Dream Dashboard"
+WHERE file.name != "${pathBasename(dashboardPath)}" AND file.name != "\u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0441\u043D\u0456\u0432" AND file.name != "Dream Dashboard"
 GROUP BY true
 \`\`\`
 
@@ -1068,10 +1086,10 @@ ${t("dashboardSectionRecent")}
 TABLE WITHOUT ID
   file.link AS "\u0417\u0430\u043F\u0438\u0441 \u0441\u043D\u0443",
   date AS "\u0414\u0430\u0442\u0430",
-  choice(lucid, "\u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u0439 (\u041E\u0421)", "\u0417\u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0439") AS "\u0422\u0438\u043F \u0441\u043D\u0443",
+  choice(lucid, "\u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u0439 (\u041E\u0421)", "\u0417\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0439") AS "\u0422\u0438\u043F \u0441\u043D\u0443",
   length(keywords) AS "\u041A\u043B\u044E\u0447\u043E\u0432\u0438\u0445 \u0441\u043B\u0456\u0432"
 FROM "${dreamsSubfolder}"
-WHERE file.name != "${fileName.replace(/\.md$/, "")}" AND file.name != "\u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0441\u043D\u0456\u0432" AND file.name != "Dream Dashboard"
+WHERE file.name != "${pathBasename(dashboardPath)}" AND file.name != "\u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0441\u043D\u0456\u0432" AND file.name != "Dream Dashboard"
 SORT file.name DESC
 LIMIT 15
 \`\`\`
@@ -1085,6 +1103,11 @@ LIMIT 15
   } else {
     await app.vault.create(dashboardPath, content);
   }
+}
+function pathBasename(pathStr) {
+  const idx = pathStr.lastIndexOf("/");
+  const file = idx >= 0 ? pathStr.substring(idx + 1) : pathStr;
+  return file.replace(/\.md$/, "");
 }
 
 // src/resetManager.ts
@@ -1435,9 +1458,10 @@ CRITICAL LANGUAGE REQUIREMENT:
 - ALL returned text fields ("summary", "name", "description", "aliases", "keywords") MUST be in the EXACT SAME LANGUAGE as the dream text.
 - Do NOT translate the dream content, entity names, descriptions, or keywords into another language.
 
-STOP ENTITIES & SELF-REFERENCE RULES:
+STOP ENTITIES & DEDUPLICATION RULES:
 - Do NOT create trivial self-referential entities representing the dreamer or narrator (e.g., "Narrator", "Dreamer", "I", "Me", "My body", "Myself", "\u041E\u043F\u043E\u0432\u0456\u0434\u0430\u0447", "\u042F", "\u0421\u043D\u043E\u0432\u0438\u0434\u0435\u0446\u044C", "\u041C\u043E\u0454 \u0442\u0456\u043B\u043E", "\u0412\u043B\u0430\u0441\u043D\u0435 \u0442\u0456\u043B\u043E", "\u0421\u0435\u0431\u0435").
 - If the dreamer's identity, body transformation, or state of self is an important plot point, record this via appropriate "concepts" (e.g., "Body Transformation", "Identity Change", "\u0422\u0440\u0430\u043D\u0441\u0444\u043E\u0440\u043C\u0430\u0446\u0456\u044F \u0442\u0456\u043B\u0430", "\u0417\u043C\u0456\u043D\u0430 \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u043E\u0441\u0442\u0456"), NOT via a "Narrator" character entity.
+- Each entity must have a SINGLE unique name across all categories. Do NOT return duplicate entity names in different categories (e.g. if an item is an Object "Ladder", do NOT also create a Symbol "Ladder").
 
 Return JSON ONLY.
 Format:
@@ -1608,6 +1632,17 @@ function cleanEntityName(item) {
   if (!str) return "";
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
+function findExistingEntityFile(app, baseFolder, safeName) {
+  for (const type of ENTITY_TYPES) {
+    const categoryFolderPath = `${baseFolder}/${type.folder}`;
+    const candidatePath = `${categoryFolderPath}/${safeName}.md`;
+    const file = app.vault.getAbstractFileByPath(candidatePath);
+    if (file instanceof import_obsidian8.TFile) {
+      return file;
+    }
+  }
+  return null;
+}
 async function createOrUpdateEntities(app, result, dreamFile, settings) {
   const dreamName = dreamFile.basename;
   const createdDate = (0, import_obsidian8.moment)().format("YYYY-MM-DD");
@@ -1623,12 +1658,10 @@ async function createOrUpdateEntities(app, result, dreamFile, settings) {
     for (const item of items) {
       const safeName = cleanEntityName(item.name);
       if (!safeName || isStopEntity(safeName)) continue;
-      const path = `${folderPath}/${safeName}.md`;
-      const existingFile = app.vault.getAbstractFileByPath(path);
+      const existingFile = findExistingEntityFile(app, baseFolder, safeName);
       if (existingFile instanceof import_obsidian8.TFile) {
         await app.fileManager.processFrontMatter(existingFile, (fm) => {
           fm.last_seen = dreamDate;
-          fm.entity_type = type.entity_type;
           fm.embedding_status = "pending";
           const dreamLink = `[[${dreamName}]]`;
           if (!Array.isArray(fm.created_from)) {
@@ -1653,8 +1686,9 @@ async function createOrUpdateEntities(app, result, dreamFile, settings) {
         if (entityText !== updatedText) {
           await app.vault.modify(existingFile, updatedText);
         }
-        modifiedPaths.push(path);
+        modifiedPaths.push(existingFile.path);
       } else {
+        const path = `${folderPath}/${safeName}.md`;
         const bodyContent = makeEntityBodyContent(
           app,
           safeName,

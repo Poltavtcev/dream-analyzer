@@ -244,7 +244,14 @@ export async function ensureEntityIndexes(app: App, settings: DreamAnalyzerSetti
 	const entitiesFolder = getEntitiesSubfolder(app, settings);
 	const locale = getLocale();
 
-	const indexFolderName = locale === "uk" ? "! Індекс" : "! Indexes";
+	// Check if '! Індекс' or '! Indexes' already exists
+	let indexFolderName = locale === "uk" ? "! Індекс" : "! Indexes";
+	if (app.vault.getAbstractFileByPath(`${entitiesFolder}/! Індекс`)) {
+		indexFolderName = "! Індекс";
+	} else if (app.vault.getAbstractFileByPath(`${entitiesFolder}/! Indexes`)) {
+		indexFolderName = "! Indexes";
+	}
+
 	const indexesFolderPath = `${entitiesFolder}/${indexFolderName}`;
 	await ensureFolder(app, indexesFolderPath);
 
@@ -252,7 +259,15 @@ export async function ensureEntityIndexes(app: App, settings: DreamAnalyzerSetti
 		const categoryFolder = `${entitiesFolder}/${type.folder}`;
 		await ensureFolder(app, categoryFolder);
 
-		const fileName = locale === "uk" ? `Індекс - ${type.folder}.md` : `Index - ${type.folder}.md`;
+		let fileName = locale === "uk" ? `Індекс - ${type.folder}.md` : `Index - ${type.folder}.md`;
+		const ukFile = `${indexesFolderPath}/Індекс - ${type.folder}.md`;
+		const enFile = `${indexesFolderPath}/Index - ${type.folder}.md`;
+		if (app.vault.getAbstractFileByPath(ukFile)) {
+			fileName = `Індекс - ${type.folder}.md`;
+		} else if (app.vault.getAbstractFileByPath(enFile)) {
+			fileName = `Index - ${type.folder}.md`;
+		}
+
 		const filePath = `${indexesFolderPath}/${fileName}`;
 
 		const title = locale === "uk" ? `Індекс сутностей: ${type.folder}` : `Entity Index: ${type.folder}`;
@@ -303,8 +318,16 @@ export async function ensureDreamDashboard(app: App, settings: DreamAnalyzerSett
 
 	await ensureEntityIndexes(app, settings);
 
-	const fileName = t("dashboardFileName");
-	const dashboardPath = `${rootFolder}/${fileName}`;
+	// Smart check: preserve existing Dashboard file (whether Дашборд снів.md or Dream Dashboard.md)
+	let dashboardPath = `${rootFolder}/${t("dashboardFileName")}`;
+	const ukPath = `${rootFolder}/Дашборд снів.md`;
+	const enPath = `${rootFolder}/Dream Dashboard.md`;
+
+	if (app.vault.getAbstractFileByPath(ukPath)) {
+		dashboardPath = ukPath;
+	} else if (app.vault.getAbstractFileByPath(enPath)) {
+		dashboardPath = enPath;
+	}
 
 	const indexLinks = ENTITY_TYPES.map(tObj => {
 		const idxName = locale === "uk" ? `Індекс - ${tObj.folder}` : `Index - ${tObj.folder}`;
@@ -330,7 +353,7 @@ TABLE WITHOUT ID
   length(filter(rows, (r) => r.lucid = true)) AS "Усвідомлених (ОС)",
   round((length(filter(rows, (r) => r.lucid = true)) / length(rows)) * 100, 1) + "%" AS "% Усвідомленості"
 FROM "${dreamsSubfolder}"
-WHERE file.name != "${fileName.replace(/\.md$/, "")}" AND file.name != "Дашборд снів" AND file.name != "Dream Dashboard"
+WHERE file.name != "${pathBasename(dashboardPath)}" AND file.name != "Дашборд снів" AND file.name != "Dream Dashboard"
 GROUP BY true
 \`\`\`
 
@@ -404,10 +427,10 @@ ${t("dashboardSectionRecent")}
 TABLE WITHOUT ID
   file.link AS "Запис сну",
   date AS "Дата",
-  choice(lucid, "Усвідомлений (ОС)", "Ззвичайний") AS "Тип сну",
+  choice(lucid, "Усвідомлений (ОС)", "Звичайний") AS "Тип сну",
   length(keywords) AS "Ключових слів"
 FROM "${dreamsSubfolder}"
-WHERE file.name != "${fileName.replace(/\.md$/, "")}" AND file.name != "Дашборд снів" AND file.name != "Dream Dashboard"
+WHERE file.name != "${pathBasename(dashboardPath)}" AND file.name != "Дашборд снів" AND file.name != "Dream Dashboard"
 SORT file.name DESC
 LIMIT 15
 \`\`\`
@@ -422,4 +445,10 @@ LIMIT 15
 	} else {
 		await app.vault.create(dashboardPath, content);
 	}
+}
+
+function pathBasename(pathStr: string): string {
+	const idx = pathStr.lastIndexOf("/");
+	const file = idx >= 0 ? pathStr.substring(idx + 1) : pathStr;
+	return file.replace(/\.md$/, "");
 }

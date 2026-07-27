@@ -1134,8 +1134,8 @@ var ConfirmResetModal = class extends import_obsidian5.Modal {
   }
 };
 async function resetAllDreamData(app, settings) {
-  const dreamsFolder = getDreamsSubfolder(settings);
-  const entitiesFolder = getEntitiesSubfolder(settings);
+  const dreamsFolder = getDreamsSubfolder(app, settings);
+  const entitiesFolder = getEntitiesSubfolder(app, settings);
   let entitiesDeleted = 0;
   let dreamsReset = 0;
   const allFiles = app.vault.getMarkdownFiles();
@@ -1148,12 +1148,11 @@ async function resetAllDreamData(app, settings) {
       console.error("Could not delete entity file:", file.path, e);
     }
   }
-  await saveEmbeddingsDatabase(app, settings, []);
-  await saveDreamEmbeddingsDatabase(app, settings, []);
   const dreamFiles = allFiles.filter((f) => f.path.startsWith(dreamsFolder));
   for (const file of dreamFiles) {
     try {
       await app.fileManager.processFrontMatter(file, (fm) => {
+        fm.type = "dream";
         fm.entities_checked = false;
         fm.characters = [];
         fm.places = [];
@@ -1164,29 +1163,17 @@ async function resetAllDreamData(app, settings) {
         fm.keywords = [];
       });
       let content = await app.vault.read(file);
-      const cleanAiText = `
-# AI \u0430\u043D\u0430\u043B\u0456\u0437
-
-## \u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441
-
-
-## \u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u0437\u0432'\u044F\u0437\u043A\u0438 \u0437 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u043C\u0438 \u0441\u043D\u0430\u043C\u0438
-
--
-`;
       if (content.includes("# AI \u0430\u043D\u0430\u043B\u0456\u0437")) {
-        content = content.replace(/# AI аналіз[\s\S]*/, cleanAiText.trim());
-      } else {
-        content += `
-
-${cleanAiText.trim()}`;
+        content = content.replace(/# AI аналіз[\s\S]*/, "# AI \u0430\u043D\u0430\u043B\u0456\u0437\n\n## \u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441\n\n\n## \u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u0437\u0432'\u044F\u0437\u043A\u0438 \u0437 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u043C\u0438 \u0441\u043D\u0430\u043C\u0438\n\n-");
+        await app.vault.modify(file, content);
       }
-      await app.vault.modify(file, content);
       dreamsReset++;
     } catch (e) {
       console.error("Could not reset dream file:", file.path, e);
     }
   }
+  await saveEmbeddingsDatabase(app, settings, []);
+  await saveDreamEmbeddingsDatabase(app, settings, []);
   return { dreamsReset, entitiesDeleted };
 }
 

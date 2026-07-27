@@ -1,4 +1,4 @@
-import { App, TFile, Notice, Modal, Setting } from "obsidian";
+import { App, Modal, Setting, TFile, Notice } from "obsidian";
 import { DreamAnalyzerSettings } from "./types";
 import { saveEmbeddingsDatabase, saveDreamEmbeddingsDatabase, getDreamsSubfolder, getEntitiesSubfolder } from "./embeddings";
 import { t } from "./i18n";
@@ -41,8 +41,8 @@ export async function resetAllDreamData(
 	app: App,
 	settings: DreamAnalyzerSettings
 ): Promise<{ dreamsReset: number; entitiesDeleted: number }> {
-	const dreamsFolder = getDreamsSubfolder(settings);
-	const entitiesFolder = getEntitiesSubfolder(settings);
+	const dreamsFolder = getDreamsSubfolder(app, settings);
+	const entitiesFolder = getEntitiesSubfolder(app, settings);
 
 	let entitiesDeleted = 0;
 	let dreamsReset = 0;
@@ -59,16 +59,12 @@ export async function resetAllDreamData(
 		}
 	}
 
-	// 2. Обнуляємо обидві векторні бази (embeddings.json та dream_embeddings.json)
-	await saveEmbeddingsDatabase(app, settings, []);
-	await saveDreamEmbeddingsDatabase(app, settings, []);
-
-	// 3. Скидаємо Frontmatter та розділ AI-аналізу у всіх снах у папці dreamsFolder
+	// 2. Скидаємо нотатки снів до початкового стану (обнуляємо frontmatter і прибираємо AI аналіз)
 	const dreamFiles = allFiles.filter(f => f.path.startsWith(dreamsFolder));
 	for (const file of dreamFiles) {
 		try {
-			// Нативне обнулення frontmatter
 			await app.fileManager.processFrontMatter(file, (fm) => {
+				fm.type = "dream";
 				fm.entities_checked = false;
 				fm.characters = [];
 				fm.places = [];
@@ -79,31 +75,21 @@ export async function resetAllDreamData(
 				fm.keywords = [];
 			});
 
-			// Очищення тіла від попереднього AI аналізу
 			let content = await app.vault.read(file);
-			const cleanAiText = `
-# AI аналіз
-
-## Короткий опис
-
-
-## Можливі зв'язки з попередніми снами
-
--
-`;
-
 			if (content.includes("# AI аналіз")) {
-				content = content.replace(/# AI аналіз[\s\S]*/, cleanAiText.trim());
-			} else {
-				content += `\n\n${cleanAiText.trim()}`;
+				content = content.replace(/# AI аналіз[\s\S]*/, "# AI аналіз\n\n## Короткий опис\n\n\n## Можливі зв'язки з попередніми снами\n\n-");
+				await app.vault.modify(file, content);
 			}
 
-			await app.vault.modify(file, content);
 			dreamsReset++;
 		} catch (e) {
 			console.error("Could not reset dream file:", file.path, e);
 		}
 	}
+
+	// 3. Очищаємо векторні бази даних (embeddings.json & dream_embeddings.json)
+	await saveEmbeddingsDatabase(app, settings, []);
+	await saveDreamEmbeddingsDatabase(app, settings, []);
 
 	return { dreamsReset, entitiesDeleted };
 }

@@ -56,107 +56,10 @@ var import_obsidian7 = require("obsidian");
 var import_obsidian3 = require("obsidian");
 
 // src/api.ts
-var import_obsidian = require("obsidian");
-async function getOpenAiApiKey(app, settings) {
-  if (settings.openaiApiKey && settings.openaiApiKey.trim().length > 0) {
-    return settings.openaiApiKey.trim();
-  }
-  throw new Error(`OpenAI API key \u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E! \u0411\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430, \u0432\u043A\u0430\u0436\u0456\u0442\u044C API \u043A\u043B\u044E\u0447 \u0443 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u043F\u043B\u0430\u0433\u0456\u043D\u0430 "Dream Analyzer".`);
-}
-async function getEmbedding(apiKey, model, input) {
-  const batch = await getBatchEmbeddings(apiKey, model, [input]);
-  if (!batch || batch.length === 0) {
-    throw new Error("\u041F\u0430\u043A\u0435\u0442\u0438 \u0435\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0456\u0432 \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u043B\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u043C\u0430\u0441\u0438\u0432");
-  }
-  return batch[0];
-}
-async function getBatchEmbeddings(apiKey, model, inputs) {
-  if (!inputs || inputs.length === 0) return [];
-  try {
-    const response = await (0, import_obsidian.requestUrl)({
-      url: "https://api.openai.com/v1/embeddings",
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: model || "text-embedding-3-small",
-        input: inputs
-      })
-    });
-    if (response.status !== 200) {
-      let errorDetail = response.text;
-      try {
-        const errJson = JSON.parse(response.text);
-        if (errJson?.error?.message) {
-          errorDetail = errJson.error.message;
-        }
-      } catch (e) {
-      }
-      throw new Error(`OpenAI API Error ${response.status}: ${errorDetail}`);
-    }
-    const data = JSON.parse(response.text);
-    if (!data.data || !Array.isArray(data.data)) {
-      throw new Error("\u041D\u0435\u043A\u043E\u0440\u0435\u043A\u0442\u043D\u0438\u0439 \u0444\u043E\u0440\u043C\u0430\u0442 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 embeddings \u0432\u0456\u0434 OpenAI");
-    }
-    const sorted = data.data.sort((a, b) => a.index - b.index);
-    return sorted.map((item) => item.embedding);
-  } catch (error) {
-    console.error("Dream Analyzer Batch Embedding Error:", error);
-    throw new Error(`\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0456\u0457 \u0435\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0456\u0432: ${error.message || error}`);
-  }
-}
-async function requestChatCompletion(apiKey, model, systemPrompt, userPrompt) {
-  try {
-    const selectedModel = model || "gpt-4o-mini";
-    const payload = {
-      model: selectedModel,
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt
-        },
-        {
-          role: "user",
-          content: userPrompt
-        }
-      ],
-      response_format: { type: "json_object" }
-    };
-    const response = await (0, import_obsidian.requestUrl)({
-      url: "https://api.openai.com/v1/chat/completions",
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-    if (response.status !== 200) {
-      let errorDetail = response.text;
-      try {
-        const errJson = JSON.parse(response.text);
-        if (errJson?.error?.message) {
-          errorDetail = errJson.error.message;
-        }
-      } catch (e) {
-      }
-      throw new Error(`OpenAI API Error ${response.status}: ${errorDetail}`);
-    }
-    const data = JSON.parse(response.text);
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      throw new Error("\u041D\u0435\u043A\u043E\u0440\u0435\u043A\u0442\u043D\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C ChatCompletion \u0432\u0456\u0434 OpenAI");
-    }
-    return JSON.parse(data.choices[0].message.content);
-  } catch (error) {
-    console.error("Dream Analyzer ChatCompletion Error:", error);
-    throw new Error(`\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0430\u043F\u0438\u0442\u0443 \u0434\u043E OpenAI: ${error.message || error}`);
-  }
-}
+var import_obsidian2 = require("obsidian");
 
 // src/i18n.ts
-var import_obsidian2 = require("obsidian");
+var import_obsidian = require("obsidian");
 function getLocale() {
   try {
     const obsLang = (window.localStorage.getItem("language") || "").toLowerCase();
@@ -166,7 +69,7 @@ function getLocale() {
       }
       return "en";
     }
-    const momentLang = (import_obsidian2.moment.locale() || "").toLowerCase();
+    const momentLang = (import_obsidian.moment.locale() || "").toLowerCase();
     if (momentLang.startsWith("uk") || momentLang.startsWith("ua")) {
       return "uk";
     }
@@ -373,6 +276,116 @@ function t(key, vars) {
     }
   }
   return template;
+}
+
+// src/api.ts
+async function getOpenAiApiKey(app, settings) {
+  const rawKey = (settings.openaiApiKey || "").trim();
+  if (!rawKey) {
+    throw new Error(t("noApiKey"));
+  }
+  if (app && app.secretStorage) {
+    try {
+      const secretVal = app.secretStorage.getSecret(rawKey);
+      if (secretVal && typeof secretVal === "string" && secretVal.trim().length > 0) {
+        return secretVal.trim();
+      }
+    } catch (e) {
+      console.warn("Could not retrieve secret from SecretStorage:", e);
+    }
+  }
+  return rawKey;
+}
+async function getEmbedding(apiKey, model, input) {
+  const batch = await getBatchEmbeddings(apiKey, model, [input]);
+  if (!batch || batch.length === 0) {
+    throw new Error("\u041F\u0430\u043A\u0435\u0442\u0438 \u0435\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0456\u0432 \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u043B\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u043C\u0430\u0441\u0438\u0432");
+  }
+  return batch[0];
+}
+async function getBatchEmbeddings(apiKey, model, inputs) {
+  if (!inputs || inputs.length === 0) return [];
+  try {
+    const response = await (0, import_obsidian2.requestUrl)({
+      url: "https://api.openai.com/v1/embeddings",
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: model || "text-embedding-3-small",
+        input: inputs
+      })
+    });
+    if (response.status !== 200) {
+      let errorDetail = response.text;
+      try {
+        const errJson = JSON.parse(response.text);
+        if (errJson?.error?.message) {
+          errorDetail = errJson.error.message;
+        }
+      } catch (e) {
+      }
+      throw new Error(`OpenAI API Error ${response.status}: ${errorDetail}`);
+    }
+    const data = JSON.parse(response.text);
+    if (!data.data || !Array.isArray(data.data)) {
+      throw new Error("\u041D\u0435\u043A\u043E\u0440\u0435\u043A\u0442\u043D\u0438\u0439 \u0444\u043E\u0440\u043C\u0430\u0442 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 embeddings \u0432\u0456\u0434 OpenAI");
+    }
+    const sorted = data.data.sort((a, b) => a.index - b.index);
+    return sorted.map((item) => item.embedding);
+  } catch (error) {
+    console.error("Dream Analyzer Batch Embedding Error:", error);
+    throw new Error(`\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0456\u0457 \u0435\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0456\u0432: ${error.message || error}`);
+  }
+}
+async function requestChatCompletion(apiKey, model, systemPrompt, userPrompt) {
+  try {
+    const selectedModel = model || "gpt-4o-mini";
+    const payload = {
+      model: selectedModel,
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: userPrompt
+        }
+      ],
+      response_format: { type: "json_object" }
+    };
+    const response = await (0, import_obsidian2.requestUrl)({
+      url: "https://api.openai.com/v1/chat/completions",
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    if (response.status !== 200) {
+      let errorDetail = response.text;
+      try {
+        const errJson = JSON.parse(response.text);
+        if (errJson?.error?.message) {
+          errorDetail = errJson.error.message;
+        }
+      } catch (e) {
+      }
+      throw new Error(`OpenAI API Error ${response.status}: ${errorDetail}`);
+    }
+    const data = JSON.parse(response.text);
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error("\u041D\u0435\u043A\u043E\u0440\u0435\u043A\u0442\u043D\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C ChatCompletion \u0432\u0456\u0434 OpenAI");
+    }
+    return JSON.parse(data.choices[0].message.content);
+  } catch (error) {
+    console.error("Dream Analyzer ChatCompletion Error:", error);
+    throw new Error(`\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0430\u043F\u0438\u0442\u0443 \u0434\u043E OpenAI: ${error.message || error}`);
+  }
 }
 
 // src/embeddings.ts
@@ -1246,13 +1259,21 @@ var DreamAnalyzerSettingTab = class extends import_obsidian7.PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     new import_obsidian7.Setting(containerEl).setName(t("settingsTitle")).setHeading();
-    new import_obsidian7.Setting(containerEl).setName(t("apiKeyName")).setDesc(t("apiKeyDesc")).addText((text) => {
-      text.inputEl.type = "password";
-      text.setPlaceholder("sk-...").setValue(this.plugin.settings.openaiApiKey).onChange(async (value) => {
-        this.plugin.settings.openaiApiKey = value.trim();
+    const hasSecretStorage = typeof import_obsidian7.SecretComponent !== "undefined" && typeof this.app.secretStorage !== "undefined";
+    if (hasSecretStorage) {
+      new import_obsidian7.Setting(containerEl).setName(t("apiKeyName")).setDesc(t("apiKeyDesc")).addComponent((el) => new import_obsidian7.SecretComponent(this.app, el).setValue(this.plugin.settings.openaiApiKey || "").onChange(async (value) => {
+        this.plugin.settings.openaiApiKey = value ? value.trim() : "";
         await this.plugin.saveSettings();
+      }));
+    } else {
+      new import_obsidian7.Setting(containerEl).setName(t("apiKeyName")).setDesc(t("apiKeyDesc")).addText((text) => {
+        text.inputEl.type = "password";
+        text.setPlaceholder("sk-...").setValue(this.plugin.settings.openaiApiKey || "").onChange(async (value) => {
+          this.plugin.settings.openaiApiKey = value.trim();
+          await this.plugin.saveSettings();
+        });
       });
-    });
+    }
     new import_obsidian7.Setting(containerEl).setName(t("modelName")).setDesc(t("modelDesc")).addDropdown((dropdown) => dropdown.addOption("gpt-5-mini", t("gptDefaultLabel")).addOption("gpt-4.1-mini", "GPT-4.1 mini").addOption("gpt-5", "GPT-5").addOption("gpt-4o-mini", "GPT-4o mini").addOption("gpt-4o", "GPT-4o").addOption("o3-mini", "o3-mini").setValue(this.plugin.settings.openaiModel || "gpt-5-mini").onChange(async (value) => {
       this.plugin.settings.openaiModel = value;
       await this.plugin.saveSettings();

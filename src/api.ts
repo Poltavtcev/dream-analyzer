@@ -1,12 +1,27 @@
 import { App, requestUrl } from "obsidian";
 import { DreamAnalyzerSettings } from "./types";
+import { t } from "./i18n";
 
 export async function getOpenAiApiKey(app: App, settings: DreamAnalyzerSettings): Promise<string> {
-	if (settings.openaiApiKey && settings.openaiApiKey.trim().length > 0) {
-		return settings.openaiApiKey.trim();
+	const rawKey = (settings.openaiApiKey || "").trim();
+	if (!rawKey) {
+		throw new Error(t("noApiKey"));
 	}
 
-	throw new Error(`OpenAI API key не вказано! Будь ласка, вкажіть API ключ у налаштуваннях плагіна "Dream Analyzer".`);
+	// 1. Try to resolve from SecretStorage (if available and rawKey is a secret name or key)
+	if (app && (app as any).secretStorage) {
+		try {
+			const secretVal = (app as any).secretStorage.getSecret(rawKey);
+			if (secretVal && typeof secretVal === "string" && secretVal.trim().length > 0) {
+				return secretVal.trim();
+			}
+		} catch (e) {
+			console.warn("Could not retrieve secret from SecretStorage:", e);
+		}
+	}
+
+	// 2. Return raw key string if direct key is used (e.g. sk-...)
+	return rawKey;
 }
 
 export async function getEmbedding(

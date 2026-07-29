@@ -94,8 +94,13 @@ export async function loadDreamEmbeddingsDatabase(
 			const content = await app.vault.read(file);
 			const parsed = JSON.parse(content) as DreamVectorDatabaseItem[];
 			if (Array.isArray(parsed)) {
-				cachedDreamDb = { dbPath, data: parsed };
-				return parsed;
+				// Filter out any entries whose dream file no longer exists in vault
+				const validParsed = parsed.filter(d => {
+					const abstractFile = app.vault.getAbstractFileByPath(d.file);
+					return abstractFile instanceof TFile;
+				});
+				cachedDreamDb = { dbPath, data: validParsed };
+				return validParsed;
 			}
 		}
 	} catch {
@@ -111,8 +116,14 @@ export async function saveDreamEmbeddingsDatabase(
 	data: DreamVectorDatabaseItem[]
 ): Promise<void> {
 	const dbPath = getDreamEmbeddingsPath(app, settings);
-	cachedDreamDb = { dbPath, data };
-	const jsonContent = JSON.stringify(data, null, 2);
+	// Filter out non-existent dream files before saving
+	const validData = data.filter(d => {
+		const abstractFile = app.vault.getAbstractFileByPath(d.file);
+		return abstractFile instanceof TFile;
+	});
+
+	cachedDreamDb = { dbPath, data: validData };
+	const jsonContent = JSON.stringify(validData, null, 2);
 	const file = app.vault.getAbstractFileByPath(dbPath);
 	if (file instanceof TFile) {
 		await app.vault.modify(file, jsonContent);
@@ -349,6 +360,7 @@ function simpleHash(str: string): string {
 }
 
 export function analyzeDreamConnections(
+	app: App,
 	currentDreamFile: TFile,
 	currentVector: number[],
 	currentEntities: string[],
@@ -362,6 +374,12 @@ export function analyzeDreamConnections(
 	for (const dream of dreamDatabase) {
 		if (dream.file === currentDreamFile.path || dream.name === currentDreamFile.basename) {
 			continue;
+		}
+
+		// Verify target dream file actually exists in vault!
+		const targetFile = app.vault.getAbstractFileByPath(dream.file);
+		if (!(targetFile instanceof TFile)) {
+			continue; // Skip deleted or missing dream files
 		}
 
 		let vectorSim = 0;

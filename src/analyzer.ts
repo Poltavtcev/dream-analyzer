@@ -219,7 +219,7 @@ A short summary of the dream in 2-5 sentences in the dream's language.
 		].map(e => cleanEntityName(e.name)).filter(Boolean);
 
 		const dreamDb = await loadDreamEmbeddingsDatabase(app, settings);
-		const connections = analyzeDreamConnections(file, dreamEmbedding, currentEntityNames, dreamDb);
+		const connections = analyzeDreamConnections(app, file, dreamEmbedding, currentEntityNames, dreamDb);
 		const connectionsMarkdown = formatDreamConnectionsMarkdown(connections);
 
 		// 1. Оновлюємо frontmatter файлу сну

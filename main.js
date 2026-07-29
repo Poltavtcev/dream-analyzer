@@ -497,8 +497,12 @@ async function loadDreamEmbeddingsDatabase(app, settings) {
       const content = await app.vault.read(file);
       const parsed = JSON.parse(content);
       if (Array.isArray(parsed)) {
-        cachedDreamDb = { dbPath, data: parsed };
-        return parsed;
+        const validParsed = parsed.filter((d) => {
+          const abstractFile = app.vault.getAbstractFileByPath(d.file);
+          return abstractFile instanceof import_obsidian3.TFile;
+        });
+        cachedDreamDb = { dbPath, data: validParsed };
+        return validParsed;
       }
     }
   } catch {
@@ -508,8 +512,12 @@ async function loadDreamEmbeddingsDatabase(app, settings) {
 }
 async function saveDreamEmbeddingsDatabase(app, settings, data) {
   const dbPath = getDreamEmbeddingsPath(app, settings);
-  cachedDreamDb = { dbPath, data };
-  const jsonContent = JSON.stringify(data, null, 2);
+  const validData = data.filter((d) => {
+    const abstractFile = app.vault.getAbstractFileByPath(d.file);
+    return abstractFile instanceof import_obsidian3.TFile;
+  });
+  cachedDreamDb = { dbPath, data: validData };
+  const jsonContent = JSON.stringify(validData, null, 2);
   const file = app.vault.getAbstractFileByPath(dbPath);
   if (file instanceof import_obsidian3.TFile) {
     await app.vault.modify(file, jsonContent);
@@ -655,12 +663,16 @@ function simpleHash(str) {
   }
   return hash.toString(36);
 }
-function analyzeDreamConnections(currentDreamFile, currentVector, currentEntities, dreamDatabase, limit = 5) {
+function analyzeDreamConnections(app, currentDreamFile, currentVector, currentEntities, dreamDatabase, limit = 5) {
   if (dreamDatabase.length === 0) return [];
   const results = [];
   const curEntitySet = new Set(currentEntities.map((e) => e.toLowerCase()));
   for (const dream of dreamDatabase) {
     if (dream.file === currentDreamFile.path || dream.name === currentDreamFile.basename) {
+      continue;
+    }
+    const targetFile = app.vault.getAbstractFileByPath(dream.file);
+    if (!(targetFile instanceof import_obsidian3.TFile)) {
       continue;
     }
     let vectorSim = 0;
@@ -1481,7 +1493,7 @@ A short summary of the dream in 2-5 sentences in the dream's language.
       ...result.concepts
     ].map((e) => cleanEntityName(e.name)).filter(Boolean);
     const dreamDb = await loadDreamEmbeddingsDatabase(app, settings);
-    const connections = analyzeDreamConnections(file, dreamEmbedding, currentEntityNames, dreamDb);
+    const connections = analyzeDreamConnections(app, file, dreamEmbedding, currentEntityNames, dreamDb);
     const connectionsMarkdown = formatDreamConnectionsMarkdown(connections);
     await app.fileManager.processFrontMatter(file, (fm) => {
       fm.type = "dream";

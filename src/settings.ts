@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, Notice, normalizePath, SecretComponent, ValueComponent } from "obsidian";
+import { App, PluginSettingTab, Setting, Notice, normalizePath } from "obsidian";
 import DreamAnalyzerPlugin from "./main";
 import { updateEntityEmbeddings } from "./embeddings";
 import { exportTemplaterTemplate, ensureDreamDashboard, ensureEntityIndexes } from "./dreamCreator";
@@ -26,23 +26,24 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setName(t("settingsTitle")).setHeading();
 
 		// API Key Setting: SecretStorage SecretComponent with Password Text fallback
-		const SecretComponentClass = typeof SecretComponent !== "undefined" ? SecretComponent : undefined;
+		const winObj = window as unknown as Record<string, Record<string, unknown>>;
+		const SecretComp = winObj.Obsidian ? winObj.Obsidian.SecretComponent : undefined;
 		const appWithSecret = this.app as App & { secretStorage?: unknown };
-		const hasSecretStorage = typeof SecretComponentClass !== "undefined" && typeof appWithSecret.secretStorage !== "undefined";
+		const hasSecretStorage = typeof SecretComp === "function" && typeof appWithSecret.secretStorage !== "undefined";
 
-		if (hasSecretStorage && SecretComponentClass) {
+		if (hasSecretStorage && typeof SecretComp === "function") {
 			const setting = new Setting(containerEl)
 				.setName(t("apiKeyName"))
 				.setDesc(t("apiKeyDesc"));
-			const comp = new SecretComponentClass(this.app, setting.controlEl) as unknown as ValueComponent<string>;
+			const comp = new (SecretComp as new (app: App, el: HTMLElement) => { setValue(v: string): unknown; onChange(cb: (v: string) => void): unknown })(this.app, setting.controlEl);
 			comp
-				.setValue(this.plugin.settings.openaiApiKey || "")
-				.onChange((value: string) => {
-					void (async () => {
-						this.plugin.settings.openaiApiKey = value ? value.trim() : "";
-						await this.plugin.saveSettings();
-					})();
-				});
+				.setValue(this.plugin.settings.openaiApiKey || "");
+			comp.onChange((value: string) => {
+				void (async () => {
+					this.plugin.settings.openaiApiKey = value ? value.trim() : "";
+					await this.plugin.saveSettings();
+				})();
+			});
 		} else {
 			new Setting(containerEl)
 				.setName(t("apiKeyName"))

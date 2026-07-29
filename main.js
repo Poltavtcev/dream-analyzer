@@ -1621,13 +1621,15 @@ var DreamAnalyzerSettingTab = class extends import_obsidian8.PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     new import_obsidian8.Setting(containerEl).setName(t("settingsTitle")).setHeading();
-    const SecretComponentClass = typeof import_obsidian8.SecretComponent !== "undefined" ? import_obsidian8.SecretComponent : void 0;
+    const winObj = window;
+    const SecretComp = winObj.Obsidian ? winObj.Obsidian.SecretComponent : void 0;
     const appWithSecret = this.app;
-    const hasSecretStorage = typeof SecretComponentClass !== "undefined" && typeof appWithSecret.secretStorage !== "undefined";
-    if (hasSecretStorage && SecretComponentClass) {
+    const hasSecretStorage = typeof SecretComp === "function" && typeof appWithSecret.secretStorage !== "undefined";
+    if (hasSecretStorage && typeof SecretComp === "function") {
       const setting = new import_obsidian8.Setting(containerEl).setName(t("apiKeyName")).setDesc(t("apiKeyDesc"));
-      const comp = new SecretComponentClass(this.app, setting.controlEl);
-      comp.setValue(this.plugin.settings.openaiApiKey || "").onChange((value) => {
+      const comp = new SecretComp(this.app, setting.controlEl);
+      comp.setValue(this.plugin.settings.openaiApiKey || "");
+      comp.onChange((value) => {
         void (async () => {
           this.plugin.settings.openaiApiKey = value ? value.trim() : "";
           await this.plugin.saveSettings();

@@ -664,35 +664,61 @@ function simpleHash(str) {
   return hash.toString(36);
 }
 function analyzeDreamConnections(app, currentDreamFile, currentVector, currentEntities, dreamDatabase, limit = 5) {
-  if (dreamDatabase.length === 0) return [];
   const results = [];
   const curEntitySet = new Set(currentEntities.map((e) => e.toLowerCase()));
-  for (const dream of dreamDatabase) {
-    if (dream.file === currentDreamFile.path || dream.name === currentDreamFile.basename) {
-      continue;
+  const dbDreamMap = /* @__PURE__ */ new Map();
+  for (const item of dreamDatabase) {
+    const targetFile = app.vault.getAbstractFileByPath(item.file);
+    if (targetFile instanceof import_obsidian3.TFile) {
+      dbDreamMap.set(item.file, item);
     }
-    const targetFile = app.vault.getAbstractFileByPath(dream.file);
-    if (!(targetFile instanceof import_obsidian3.TFile)) {
-      continue;
-    }
+  }
+  const dreamsSubfolder = getDreamsSubfolder(app, settingsFromPath(currentDreamFile));
+  const allFiles = app.vault.getMarkdownFiles();
+  const dreamFiles = allFiles.filter((f) => f.path.startsWith(dreamsSubfolder) && f.path !== currentDreamFile.path);
+  for (const dreamFile of dreamFiles) {
+    const cache = app.metadataCache.getFileCache(dreamFile);
+    const frontmatterObj = cache?.frontmatter;
+    if (!frontmatterObj || frontmatterObj.type !== "dream") continue;
+    const extractEntities = (arr) => {
+      if (!Array.isArray(arr)) return [];
+      return arr.map((x) => {
+        const str = String(x || "").replace(/\[\[/g, "").replace(/\]\]/g, "").trim();
+        return str.charAt(0).toUpperCase() + str.slice(1);
+      }).filter(Boolean);
+    };
+    const noteEntities = [
+      ...extractEntities(frontmatterObj.characters),
+      ...extractEntities(frontmatterObj.places),
+      ...extractEntities(frontmatterObj.objects),
+      ...extractEntities(frontmatterObj.emotions),
+      ...extractEntities(frontmatterObj.symbols),
+      ...extractEntities(frontmatterObj.concepts),
+      ...extractEntities(frontmatterObj.keywords)
+    ];
+    const dbItem = dbDreamMap.get(dreamFile.path);
     let vectorSim = 0;
-    if (currentVector && dream.vector && dream.vector.length > 0) {
-      vectorSim = cosineSimilarity(currentVector, dream.vector);
+    if (currentVector && dbItem && dbItem.vector && dbItem.vector.length > 0) {
+      vectorSim = cosineSimilarity(currentVector, dbItem.vector);
     }
-    const otherEntities = (dream.entities || []).map((e) => e.toLowerCase());
+    const mergedEntities = Array.from(/* @__PURE__ */ new Set([
+      ...noteEntities.map((e) => e.toLowerCase()),
+      ...(dbItem?.entities || []).map((e) => e.toLowerCase())
+    ]));
     const sharedEntities = [];
-    for (const entity of otherEntities) {
+    for (const entity of mergedEntities) {
       if (curEntitySet.has(entity)) {
         sharedEntities.push(entity);
       }
     }
-    const entitySim = (dream.entities || []).length > 0 ? sharedEntities.length / Math.max(curEntitySet.size, dream.entities.length) : 0;
-    const combinedScore = vectorSim * 0.5 + entitySim * 0.5;
-    if (combinedScore > 0.15 || sharedEntities.length > 0) {
+    const entitySim = mergedEntities.length > 0 ? sharedEntities.length / Math.max(curEntitySet.size, mergedEntities.length) : 0;
+    const combinedScore = vectorSim > 0 ? vectorSim * 0.5 + entitySim * 0.5 : entitySim;
+    if (combinedScore > 0.1 || sharedEntities.length > 0) {
+      const dreamDate = frontmatterObj && typeof frontmatterObj.date === "string" ? frontmatterObj.date : dbItem?.date || "";
       results.push({
-        dreamFile: dream.file,
-        dreamName: dream.name,
-        date: dream.date || "",
+        dreamFile: dreamFile.path,
+        dreamName: dreamFile.basename,
+        date: dreamDate,
         vectorSimilarity: vectorSim,
         sharedEntities: sharedEntities.map((e) => e.charAt(0).toUpperCase() + e.slice(1)),
         score: combinedScore
@@ -701,6 +727,28 @@ function analyzeDreamConnections(app, currentDreamFile, currentVector, currentEn
   }
   results.sort((a, b) => b.score - a.score);
   return results.slice(0, limit);
+}
+function settingsFromPath(file) {
+  let dreamsFolder = "Dreams";
+  const parts = file.path.split("/");
+  if (parts.length > 1) {
+    const idx = parts.indexOf("\u0421\u043D\u0438");
+    if (idx > 0) {
+      dreamsFolder = parts.slice(0, idx).join("/");
+    } else {
+      dreamsFolder = parts[0];
+    }
+  }
+  return {
+    openaiApiKey: "",
+    openaiModel: "gpt-5-mini",
+    embeddingModel: "text-embedding-3-small",
+    dreamsFolder,
+    templateFilePath: "Templates/Dream Template.md",
+    similarityThreshold: 0.35,
+    similarityLimit: 40,
+    autoUpdateEmbeddings: true
+  };
 }
 function formatDreamConnectionsMarkdown(connections) {
   if (connections.length === 0) {

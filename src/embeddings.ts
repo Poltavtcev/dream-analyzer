@@ -367,45 +367,81 @@ export function analyzeDreamConnections(
 	dreamDatabase: DreamVectorDatabaseItem[],
 	limit: number = 5
 ): DreamConnectionResult[] {
-	if (dreamDatabase.length === 0) return [];
 	const results: DreamConnectionResult[] = [];
 	const curEntitySet = new Set(currentEntities.map(e => e.toLowerCase()));
 
-	for (const dream of dreamDatabase) {
-		if (dream.file === currentDreamFile.path || dream.name === currentDreamFile.basename) {
-			continue;
+	// 1. Build map of existing dreams from dreamDatabase (vector DB)
+	const dbDreamMap = new Map<string, DreamVectorDatabaseItem>();
+	for (const item of dreamDatabase) {
+		const targetFile = app.vault.getAbstractFileByPath(item.file);
+		if (targetFile instanceof TFile) {
+			dbDreamMap.set(item.file, item);
 		}
+	}
 
-		// Verify target dream file actually exists in vault!
-		const targetFile = app.vault.getAbstractFileByPath(dream.file);
-		if (!(targetFile instanceof TFile)) {
-			continue; // Skip deleted or missing dream files
-		}
+	// 2. Scan all dream markdown files in dreamsSubfolder
+	const dreamsSubfolder = getDreamsSubfolder(app, settingsFromPath(currentDreamFile));
+	const allFiles = app.vault.getMarkdownFiles();
+	const dreamFiles = allFiles.filter(f => f.path.startsWith(dreamsSubfolder) && f.path !== currentDreamFile.path);
 
+	for (const dreamFile of dreamFiles) {
+		const cache = app.metadataCache.getFileCache(dreamFile);
+		const frontmatterObj: Record<string, unknown> | undefined = cache?.frontmatter;
+		if (!frontmatterObj || frontmatterObj.type !== "dream") continue;
+
+		const extractEntities = (arr: unknown): string[] => {
+			if (!Array.isArray(arr)) return [];
+			return arr.map(x => {
+				const str = String(x || "").replace(/\[\[/g, "").replace(/\]\]/g, "").trim();
+				return str.charAt(0).toUpperCase() + str.slice(1);
+			}).filter(Boolean);
+		};
+
+		const noteEntities: string[] = [
+			...extractEntities(frontmatterObj.characters),
+			...extractEntities(frontmatterObj.places),
+			...extractEntities(frontmatterObj.objects),
+			...extractEntities(frontmatterObj.emotions),
+			...extractEntities(frontmatterObj.symbols),
+			...extractEntities(frontmatterObj.concepts),
+			...extractEntities(frontmatterObj.keywords)
+		];
+
+		const dbItem = dbDreamMap.get(dreamFile.path);
 		let vectorSim = 0;
-		if (currentVector && dream.vector && dream.vector.length > 0) {
-			vectorSim = cosineSimilarity(currentVector, dream.vector);
+		if (currentVector && dbItem && dbItem.vector && dbItem.vector.length > 0) {
+			vectorSim = cosineSimilarity(currentVector, dbItem.vector);
 		}
 
-		const otherEntities = (dream.entities || []).map(e => e.toLowerCase());
+		const mergedEntities = Array.from(new Set([
+			...noteEntities.map(e => e.toLowerCase()),
+			...((dbItem?.entities || []).map(e => e.toLowerCase()))
+		]));
+
 		const sharedEntities: string[] = [];
-		for (const entity of otherEntities) {
+		for (const entity of mergedEntities) {
 			if (curEntitySet.has(entity)) {
 				sharedEntities.push(entity);
 			}
 		}
 
-		const entitySim = (dream.entities || []).length > 0
-			? sharedEntities.length / Math.max(curEntitySet.size, dream.entities.length)
+		const entitySim = mergedEntities.length > 0
+			? sharedEntities.length / Math.max(curEntitySet.size, mergedEntities.length)
 			: 0;
 
-		const combinedScore = (vectorSim * 0.5) + (entitySim * 0.5);
+		const combinedScore = vectorSim > 0
+			? (vectorSim * 0.5) + (entitySim * 0.5)
+			: entitySim;
 
-		if (combinedScore > 0.15 || sharedEntities.length > 0) {
+		if (combinedScore > 0.10 || sharedEntities.length > 0) {
+			const dreamDate = (frontmatterObj && typeof frontmatterObj.date === "string")
+				? frontmatterObj.date
+				: (dbItem?.date || "");
+
 			results.push({
-				dreamFile: dream.file,
-				dreamName: dream.name,
-				date: dream.date || "",
+				dreamFile: dreamFile.path,
+				dreamName: dreamFile.basename,
+				date: dreamDate,
 				vectorSimilarity: vectorSim,
 				sharedEntities: sharedEntities.map(e => e.charAt(0).toUpperCase() + e.slice(1)),
 				score: combinedScore
@@ -415,6 +451,29 @@ export function analyzeDreamConnections(
 
 	results.sort((a, b) => b.score - a.score);
 	return results.slice(0, limit);
+}
+
+function settingsFromPath(file: TFile): DreamAnalyzerSettings {
+	let dreamsFolder = "Dreams";
+	const parts = file.path.split("/");
+	if (parts.length > 1) {
+		const idx = parts.indexOf("Сни");
+		if (idx > 0) {
+			dreamsFolder = parts.slice(0, idx).join("/");
+		} else {
+			dreamsFolder = parts[0];
+		}
+	}
+	return {
+		openaiApiKey: "",
+		openaiModel: "gpt-5-mini",
+		embeddingModel: "text-embedding-3-small",
+		dreamsFolder,
+		templateFilePath: "Templates/Dream Template.md",
+		similarityThreshold: 0.35,
+		similarityLimit: 40,
+		autoUpdateEmbeddings: true
+	};
 }
 
 export function formatDreamConnectionsMarkdown(connections: DreamConnectionResult[]): string {

@@ -1,6 +1,6 @@
 {
   "name": "dream-analyzer",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "AI-powered dream analysis, entity extraction, vector similarity connections, and lucid dreaming dashboard.",
   "main": "main.js",
   "scripts": {

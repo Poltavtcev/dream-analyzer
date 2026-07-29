@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, Notice, normalizePath, SecretComponent } from "obsidian";
+import { App, PluginSettingTab, Setting, Notice, normalizePath } from "obsidian";
 import DreamAnalyzerPlugin from "./main";
 import { updateEntityEmbeddings } from "./embeddings";
 import { exportTemplaterTemplate, ensureDreamDashboard, ensureEntityIndexes } from "./dreamCreator";
@@ -22,18 +22,20 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setName(t("settingsTitle")).setHeading();
 
 		// API Key Setting: SecretStorage SecretComponent with Password Text fallback
-		const hasSecretStorage = typeof (SecretComponent as any) !== "undefined" && typeof (this.app as any).secretStorage !== "undefined";
+		const obsidianModule = require("obsidian");
+		const SecretComponentClass = obsidianModule ? obsidianModule.SecretComponent : undefined;
+		const hasSecretStorage = typeof SecretComponentClass !== "undefined" && typeof (this.app as any).secretStorage !== "undefined";
 
 		if (hasSecretStorage) {
-			new Setting(containerEl)
+			const setting = new Setting(containerEl)
 				.setName(t("apiKeyName"))
-				.setDesc(t("apiKeyDesc"))
-				.addComponent(el => new (SecretComponent as any)(this.app, el)
-					.setValue(this.plugin.settings.openaiApiKey || "")
-					.onChange(async (value: string) => {
-						this.plugin.settings.openaiApiKey = value ? value.trim() : "";
-						await this.plugin.saveSettings();
-					}));
+				.setDesc(t("apiKeyDesc"));
+			new SecretComponentClass(this.app, setting.controlEl)
+				.setValue(this.plugin.settings.openaiApiKey || "")
+				.onChange(async (value: string) => {
+					this.plugin.settings.openaiApiKey = value ? value.trim() : "";
+					await this.plugin.saveSettings();
+				});
 		} else {
 			new Setting(containerEl)
 				.setName(t("apiKeyName"))

@@ -56,25 +56,157 @@ var import_obsidian7 = require("obsidian");
 var import_obsidian3 = require("obsidian");
 
 // src/api.ts
-var import_obsidian2 = require("obsidian");
+var import_obsidian = require("obsidian");
+async function getOpenAiApiKey(app, settings) {
+  let key = (settings.openaiApiKey || "").trim();
+  const secretStorage = app.secretStorage;
+  if (key && secretStorage && typeof secretStorage.getSecret === "function") {
+    try {
+      const resolvedSecret = await secretStorage.getSecret(key);
+      if (resolvedSecret) {
+        return resolvedSecret.trim();
+      }
+    } catch {
+    }
+  }
+  if (!key) {
+    throw new Error("OpenAI API key \u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E \u0443 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u043F\u043B\u0430\u0433\u0456\u043D\u0430!");
+  }
+  return key;
+}
+async function getEmbedding(apiKey, model, text) {
+  try {
+    const response = await (0, import_obsidian.requestUrl)({
+      url: "https://api.openai.com/v1/embeddings",
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: model || "text-embedding-3-small",
+        input: text
+      })
+    });
+    if (response.status !== 200) {
+      let errorDetail = response.text;
+      try {
+        const errJson = JSON.parse(response.text);
+        if (errJson?.error?.message) {
+          errorDetail = errJson.error.message;
+        }
+      } catch {
+      }
+      throw new Error(`OpenAI API Error ${response.status}: ${errorDetail}`);
+    }
+    const data = JSON.parse(response.text);
+    if (!data.data || !data.data[0] || !data.data[0].embedding) {
+      throw new Error("\u041D\u0435\u043A\u043E\u0440\u0435\u043A\u0442\u043D\u0438\u0439 \u0444\u043E\u0440\u043C\u0430\u0442 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 embeddings \u0432\u0456\u0434 OpenAI");
+    }
+    return data.data[0].embedding;
+  } catch (error) {
+    throw new Error(`\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0456\u0457 \u0432\u0435\u043A\u0442\u043E\u0440\u043D\u043E\u0433\u043E \u0435\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0443: ${error?.message || error}`);
+  }
+}
+async function getBatchEmbeddings(apiKey, model, inputs) {
+  try {
+    const response = await (0, import_obsidian.requestUrl)({
+      url: "https://api.openai.com/v1/embeddings",
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: model || "text-embedding-3-small",
+        input: inputs
+      })
+    });
+    if (response.status !== 200) {
+      let errorDetail = response.text;
+      try {
+        const errJson = JSON.parse(response.text);
+        if (errJson?.error?.message) {
+          errorDetail = errJson.error.message;
+        }
+      } catch {
+      }
+      throw new Error(`OpenAI API Error ${response.status}: ${errorDetail}`);
+    }
+    const data = JSON.parse(response.text);
+    if (!data.data || !Array.isArray(data.data)) {
+      throw new Error("\u041D\u0435\u043A\u043E\u0440\u0435\u043A\u0442\u043D\u0438\u0439 \u0444\u043E\u0440\u043C\u0430\u0442 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 embeddings \u0432\u0456\u0434 OpenAI");
+    }
+    const sorted = data.data.sort((a, b) => a.index - b.index);
+    return sorted.map((item) => item.embedding);
+  } catch (error) {
+    throw new Error(`\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0456\u0457 \u0435\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0456\u0432: ${error?.message || error}`);
+  }
+}
+async function requestChatCompletion(apiKey, model, systemPrompt, userPrompt) {
+  try {
+    const selectedModel = model || "gpt-4o-mini";
+    const payload = {
+      model: selectedModel,
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt
+        },
+        {
+          role: "user",
+          content: userPrompt
+        }
+      ],
+      response_format: { type: "json_object" }
+    };
+    const response = await (0, import_obsidian.requestUrl)({
+      url: "https://api.openai.com/v1/chat/completions",
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+    if (response.status !== 200) {
+      let errorDetail = response.text;
+      try {
+        const errJson = JSON.parse(response.text);
+        if (errJson?.error?.message) {
+          errorDetail = errJson.error.message;
+        }
+      } catch {
+      }
+      throw new Error(`OpenAI API Error ${response.status}: ${errorDetail}`);
+    }
+    const data = JSON.parse(response.text);
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error("\u041D\u0435\u043A\u043E\u0440\u0435\u043A\u0442\u043D\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C ChatCompletion \u0432\u0456\u0434 OpenAI");
+    }
+    return JSON.parse(data.choices[0].message.content);
+  } catch (error) {
+    throw new Error(`\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0430\u043F\u0438\u0442\u0443 \u0434\u043E OpenAI: ${error?.message || error}`);
+  }
+}
 
 // src/i18n.ts
-var import_obsidian = require("obsidian");
+var import_obsidian2 = require("obsidian");
 function getLocale() {
   try {
     const getLangFn = window.getLanguage;
-    const obsLang = (typeof getLangFn === "function" ? getLangFn() : window.localStorage.getItem("language") || "").toLowerCase();
+    const obsLang = typeof getLangFn === "function" ? String(getLangFn()).toLowerCase() : "";
     if (obsLang) {
       if (obsLang.startsWith("uk") || obsLang.startsWith("ua")) {
         return "uk";
       }
       return "en";
     }
-    const momentLang = (import_obsidian.moment.locale() || "").toLowerCase();
+    const momentLang = (import_obsidian2.moment.locale() || "").toLowerCase();
     if (momentLang.startsWith("uk") || momentLang.startsWith("ua")) {
       return "uk";
     }
-  } catch (e) {
+  } catch {
   }
   return "en";
 }
@@ -279,116 +411,6 @@ function t(key, vars) {
   return template;
 }
 
-// src/api.ts
-async function getOpenAiApiKey(app, settings) {
-  const rawKey = (settings.openaiApiKey || "").trim();
-  if (!rawKey) {
-    throw new Error(t("noApiKey"));
-  }
-  if (app && app.secretStorage) {
-    try {
-      const secretVal = app.secretStorage.getSecret(rawKey);
-      if (secretVal && typeof secretVal === "string" && secretVal.trim().length > 0) {
-        return secretVal.trim();
-      }
-    } catch (e) {
-      console.warn("Could not retrieve secret from SecretStorage:", e);
-    }
-  }
-  return rawKey;
-}
-async function getEmbedding(apiKey, model, input) {
-  const batch = await getBatchEmbeddings(apiKey, model, [input]);
-  if (!batch || batch.length === 0) {
-    throw new Error("\u041F\u0430\u043A\u0435\u0442\u0438 \u0435\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0456\u0432 \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u043B\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 \u043C\u0430\u0441\u0438\u0432");
-  }
-  return batch[0];
-}
-async function getBatchEmbeddings(apiKey, model, inputs) {
-  if (!inputs || inputs.length === 0) return [];
-  try {
-    const response = await (0, import_obsidian2.requestUrl)({
-      url: "https://api.openai.com/v1/embeddings",
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: model || "text-embedding-3-small",
-        input: inputs
-      })
-    });
-    if (response.status !== 200) {
-      let errorDetail = response.text;
-      try {
-        const errJson = JSON.parse(response.text);
-        if (errJson?.error?.message) {
-          errorDetail = errJson.error.message;
-        }
-      } catch (e) {
-      }
-      throw new Error(`OpenAI API Error ${response.status}: ${errorDetail}`);
-    }
-    const data = JSON.parse(response.text);
-    if (!data.data || !Array.isArray(data.data)) {
-      throw new Error("\u041D\u0435\u043A\u043E\u0440\u0435\u043A\u0442\u043D\u0438\u0439 \u0444\u043E\u0440\u043C\u0430\u0442 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456 embeddings \u0432\u0456\u0434 OpenAI");
-    }
-    const sorted = data.data.sort((a, b) => a.index - b.index);
-    return sorted.map((item) => item.embedding);
-  } catch (error) {
-    console.error("Dream Analyzer Batch Embedding Error:", error);
-    throw new Error(`\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0433\u0435\u043D\u0435\u0440\u0430\u0446\u0456\u0457 \u0435\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0456\u0432: ${error.message || error}`);
-  }
-}
-async function requestChatCompletion(apiKey, model, systemPrompt, userPrompt) {
-  try {
-    const selectedModel = model || "gpt-4o-mini";
-    const payload = {
-      model: selectedModel,
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt
-        },
-        {
-          role: "user",
-          content: userPrompt
-        }
-      ],
-      response_format: { type: "json_object" }
-    };
-    const response = await (0, import_obsidian2.requestUrl)({
-      url: "https://api.openai.com/v1/chat/completions",
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
-    });
-    if (response.status !== 200) {
-      let errorDetail = response.text;
-      try {
-        const errJson = JSON.parse(response.text);
-        if (errJson?.error?.message) {
-          errorDetail = errJson.error.message;
-        }
-      } catch (e) {
-      }
-      throw new Error(`OpenAI API Error ${response.status}: ${errorDetail}`);
-    }
-    const data = JSON.parse(response.text);
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-      throw new Error("\u041D\u0435\u043A\u043E\u0440\u0435\u043A\u0442\u043D\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C ChatCompletion \u0432\u0456\u0434 OpenAI");
-    }
-    return JSON.parse(data.choices[0].message.content);
-  } catch (error) {
-    console.error("Dream Analyzer ChatCompletion Error:", error);
-    throw new Error(`\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0430\u043F\u0438\u0442\u0443 \u0434\u043E OpenAI: ${error.message || error}`);
-  }
-}
-
 // src/embeddings.ts
 var cachedEntityDb = null;
 var cachedDreamDb = null;
@@ -397,331 +419,282 @@ function clearMemoryCache() {
   cachedDreamDb = null;
 }
 function getDreamsSubfolder(app, settings) {
-  const root = (0, import_obsidian3.normalizePath)((settings?.dreamsFolder || "Dreams").trim());
-  if (app && app.vault) {
-    if (app.vault.getAbstractFileByPath((0, import_obsidian3.normalizePath)(`${root}/\u0421\u043D\u0438`))) return (0, import_obsidian3.normalizePath)(`${root}/\u0421\u043D\u0438`);
-    if (app.vault.getAbstractFileByPath((0, import_obsidian3.normalizePath)(`${root}/Dreams`))) return (0, import_obsidian3.normalizePath)(`${root}/Dreams`);
-  }
-  const locale = getLocale();
-  const sub = locale === "uk" ? "\u0421\u043D\u0438" : "Dreams";
-  return (0, import_obsidian3.normalizePath)(`${root}/${sub}`);
+  const base = (0, import_obsidian3.normalizePath)(settings.dreamsFolder.trim() || "Dreams");
+  const lang = getLocale();
+  const subname = lang === "uk" ? "\u0421\u043D\u0438" : "Dreams";
+  return (0, import_obsidian3.normalizePath)(`${base}/${subname}`);
 }
 function getEntitiesSubfolder(app, settings) {
-  const root = (0, import_obsidian3.normalizePath)((settings?.dreamsFolder || "Dreams").trim());
-  if (app && app.vault) {
-    if (app.vault.getAbstractFileByPath((0, import_obsidian3.normalizePath)(`${root}/\u0421\u0443\u0442\u043D\u043E\u0441\u0442\u0456`))) return (0, import_obsidian3.normalizePath)(`${root}/\u0421\u0443\u0442\u043D\u043E\u0441\u0442\u0456`);
-    if (app.vault.getAbstractFileByPath((0, import_obsidian3.normalizePath)(`${root}/Entities`))) return (0, import_obsidian3.normalizePath)(`${root}/Entities`);
-  }
-  const locale = getLocale();
-  const sub = locale === "uk" ? "\u0421\u0443\u0442\u043D\u043E\u0441\u0442\u0456" : "Entities";
-  return (0, import_obsidian3.normalizePath)(`${root}/${sub}`);
+  const base = (0, import_obsidian3.normalizePath)(settings.dreamsFolder.trim() || "Dreams");
+  const lang = getLocale();
+  const subname = lang === "uk" ? "\u0421\u0443\u0442\u043D\u043E\u0441\u0442\u0456" : "Entities";
+  return (0, import_obsidian3.normalizePath)(`${base}/${subname}`);
 }
-function getEntityEmbeddingsDbPath(app, settings) {
-  const folder = getDreamsSubfolder(app, settings);
-  return (0, import_obsidian3.normalizePath)(`${folder}/embeddings.json`);
+function getEmbeddingsPath(app, settings) {
+  const base = (0, import_obsidian3.normalizePath)(settings.dreamsFolder.trim() || "Dreams");
+  return (0, import_obsidian3.normalizePath)(`${base}/embeddings.json`);
 }
-function getDreamEmbeddingsDbPath(app, settings) {
-  const folder = getDreamsSubfolder(app, settings);
-  return (0, import_obsidian3.normalizePath)(`${folder}/dream_embeddings.json`);
+function getDreamEmbeddingsPath(app, settings) {
+  const base = (0, import_obsidian3.normalizePath)(settings.dreamsFolder.trim() || "Dreams");
+  return (0, import_obsidian3.normalizePath)(`${base}/dream_embeddings.json`);
 }
-function cosineSimilarity(a, b) {
-  if (!Array.isArray(a) || !Array.isArray(b) || a.length === 0 || a.length !== b.length) {
-    return null;
-  }
-  let dot = 0;
-  let normA = 0;
-  let normB = 0;
-  for (let i = 0; i < a.length; i++) {
-    dot += a[i] * b[i];
-    normA += a[i] * a[i];
-    normB += b[i] * b[i];
-  }
-  if (normA === 0 || normB === 0) {
-    return null;
-  }
-  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-}
-async function ensureParentDirectory(app, filePath) {
-  const normalizedPath = (0, import_obsidian3.normalizePath)(filePath.trim());
-  const dirIndex = normalizedPath.lastIndexOf("/");
-  if (dirIndex > 0) {
-    const dir = normalizedPath.substring(0, dirIndex);
-    if (!await app.vault.adapter.exists(dir)) {
-      await app.vault.createFolder(dir);
-    }
-  }
-}
-async function loadEmbeddingsDatabase(app, settings, forceReload = false) {
-  const dbPath = getEntityEmbeddingsDbPath(app, settings);
-  if (!forceReload && cachedEntityDb && cachedEntityDb.dbPath === dbPath) {
+async function loadEmbeddingsDatabase(app, settings) {
+  const dbPath = getEmbeddingsPath(app, settings);
+  if (cachedEntityDb && cachedEntityDb.dbPath === dbPath) {
     return cachedEntityDb.data;
   }
   try {
-    const exists = await app.vault.adapter.exists(dbPath);
-    if (!exists) {
-      await saveEmbeddingsDatabase(app, settings, []);
-      return [];
+    const file = app.vault.getAbstractFileByPath(dbPath);
+    if (file instanceof import_obsidian3.TFile) {
+      const content = await app.vault.read(file);
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) {
+        cachedEntityDb = { dbPath, data: parsed };
+        return parsed;
+      }
     }
-    const content = await app.vault.adapter.read(dbPath);
-    const rawData = JSON.parse(content);
-    const data = Array.isArray(rawData) ? rawData : [];
-    const cleanData = data.filter((item) => item && item.file && app.vault.getAbstractFileByPath(item.file));
-    cachedEntityDb = { dbPath, data: cleanData };
-    if (cleanData.length !== data.length) {
-      await saveEmbeddingsDatabase(app, settings, cleanData);
-    }
-    return cleanData;
-  } catch (e) {
-    console.warn("Could not load embeddings database:", e);
-    return [];
+  } catch {
+  }
+  cachedEntityDb = { dbPath, data: [] };
+  return [];
+}
+async function saveEmbeddingsDatabase(app, settings, data) {
+  const dbPath = getEmbeddingsPath(app, settings);
+  cachedEntityDb = { dbPath, data };
+  const jsonContent = JSON.stringify(data, null, 2);
+  const file = app.vault.getAbstractFileByPath(dbPath);
+  if (file instanceof import_obsidian3.TFile) {
+    await app.vault.modify(file, jsonContent);
+  } else {
+    await app.vault.create(dbPath, jsonContent);
   }
 }
-async function saveEmbeddingsDatabase(app, settings, database) {
-  const dbPath = getEntityEmbeddingsDbPath(app, settings);
-  await ensureParentDirectory(app, dbPath);
-  await app.vault.adapter.write(dbPath, JSON.stringify(database, null, 2));
-  cachedEntityDb = { dbPath, data: database };
-}
-async function loadDreamEmbeddingsDatabase(app, settings, forceReload = false) {
-  const dbPath = getDreamEmbeddingsDbPath(app, settings);
-  if (!forceReload && cachedDreamDb && cachedDreamDb.dbPath === dbPath) {
+async function loadDreamEmbeddingsDatabase(app, settings) {
+  const dbPath = getDreamEmbeddingsPath(app, settings);
+  if (cachedDreamDb && cachedDreamDb.dbPath === dbPath) {
     return cachedDreamDb.data;
   }
   try {
-    const exists = await app.vault.adapter.exists(dbPath);
-    if (!exists) {
-      await saveDreamEmbeddingsDatabase(app, settings, []);
-      return [];
+    const file = app.vault.getAbstractFileByPath(dbPath);
+    if (file instanceof import_obsidian3.TFile) {
+      const content = await app.vault.read(file);
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) {
+        cachedDreamDb = { dbPath, data: parsed };
+        return parsed;
+      }
     }
-    const content = await app.vault.adapter.read(dbPath);
-    const rawData = JSON.parse(content);
-    const data = Array.isArray(rawData) ? rawData : [];
-    const cleanData = data.filter((item) => item && item.file && app.vault.getAbstractFileByPath(item.file));
-    cachedDreamDb = { dbPath, data: cleanData };
-    if (cleanData.length !== data.length) {
-      await saveDreamEmbeddingsDatabase(app, settings, cleanData);
-    }
-    return cleanData;
-  } catch (e) {
-    console.warn("Could not load dream embeddings database:", e);
-    return [];
+  } catch {
+  }
+  cachedDreamDb = { dbPath, data: [] };
+  return [];
+}
+async function saveDreamEmbeddingsDatabase(app, settings, data) {
+  const dbPath = getDreamEmbeddingsPath(app, settings);
+  cachedDreamDb = { dbPath, data };
+  const jsonContent = JSON.stringify(data, null, 2);
+  const file = app.vault.getAbstractFileByPath(dbPath);
+  if (file instanceof import_obsidian3.TFile) {
+    await app.vault.modify(file, jsonContent);
+  } else {
+    await app.vault.create(dbPath, jsonContent);
   }
 }
-async function saveDreamEmbeddingsDatabase(app, settings, database) {
-  const dbPath = getDreamEmbeddingsDbPath(app, settings);
-  await ensureParentDirectory(app, dbPath);
-  await app.vault.adapter.write(dbPath, JSON.stringify(database, null, 2));
-  cachedDreamDb = { dbPath, data: database };
-}
-async function handleFileRename(app, settings, file, oldPath) {
-  if (!(file instanceof import_obsidian3.TFile) || file.extension !== "md") return;
-  const entitiesFolder = getEntitiesSubfolder(app, settings);
-  const dreamsFolder = getDreamsSubfolder(app, settings);
-  let updated = false;
-  if (oldPath.startsWith(entitiesFolder) || file.path.startsWith(entitiesFolder)) {
-    let entityDb = await loadEmbeddingsDatabase(app, settings);
-    let itemChanged = false;
-    entityDb = entityDb.map((item) => {
+async function handleFileRename(app, file, oldPath, settings) {
+  try {
+    const entityDb = await loadEmbeddingsDatabase(app, settings);
+    let entityChanged = false;
+    for (const item of entityDb) {
       if (item.file === oldPath) {
-        itemChanged = true;
-        return {
-          ...item,
-          file: file.path,
-          name: file.basename
-        };
+        item.file = file.path;
+        item.name = file.basename;
+        entityChanged = true;
       }
-      return item;
-    });
-    if (itemChanged) {
+    }
+    if (entityChanged) {
       await saveEmbeddingsDatabase(app, settings, entityDb);
-      updated = true;
     }
-  }
-  if (oldPath.startsWith(dreamsFolder) || file.path.startsWith(dreamsFolder)) {
-    let dreamDb = await loadDreamEmbeddingsDatabase(app, settings);
-    let itemChanged = false;
-    dreamDb = dreamDb.map((item) => {
+    const dreamDb = await loadDreamEmbeddingsDatabase(app, settings);
+    let dreamChanged = false;
+    for (const item of dreamDb) {
       if (item.file === oldPath) {
-        itemChanged = true;
-        return {
-          ...item,
-          file: file.path,
-          name: file.basename
-        };
+        item.file = file.path;
+        item.name = file.basename;
+        dreamChanged = true;
       }
-      return item;
-    });
-    if (itemChanged) {
-      await saveDreamEmbeddingsDatabase(app, settings, dreamDb);
-      updated = true;
     }
-  }
-  if (updated) {
-    console.log(`[Dream Analyzer] Updated vector embedding path from ${oldPath} to ${file.path}`);
+    if (dreamChanged) {
+      await saveDreamEmbeddingsDatabase(app, settings, dreamDb);
+    }
+  } catch {
   }
 }
-function selectSimilarEntities(dreamVector, database, threshold = 0.35, limit = 40) {
-  if (!Array.isArray(dreamVector) || dreamVector.length === 0 || !Array.isArray(database)) {
-    return [];
+function cosineSimilarity(vecA, vecB) {
+  if (!vecA || !vecB || vecA.length === 0 || vecB.length === 0 || vecA.length !== vecB.length) {
+    return 0;
   }
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+function searchSimilarEntities(targetVector, database, threshold = 0.35, limit = 40) {
+  if (!targetVector || database.length === 0) return [];
   const results = [];
   for (const item of database) {
-    if (!item || !item.name || !Array.isArray(item.vector)) continue;
-    const score = cosineSimilarity(dreamVector, item.vector);
-    if (score !== null && score >= threshold) {
-      results.push({
-        name: item.name,
-        type: item.type || "",
-        description: item.description || "",
-        aliases: Array.isArray(item.aliases) ? item.aliases : [],
-        file: item.file || "",
-        score
-      });
+    if (!item.vector || item.vector.length === 0) continue;
+    const sim = cosineSimilarity(targetVector, item.vector);
+    if (sim >= threshold) {
+      results.push({ item, similarity: sim });
     }
   }
-  return results.sort((a, b) => b.score - a.score).slice(0, limit);
+  results.sort((a, b) => b.similarity - a.similarity);
+  return results.slice(0, limit);
 }
-function formatEntityContext(entities) {
-  if (!Array.isArray(entities) || entities.length === 0) return "";
-  return entities.map((item) => {
-    const aliases = item.aliases && item.aliases.length ? item.aliases.join(", ") : "-";
-    return [
-      `- ${item.name} (${item.type})`,
-      `  \u0421\u0445\u043E\u0436\u0456\u0441\u0442\u044C: ${item.score.toFixed(3)}`,
-      `  \u041E\u043F\u0438\u0441: ${item.description || "-"}`,
-      `  \u0410\u043B\u0456\u0430\u0441\u0438: ${aliases}`
-    ].join("\n");
-  }).join("\n\n");
+async function getSimilarEntitiesContext(app, apiKey, settings, dreamEmbedding) {
+  const db = await loadEmbeddingsDatabase(app, settings);
+  if (db.length === 0) return "";
+  const matches = searchSimilarEntities(
+    dreamEmbedding,
+    db,
+    settings.similarityThreshold,
+    settings.similarityLimit
+  );
+  if (matches.length === 0) return "";
+  const lines = matches.map((m) => {
+    const aliasesText = m.item.aliases && m.item.aliases.length > 0 ? ` (aliases: ${m.item.aliases.join(", ")})` : "";
+    return `- ${m.item.name} [Type: ${m.item.type}]${aliasesText}: ${m.item.description || "No description"}`;
+  });
+  return lines.join("\n");
 }
-async function getSimilarEntitiesContext(app, apiKey, settings, dreamVector) {
-  try {
-    const database = await loadEmbeddingsDatabase(app, settings);
-    const matches = selectSimilarEntities(
-      dreamVector,
-      database,
-      settings.similarityThreshold,
-      settings.similarityLimit
-    );
-    return formatEntityContext(matches);
-  } catch (error) {
-    console.warn("Could not get similar entities for context:", error);
-    return "";
+async function updateEntityEmbeddings(app, apiKey, settings, forceRebuildAll = false, specificFilePaths) {
+  const entitiesFolder = getEntitiesSubfolder(app, settings);
+  const db = forceRebuildAll ? [] : await loadEmbeddingsDatabase(app, settings);
+  const dbMap = /* @__PURE__ */ new Map();
+  for (const item of db) {
+    dbMap.set(item.file, item);
   }
-}
-function analyzeDreamConnections(currentFile, currentEmbedding, currentEntities, dreamDatabase) {
-  if (!Array.isArray(currentEmbedding) || currentEmbedding.length === 0 || !Array.isArray(dreamDatabase)) {
-    return [];
-  }
-  const currentSet = new Set(currentEntities.map((e) => e.toLowerCase()));
-  const results = [];
-  for (const dream of dreamDatabase) {
-    if (dream.file === currentFile.path || dream.name === currentFile.basename) {
+  const allFiles = app.vault.getMarkdownFiles();
+  const entityFiles = allFiles.filter((f) => f.path.startsWith(entitiesFolder));
+  const targetFiles = specificFilePaths && specificFilePaths.length > 0 ? entityFiles.filter((f) => specificFilePaths.includes(f.path)) : entityFiles;
+  const toProcess = [];
+  for (const file of targetFiles) {
+    const cache = app.metadataCache.getFileCache(file);
+    const fm = cache?.frontmatter;
+    if (!fm || fm.type !== "entity") continue;
+    const entityName = file.basename;
+    const entityType = fm.entity_type || "concept";
+    const aliases = Array.isArray(fm.aliases) ? fm.aliases : [];
+    const description = fm.description || "";
+    const textToEmbed = `${entityName}. ${description}. Aliases: ${aliases.join(", ")}`;
+    const existing = dbMap.get(file.path);
+    if (!forceRebuildAll && existing && existing.textHash === simpleHash(textToEmbed)) {
       continue;
     }
-    const embSim = cosineSimilarity(currentEmbedding, dream.vector) || 0;
-    const validEmbSim = Math.max(embSim, 0);
-    const dreamEntities = Array.isArray(dream.entities) ? dream.entities : [];
-    const commonEntities = [];
-    const seenCommon = /* @__PURE__ */ new Set();
-    for (const entity of dreamEntities) {
-      const lower = entity.toLowerCase();
-      if (currentSet.has(lower) && !seenCommon.has(lower)) {
-        seenCommon.add(lower);
-        commonEntities.push(entity);
+    toProcess.push({
+      file,
+      textToEmbed,
+      name: entityName,
+      type: entityType,
+      aliases,
+      description
+    });
+  }
+  if (toProcess.length === 0) return 0;
+  const BATCH_SIZE = 20;
+  let processedCount = 0;
+  for (let i = 0; i < toProcess.length; i += BATCH_SIZE) {
+    const batch = toProcess.slice(i, i + BATCH_SIZE);
+    const inputs = batch.map((b) => b.textToEmbed);
+    const embeddings = await getBatchEmbeddings(apiKey, settings.embeddingModel, inputs);
+    for (let j = 0; j < batch.length; j++) {
+      const item = batch[j];
+      const vec = embeddings[j];
+      if (!vec) continue;
+      const hash = simpleHash(item.textToEmbed);
+      const dbItem = {
+        id: `entity_${item.file.basename}`,
+        file: item.file.path,
+        name: item.name,
+        type: item.type,
+        aliases: item.aliases,
+        description: item.description,
+        vector: vec,
+        textHash: hash
+      };
+      dbMap.set(item.file.path, dbItem);
+      await app.fileManager.processFrontMatter(item.file, (fm) => {
+        fm.embedding_status = "active";
+        fm.embedding_id = dbItem.id;
+      });
+      processedCount++;
+    }
+  }
+  const updatedDb = Array.from(dbMap.values());
+  await saveEmbeddingsDatabase(app, settings, updatedDb);
+  return processedCount;
+}
+function simpleHash(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+  return hash.toString(36);
+}
+function analyzeDreamConnections(currentDreamFile, currentVector, currentEntities, dreamDatabase, limit = 5) {
+  if (dreamDatabase.length === 0) return [];
+  const results = [];
+  const curEntitySet = new Set(currentEntities.map((e) => e.toLowerCase()));
+  for (const dream of dreamDatabase) {
+    if (dream.file === currentDreamFile.path || dream.name === currentDreamFile.basename) {
+      continue;
+    }
+    let vectorSim = 0;
+    if (currentVector && dream.vector && dream.vector.length > 0) {
+      vectorSim = cosineSimilarity(currentVector, dream.vector);
+    }
+    const otherEntities = (dream.entities || []).map((e) => e.toLowerCase());
+    const sharedEntities = [];
+    for (const entity of otherEntities) {
+      if (curEntitySet.has(entity)) {
+        sharedEntities.push(entity);
       }
     }
-    const entityScore = currentEntities.length > 0 ? commonEntities.length / Math.max(currentEntities.length, 1) : 0;
-    const finalScore = 0.5 * validEmbSim + 0.5 * Math.min(entityScore, 1);
-    const scorePercent = Math.round(finalScore * 100);
-    if (scorePercent >= 15 && (validEmbSim >= 0.2 || commonEntities.length > 0)) {
+    const entitySim = (dream.entities || []).length > 0 ? sharedEntities.length / Math.max(curEntitySet.size, dream.entities.length) : 0;
+    const combinedScore = vectorSim * 0.5 + entitySim * 0.5;
+    if (combinedScore > 0.15 || sharedEntities.length > 0) {
       results.push({
+        dreamFile: dream.file,
         dreamName: dream.name,
-        dreamPath: dream.file,
-        scorePercent,
-        embeddingSimilarity: validEmbSim,
-        entityScore,
-        commonEntities
+        date: dream.date || "",
+        vectorSimilarity: vectorSim,
+        sharedEntities: sharedEntities.map((e) => e.charAt(0).toUpperCase() + e.slice(1)),
+        score: combinedScore
       });
     }
   }
-  return results.sort((a, b) => b.scorePercent - a.scorePercent).slice(0, 5);
+  results.sort((a, b) => b.score - a.score);
+  return results.slice(0, limit);
 }
 function formatDreamConnectionsMarkdown(connections) {
-  if (!Array.isArray(connections) || connections.length === 0) {
-    return "-";
+  if (connections.length === 0) {
+    return "_\u041F\u043E\u043A\u0438 \u0449\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0441\u0445\u043E\u0436\u0438\u0445 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u0445 \u0441\u043D\u0456\u0432._";
   }
-  return connections.map((conn) => {
-    let item = `- **[[${conn.dreamName}]]** \u2014 **${conn.scorePercent}%** \u0441\u0445\u043E\u0436\u043E\u0441\u0442\u0456`;
-    if (conn.commonEntities && conn.commonEntities.length > 0) {
-      item += `
-  - \u0421\u043F\u0456\u043B\u044C\u043D\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456:`;
-      for (const entity of conn.commonEntities) {
-        item += `
-    - [[${entity}]]`;
-      }
-    }
-    return item;
-  }).join("\n\n");
-}
-async function updateEntityEmbeddings(app, apiKey, settings, forceRebuild = false, specificPaths) {
-  const entitiesFolder = getEntitiesSubfolder(app, settings);
-  const allFiles = app.vault.getMarkdownFiles().filter((f) => f.path.startsWith(entitiesFolder));
-  let database = await loadEmbeddingsDatabase(app, settings, forceRebuild);
-  const targets = [];
-  for (const file of allFiles) {
-    const cache = app.metadataCache.getFileCache(file);
-    const fm = cache?.frontmatter || {};
-    const isTargeted = specificPaths ? specificPaths.includes(file.path) : false;
-    if (fm.embedding_status === "done" && !forceRebuild && !isTargeted) {
-      continue;
-    }
-    const embeddingId = `emb_${Date.now()}_${file.basename}`;
-    const text = `
-\u041D\u0430\u0437\u0432\u0430:
-${file.basename}
-
-\u0422\u0438\u043F:
-${fm.entity_type || ""}
-
-\u041E\u043F\u0438\u0441:
-${fm.description || ""}
-
-\u0410\u043B\u0456\u0430\u0441\u0438:
-${Array.isArray(fm.aliases) ? fm.aliases.join(", ") : ""}
-
-\u0422\u0435\u0433\u0438:
-${Array.isArray(fm.tags) ? fm.tags.join(", ") : ""}
-`;
-    targets.push({ file, text, embeddingId, fm });
-  }
-  if (targets.length === 0) return 0;
-  const inputs = targets.map((t2) => t2.text);
-  const vectors = await getBatchEmbeddings(apiKey, settings.embeddingModel, inputs);
-  let updatedCount = 0;
-  for (let i = 0; i < targets.length; i++) {
-    const target = targets[i];
-    const vector = vectors[i];
-    if (!vector) continue;
-    database = database.filter((item) => item.file !== target.file.path);
-    database.push({
-      id: target.embeddingId,
-      file: target.file.path,
-      name: target.file.basename,
-      type: target.fm.entity_type || "",
-      description: target.fm.description || "",
-      aliases: Array.isArray(target.fm.aliases) ? target.fm.aliases : [],
-      vector
-    });
-    await app.fileManager.processFrontMatter(target.file, (frontmatter) => {
-      frontmatter.embedding_status = "done";
-      frontmatter.embedding_id = target.embeddingId;
-    });
-    updatedCount++;
-  }
-  if (updatedCount > 0 || forceRebuild) {
-    await saveEmbeddingsDatabase(app, settings, database);
-  }
-  return updatedCount;
+  const lines = connections.map((conn) => {
+    const percent = Math.round(conn.score * 100);
+    const sharedText = conn.sharedEntities.length > 0 ? ` (\u0441\u043F\u0456\u043B\u044C\u043D\u0456 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0456: ${conn.sharedEntities.map((e) => `[[${e}]]`).join(", ")})` : "";
+    const dateText = conn.date ? ` [${conn.date}]` : "";
+    return `- [[${conn.dreamName}]]${dateText} \u2014 \u0441\u0445\u043E\u0436\u0456\u0441\u0442\u044C ${percent}%${sharedText}`;
+  });
+  return lines.join("\n");
 }
 
 // src/dreamCreator.ts
@@ -1268,12 +1241,15 @@ var DreamAnalyzerSettingTab = class extends import_obsidian7.PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     new import_obsidian7.Setting(containerEl).setName(t("settingsTitle")).setHeading();
-    const hasSecretStorage = typeof import_obsidian7.SecretComponent !== "undefined" && typeof this.app.secretStorage !== "undefined";
+    const obsidianModule = require("obsidian");
+    const SecretComponentClass = obsidianModule ? obsidianModule.SecretComponent : void 0;
+    const hasSecretStorage = typeof SecretComponentClass !== "undefined" && typeof this.app.secretStorage !== "undefined";
     if (hasSecretStorage) {
-      new import_obsidian7.Setting(containerEl).setName(t("apiKeyName")).setDesc(t("apiKeyDesc")).addComponent((el) => new import_obsidian7.SecretComponent(this.app, el).setValue(this.plugin.settings.openaiApiKey || "").onChange(async (value) => {
+      const setting = new import_obsidian7.Setting(containerEl).setName(t("apiKeyName")).setDesc(t("apiKeyDesc"));
+      new SecretComponentClass(this.app, setting.controlEl).setValue(this.plugin.settings.openaiApiKey || "").onChange(async (value) => {
         this.plugin.settings.openaiApiKey = value ? value.trim() : "";
         await this.plugin.saveSettings();
-      }));
+      });
     } else {
       new import_obsidian7.Setting(containerEl).setName(t("apiKeyName")).setDesc(t("apiKeyDesc")).addText((text) => {
         text.inputEl.type = "password";

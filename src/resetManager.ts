@@ -19,10 +19,11 @@ export class ConfirmResetModal extends Modal {
 		new Setting(contentEl)
 			.addButton(btn => {
 				btn.setButtonText(t("resetModalConfirmButton"));
-				if (typeof (btn as any).setDestructive === "function") {
-					(btn as any).setDestructive(true);
-				} else if (typeof (btn as any).setWarning === "function") {
-					(btn as any).setWarning();
+				const btnRecord = btn as unknown as Record<string, unknown>;
+				if (typeof btnRecord.setDestructive === "function") {
+					(btnRecord.setDestructive as (val: boolean) => void)(true);
+				} else if (typeof btnRecord.setWarning === "function") {
+					(btnRecord.setWarning as () => void)();
 				}
 				btn.onClick(() => {
 					this.close();
@@ -59,7 +60,7 @@ export async function resetAllDreamData(
 		try {
 			await app.fileManager.trashFile(file);
 			entitiesDeleted++;
-		} catch (e) {
+		} catch (e: unknown) {
 			console.error("Could not trash entity file:", file.path, e);
 		}
 	}
@@ -87,7 +88,7 @@ export async function resetAllDreamData(
 			}
 
 			dreamsReset++;
-		} catch (e) {
+		} catch (e: unknown) {
 			console.error("Could not reset dream file:", file.path, e);
 		}
 	}

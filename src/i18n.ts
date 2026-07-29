@@ -4,7 +4,8 @@ export type Locale = "uk" | "en";
 
 export function getLocale(): Locale {
 	try {
-		const getLangFn = (window as any).getLanguage;
+		const win = window as Record<string, unknown>;
+		const getLangFn = win.getLanguage as (() => string) | undefined;
 		const obsLang = typeof getLangFn === "function" ? String(getLangFn()).toLowerCase() : "";
 		if (obsLang) {
 			if (obsLang.startsWith("uk") || obsLang.startsWith("ua")) {
@@ -210,7 +211,7 @@ const strings = {
 	}
 };
 
-export function t(key: keyof typeof strings["uk"], vars?: Record<string, string | number>): any {
+export function t(key: keyof typeof strings["uk"], vars?: Record<string, string | number>): string {
 	const locale = getLocale();
 	let template = (strings[locale] && strings[locale][key]) || strings["en"][key] || strings["uk"][key] || "";
 	if (typeof template === "string" && vars) {
@@ -218,5 +219,5 @@ export function t(key: keyof typeof strings["uk"], vars?: Record<string, string 
 			template = template.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
 		}
 	}
-	return template;
+	return typeof template === "string" ? template : "";
 }

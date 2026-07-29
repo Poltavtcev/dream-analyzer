@@ -86,8 +86,9 @@ export async function analyzeDream(app: App, file: TFile, settings: DreamAnalyze
 	let apiKey: string;
 	try {
 		apiKey = await getOpenAiApiKey(app, settings);
-	} catch (error: any) {
-		new Notice(error?.message || "Помилка OpenAI API Key");
+	} catch (error: unknown) {
+		const msg = error instanceof Error ? error.message : String(error);
+		new Notice(msg || "Помилка OpenAI API Key");
 		return;
 	}
 
@@ -186,7 +187,7 @@ A short summary of the dream in 2-5 sentences in the dream's language.
 		);
 
 		const result: DreamAnalysisResult = {
-			summary: rawResult.summary || "",
+			summary: typeof rawResult.summary === "string" ? rawResult.summary : "",
 			characters: normalizeEntityArray(rawResult.characters),
 			places: normalizeEntityArray(rawResult.places),
 			objects: normalizeEntityArray(rawResult.objects),
@@ -274,25 +275,29 @@ ${connectionsMarkdown}
 		const totalSec = progress.getElapsedSeconds();
 		progress.close();
 		new Notice(`Сон успішно проаналізовано за ${totalSec}с!`);
-	} catch (error: any) {
+	} catch (error: unknown) {
 		progress.close();
-		new Notice("Помилка аналізу сну: " + (error?.message || error));
-		console.error("Dream analysis failed:", error);
+		const msg = error instanceof Error ? error.message : String(error);
+		new Notice("Помилка аналізу сну: " + msg);
 	}
 }
 
-function normalizeEntityArray(value: any): EntityItem[] {
+function normalizeEntityArray(value: unknown): EntityItem[] {
 	if (!Array.isArray(value)) return [];
 	return value.map(item => {
 		if (typeof item === "string") {
 			const cleaned = cleanEntityName(item);
 			return { name: cleaned, description: "", aliases: [] };
 		} else if (typeof item === "object" && item !== null) {
-			const cleaned = cleanEntityName(item.name);
+			const obj = item as Record<string, unknown>;
+			const cleaned = cleanEntityName(obj.name);
+			const aliases = Array.isArray(obj.aliases)
+				? obj.aliases.map(a => cleanEntityName(a)).filter(Boolean)
+				: [];
 			return {
 				name: cleaned,
-				description: String(item.description || ""),
-				aliases: Array.isArray(item.aliases) ? item.aliases.map(a => cleanEntityName(a)).filter(Boolean) : []
+				description: typeof obj.description === "string" ? obj.description : "",
+				aliases
 			};
 		}
 		return { name: "", description: "", aliases: [] };
@@ -300,13 +305,13 @@ function normalizeEntityArray(value: any): EntityItem[] {
 	.filter(item => item.name.length > 0 && !isStopEntity(item.name));
 }
 
-function normalizeStringArray(value: any): string[] {
+function normalizeStringArray(value: unknown): string[] {
 	if (!Array.isArray(value)) return [];
 	return value.map(x => cleanEntityName(x)).filter(x => x.length > 0 && !isStopEntity(x));
 }
 
-export function cleanEntityName(item: any): string {
-	let name = typeof item === "object" && item !== null ? item.name : item;
+export function cleanEntityName(item: unknown): string {
+	let name = typeof item === "object" && item !== null ? (item as { name?: unknown }).name : item;
 	let str = String(name || "")
 		.replace(/\[\[/g, "")
 		.replace(/\]\]/g, "")
@@ -352,7 +357,12 @@ async function createOrUpdateEntities(
 		const folderPath = `${baseFolder}/${type.folder}`;
 		await ensureFolder(app, folderPath);
 
-		const items: EntityItem[] = (result as any)[type.field] || [];
+		const items: EntityItem[] = type.field === "characters" ? result.characters
+			: type.field === "places" ? result.places
+			: type.field === "objects" ? result.objects
+			: type.field === "emotions" ? result.emotions
+			: type.field === "symbols" ? result.symbols
+			: result.concepts;
 
 		for (const item of items) {
 			const safeName = cleanEntityName(item.name);

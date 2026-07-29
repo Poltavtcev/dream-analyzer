@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, Notice, normalizePath, SecretComponent } from "obsidian";
+import { App, PluginSettingTab, Setting, Notice, normalizePath, SecretComponent, ValueComponent } from "obsidian";
 import DreamAnalyzerPlugin from "./main";
 import { updateEntityEmbeddings } from "./embeddings";
 import { exportTemplaterTemplate, ensureDreamDashboard, ensureEntityIndexes } from "./dreamCreator";
@@ -15,7 +15,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
-	getSettingDefinitions(): any[] {
+	getSettingDefinitions(): unknown[] {
 		return [];
 	}
 
@@ -26,14 +26,16 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setName(t("settingsTitle")).setHeading();
 
 		// API Key Setting: SecretStorage SecretComponent with Password Text fallback
-		const SecretComponentClass = typeof SecretComponent !== "undefined" ? SecretComponent : (undefined as any);
-		const hasSecretStorage = typeof SecretComponentClass !== "undefined" && typeof (this.app as any).secretStorage !== "undefined";
+		const SecretComponentClass = typeof SecretComponent !== "undefined" ? SecretComponent : undefined;
+		const appWithSecret = this.app as App & { secretStorage?: unknown };
+		const hasSecretStorage = typeof SecretComponentClass !== "undefined" && typeof appWithSecret.secretStorage !== "undefined";
 
-		if (hasSecretStorage) {
+		if (hasSecretStorage && SecretComponentClass) {
 			const setting = new Setting(containerEl)
 				.setName(t("apiKeyName"))
 				.setDesc(t("apiKeyDesc"));
-			new SecretComponentClass(this.app, setting.controlEl)
+			const comp = new SecretComponentClass(this.app, setting.controlEl) as unknown as ValueComponent<string>;
+			comp
 				.setValue(this.plugin.settings.openaiApiKey || "")
 				.onChange((value: string) => {
 					void (async () => {
@@ -93,7 +95,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 						try {
 							await ensureEntityIndexes(this.app, this.plugin.settings);
 							await ensureDreamDashboard(this.app, this.plugin.settings);
-						} catch (e) {
+						} catch (e: unknown) {
 							console.warn("Could not ensure dream dashboard/indexes on folder change:", e);
 						}
 					}
@@ -136,7 +138,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.templateFilePath || "Templates/Dream Template.md")
 					.onChange((value) => {
 						void (async () => {
-							this.plugin.settings.templateFilePath = normalizePath(value.trim());
+							this.plugin.settings.templateFilePath = normalizePath(val.trim());
 							await this.plugin.saveSettings();
 						})();
 					});
@@ -152,8 +154,9 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					void (async () => {
 						try {
 							await exportTemplaterTemplate(this.app, this.plugin.settings);
-						} catch (e: any) {
-							new Notice("Помилка створення шаблону: " + (e.message || e));
+						} catch (e: unknown) {
+							const msg = e instanceof Error ? e.message : String(e);
+							new Notice("Помилка створення шаблону: " + msg);
 						}
 					})();
 				}));
@@ -230,8 +233,9 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 							const count = await updateEntityEmbeddings(this.app, apiKey, this.plugin.settings, true);
 							notice.hide();
 							new Notice(t("rebuildSuccess", { count }));
-						} catch (e: any) {
-							new Notice("Помилка: " + (e.message || e));
+						} catch (e: unknown) {
+							const msg = e instanceof Error ? e.message : String(e);
+							new Notice("Помилка: " + msg);
 						}
 					})();
 				}));
@@ -243,10 +247,11 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 			.setDesc(t("resetSectionDesc"))
 			.addButton(button => {
 				button.setButtonText(t("resetButtonText"));
-				if (typeof (button as any).setDestructive === "function") {
-					(button as any).setDestructive(true);
-				} else if (typeof (button as any).setWarning === "function") {
-					(button as any).setWarning();
+				const btnRecord = button as unknown as Record<string, unknown>;
+				if (typeof btnRecord.setDestructive === "function") {
+					(btnRecord.setDestructive as (val: boolean) => void)(true);
+				} else if (typeof btnRecord.setWarning === "function") {
+					(btnRecord.setWarning as () => void)();
 				}
 				button.onClick(() => {
 					new ConfirmResetModal(this.app, () => {
@@ -256,8 +261,9 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 								const res = await resetAllDreamData(this.app, this.plugin.settings);
 								notice.hide();
 								new Notice(t("resetSuccess", { dreams: res.dreamsReset, entities: res.entitiesDeleted }));
-							} catch (e: any) {
-								new Notice("Помилка очищення: " + (e.message || e));
+							} catch (e: unknown) {
+								const msg = e instanceof Error ? e.message : String(e);
+								new Notice("Помилка очищення: " + msg);
 							}
 						})();
 					}).open();

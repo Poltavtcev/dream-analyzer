@@ -567,6 +567,9 @@ async function updateEntityEmbeddings(app, apiKey, settings, forceRebuildAll = f
   const db = forceRebuildAll ? [] : await loadEmbeddingsDatabase(app, settings);
   const dbMap = /* @__PURE__ */ new Map();
   for (const item of db) {
+    if (item.id && item.id.startsWith("entity_")) {
+      item.id = `emb_${Date.now()}_${item.name ? item.name.toLowerCase() : "entity"}`;
+    }
     dbMap.set(item.file, item);
     if (item.name) {
       dbMap.set(item.name.toLowerCase(), item);
@@ -585,11 +588,14 @@ async function updateEntityEmbeddings(app, apiKey, settings, forceRebuildAll = f
     const rawAliases = Array.isArray(frontmatterObj.aliases) ? frontmatterObj.aliases : [];
     const aliases = rawAliases.map((x) => String(x || "")).filter(Boolean);
     const description = typeof frontmatterObj.description === "string" ? frontmatterObj.description : "";
-    const existingEmbeddingId = typeof frontmatterObj.embedding_id === "string" ? frontmatterObj.embedding_id : "";
+    let existingEmbeddingId = typeof frontmatterObj.embedding_id === "string" ? frontmatterObj.embedding_id : "";
+    if (existingEmbeddingId.startsWith("entity_")) {
+      existingEmbeddingId = "";
+    }
     const textToEmbed = `${entityName}. ${description}. Aliases: ${aliases.join(", ")}`;
     const existing = dbMap.get(file.path) || dbMap.get(entityName.toLowerCase());
-    const existingId = existing?.id || existingEmbeddingId;
-    if (!forceRebuildAll && existing && existing.textHash === simpleHash(textToEmbed)) {
+    const existingId = existing && existing.id && !existing.id.startsWith("entity_") ? existing.id : existingEmbeddingId;
+    if (!forceRebuildAll && existing && existing.textHash === simpleHash(textToEmbed) && existingId && !existingId.startsWith("entity_")) {
       continue;
     }
     toProcess.push({
@@ -614,7 +620,10 @@ async function updateEntityEmbeddings(app, apiKey, settings, forceRebuildAll = f
       const vec = embeddings[j];
       if (!vec) continue;
       const hash = simpleHash(item.textToEmbed);
-      const generatedId = item.existingId || `emb_${Date.now()}_${item.name.toLowerCase()}`;
+      let generatedId = item.existingId;
+      if (!generatedId || generatedId.startsWith("entity_")) {
+        generatedId = `emb_${Date.now()}_${item.name.toLowerCase()}`;
+      }
       const dbItem = {
         id: generatedId,
         file: item.file.path,

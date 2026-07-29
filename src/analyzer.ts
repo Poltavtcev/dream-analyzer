@@ -36,7 +36,7 @@ class ProgressNotice {
 	private totalSteps: number;
 	private currentMessage: string;
 	private startTime: number;
-	private timerId: any;
+	private timerId: number | null = null;
 
 	constructor(totalSteps: number = 5) {
 		this.totalSteps = totalSteps;
@@ -54,7 +54,7 @@ class ProgressNotice {
 	}
 
 	private startTimer() {
-		this.timerId = setInterval(() => {
+		this.timerId = window.setInterval(() => {
 			this.updateText();
 		}, 1000);
 	}
@@ -65,7 +65,10 @@ class ProgressNotice {
 	}
 
 	close() {
-		if (this.timerId) clearInterval(this.timerId);
+		if (this.timerId !== null) {
+			window.clearInterval(this.timerId);
+			this.timerId = null;
+		}
 		this.notice.hide();
 	}
 
@@ -84,7 +87,7 @@ export async function analyzeDream(app: App, file: TFile, settings: DreamAnalyze
 	try {
 		apiKey = await getOpenAiApiKey(app, settings);
 	} catch (error: any) {
-		new Notice(error.message || "Помилка OpenAI API Key");
+		new Notice(error?.message || "Помилка OpenAI API Key");
 		return;
 	}
 
@@ -245,7 +248,7 @@ ${connectionsMarkdown}
 		await app.vault.modify(file, updatedContent);
 
 		// 3. Зберігаємо/оновлюємо вектор даного сну у dream_embeddings.json
-		const createdDate = (moment as any)().format("YYYY-MM-DD");
+		const createdDate = moment().format("YYYY-MM-DD");
 		const cache = app.metadataCache.getFileCache(file);
 		const dreamDate = (cache && cache.frontmatter && cache.frontmatter.date)
 			? String(cache.frontmatter.date)
@@ -273,7 +276,7 @@ ${connectionsMarkdown}
 		new Notice(`Сон успішно проаналізовано за ${totalSec}с!`);
 	} catch (error: any) {
 		progress.close();
-		new Notice("Помилка аналізу сну: " + (error.message || error));
+		new Notice("Помилка аналізу сну: " + (error?.message || error));
 		console.error("Dream analysis failed:", error);
 	}
 }
@@ -307,7 +310,7 @@ export function cleanEntityName(item: any): string {
 	let str = String(name || "")
 		.replace(/\[\[/g, "")
 		.replace(/\]\]/g, "")
-		.replace(/[\/\\:*?"<>|]/g, "")
+		.replace(/[/\\:*?"<>|]/g, "")
 		.replace(/\s+/g, " ")
 		.trim();
 	if (!str) return "";
@@ -333,7 +336,7 @@ async function createOrUpdateEntities(
 	settings: DreamAnalyzerSettings
 ): Promise<string[]> {
 	const dreamName = dreamFile.basename;
-	const createdDate = (moment as any)().format("YYYY-MM-DD");
+	const createdDate = moment().format("YYYY-MM-DD");
 
 	const cache = app.metadataCache.getFileCache(dreamFile);
 	const dreamDate = (cache && cache.frontmatter && cache.frontmatter.date)

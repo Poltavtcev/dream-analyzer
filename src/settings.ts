@@ -212,10 +212,14 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 		new Setting(containerEl)
 			.setName(t("resetSectionTitle"))
 			.setDesc(t("resetSectionDesc"))
-			.addButton(button => button
-				.setButtonText(t("resetButtonText"))
-				.setWarning()
-				.onClick(() => {
+			.addButton(button => {
+				button.setButtonText(t("resetButtonText"));
+				if (typeof (button as any).setDestructive === "function") {
+					(button as any).setDestructive(true);
+				} else if (typeof (button as any).setWarning === "function") {
+					(button as any).setWarning();
+				}
+				button.onClick(() => {
 					new ConfirmResetModal(this.app, async () => {
 						try {
 							const notice = new Notice("Очищення даних...", 0);
@@ -226,6 +230,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 							new Notice("Помилка очищення: " + (e.message || e));
 						}
 					}).open();
-				}));
+				});
+			});
 	}
 }

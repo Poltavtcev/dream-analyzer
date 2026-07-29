@@ -1,4 +1,4 @@
-import { App, Modal, Setting, TFile, Notice } from "obsidian";
+import { App, Modal, Setting } from "obsidian";
 import { DreamAnalyzerSettings } from "./types";
 import { saveEmbeddingsDatabase, saveDreamEmbeddingsDatabase, getDreamsSubfolder, getEntitiesSubfolder } from "./embeddings";
 import { t } from "./i18n";
@@ -17,13 +17,18 @@ export class ConfirmResetModal extends Modal {
 		contentEl.createEl("p", { text: t("resetModalDesc") });
 
 		new Setting(contentEl)
-			.addButton(btn => btn
-				.setButtonText(t("resetModalConfirmButton"))
-				.setWarning()
-				.onClick(() => {
+			.addButton(btn => {
+				btn.setButtonText(t("resetModalConfirmButton"));
+				if (typeof (btn as any).setDestructive === "function") {
+					(btn as any).setDestructive(true);
+				} else if (typeof (btn as any).setWarning === "function") {
+					(btn as any).setWarning();
+				}
+				btn.onClick(() => {
 					this.close();
 					this.onConfirm();
-				}))
+				});
+			})
 			.addButton(btn => btn
 				.setButtonText(t("resetModalCancelButton"))
 				.onClick(() => {
@@ -47,15 +52,15 @@ export async function resetAllDreamData(
 	let entitiesDeleted = 0;
 	let dreamsReset = 0;
 
-	// 1. Видаляємо всі файли сутностей у папці entitiesFolder
+	// 1. Видаляємо всі файли сутностей у папці entitiesFolder через FileManager.trashFile (безпечно до корзини)
 	const allFiles = app.vault.getMarkdownFiles();
 	const entityFiles = allFiles.filter(f => f.path.startsWith(entitiesFolder));
 	for (const file of entityFiles) {
 		try {
-			await app.vault.delete(file);
+			await app.fileManager.trashFile(file);
 			entitiesDeleted++;
 		} catch (e) {
-			console.error("Could not delete entity file:", file.path, e);
+			console.error("Could not trash entity file:", file.path, e);
 		}
 	}
 

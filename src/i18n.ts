@@ -4,7 +4,8 @@ export type Locale = "uk" | "en";
 
 export function getLocale(): Locale {
 	try {
-		const obsLang = (window.localStorage.getItem("language") || "").toLowerCase();
+		const getLangFn = (window as any).getLanguage;
+		const obsLang = (typeof getLangFn === "function" ? getLangFn() : window.localStorage.getItem("language") || "").toLowerCase();
 		if (obsLang) {
 			if (obsLang.startsWith("uk") || obsLang.startsWith("ua")) {
 				return "uk";
@@ -16,7 +17,9 @@ export function getLocale(): Locale {
 		if (momentLang.startsWith("uk") || momentLang.startsWith("ua")) {
 			return "uk";
 		}
-	} catch (e) {}
+	} catch (e) {
+		// Silent catch for language detection fallback
+	}
 	return "en";
 }
 

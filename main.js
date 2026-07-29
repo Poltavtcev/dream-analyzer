@@ -62,7 +62,8 @@ var import_obsidian2 = require("obsidian");
 var import_obsidian = require("obsidian");
 function getLocale() {
   try {
-    const obsLang = (window.localStorage.getItem("language") || "").toLowerCase();
+    const getLangFn = window.getLanguage;
+    const obsLang = (typeof getLangFn === "function" ? getLangFn() : window.localStorage.getItem("language") || "").toLowerCase();
     if (obsLang) {
       if (obsLang.startsWith("uk") || obsLang.startsWith("ua")) {
         return "uk";
@@ -1134,10 +1135,18 @@ var ConfirmResetModal = class extends import_obsidian5.Modal {
     const { contentEl } = this;
     contentEl.createEl("h2", { text: t("resetModalTitle") });
     contentEl.createEl("p", { text: t("resetModalDesc") });
-    new import_obsidian5.Setting(contentEl).addButton((btn) => btn.setButtonText(t("resetModalConfirmButton")).setWarning().onClick(() => {
-      this.close();
-      this.onConfirm();
-    })).addButton((btn) => btn.setButtonText(t("resetModalCancelButton")).onClick(() => {
+    new import_obsidian5.Setting(contentEl).addButton((btn) => {
+      btn.setButtonText(t("resetModalConfirmButton"));
+      if (typeof btn.setDestructive === "function") {
+        btn.setDestructive(true);
+      } else if (typeof btn.setWarning === "function") {
+        btn.setWarning();
+      }
+      btn.onClick(() => {
+        this.close();
+        this.onConfirm();
+      });
+    }).addButton((btn) => btn.setButtonText(t("resetModalCancelButton")).onClick(() => {
       this.close();
     }));
   }
@@ -1155,10 +1164,10 @@ async function resetAllDreamData(app, settings) {
   const entityFiles = allFiles.filter((f) => f.path.startsWith(entitiesFolder));
   for (const file of entityFiles) {
     try {
-      await app.vault.delete(file);
+      await app.fileManager.trashFile(file);
       entitiesDeleted++;
     } catch (e) {
-      console.error("Could not delete entity file:", file.path, e);
+      console.error("Could not trash entity file:", file.path, e);
     }
   }
   const dreamFiles = allFiles.filter((f) => f.path.startsWith(dreamsFolder));
@@ -1358,18 +1367,26 @@ var DreamAnalyzerSettingTab = class extends import_obsidian7.PluginSettingTab {
       }
     }));
     new import_obsidian7.Setting(containerEl).setName(t("resetSectionTitle")).setHeading();
-    new import_obsidian7.Setting(containerEl).setName(t("resetSectionTitle")).setDesc(t("resetSectionDesc")).addButton((button) => button.setButtonText(t("resetButtonText")).setWarning().onClick(() => {
-      new ConfirmResetModal(this.app, async () => {
-        try {
-          const notice = new import_obsidian7.Notice("\u041E\u0447\u0438\u0449\u0435\u043D\u043D\u044F \u0434\u0430\u043D\u0438\u0445...", 0);
-          const res = await resetAllDreamData(this.app, this.plugin.settings);
-          notice.hide();
-          new import_obsidian7.Notice(t("resetSuccess", { dreams: res.dreamsReset, entities: res.entitiesDeleted }));
-        } catch (e) {
-          new import_obsidian7.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u043E\u0447\u0438\u0449\u0435\u043D\u043D\u044F: " + (e.message || e));
-        }
-      }).open();
-    }));
+    new import_obsidian7.Setting(containerEl).setName(t("resetSectionTitle")).setDesc(t("resetSectionDesc")).addButton((button) => {
+      button.setButtonText(t("resetButtonText"));
+      if (typeof button.setDestructive === "function") {
+        button.setDestructive(true);
+      } else if (typeof button.setWarning === "function") {
+        button.setWarning();
+      }
+      button.onClick(() => {
+        new ConfirmResetModal(this.app, async () => {
+          try {
+            const notice = new import_obsidian7.Notice("\u041E\u0447\u0438\u0449\u0435\u043D\u043D\u044F \u0434\u0430\u043D\u0438\u0445...", 0);
+            const res = await resetAllDreamData(this.app, this.plugin.settings);
+            notice.hide();
+            new import_obsidian7.Notice(t("resetSuccess", { dreams: res.dreamsReset, entities: res.entitiesDeleted }));
+          } catch (e) {
+            new import_obsidian7.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u043E\u0447\u0438\u0449\u0435\u043D\u043D\u044F: " + (e.message || e));
+          }
+        }).open();
+      });
+    });
   }
 };
 
@@ -1403,6 +1420,7 @@ function isStopEntity(name) {
 }
 var ProgressNotice = class {
   constructor(totalSteps = 5) {
+    this.timerId = null;
     this.totalSteps = totalSteps;
     this.step = 1;
     this.currentMessage = "";
@@ -1416,7 +1434,7 @@ var ProgressNotice = class {
     this.updateText();
   }
   startTimer() {
-    this.timerId = setInterval(() => {
+    this.timerId = window.setInterval(() => {
       this.updateText();
     }, 1e3);
   }
@@ -1425,7 +1443,10 @@ var ProgressNotice = class {
     this.notice.setMessage(`[${this.step}/${this.totalSteps}] ${this.currentMessage} (${elapsedSec}s)`);
   }
   close() {
-    if (this.timerId) clearInterval(this.timerId);
+    if (this.timerId !== null) {
+      window.clearInterval(this.timerId);
+      this.timerId = null;
+    }
     this.notice.hide();
   }
   getElapsedSeconds() {
@@ -1441,7 +1462,7 @@ async function analyzeDream(app, file, settings) {
   try {
     apiKey = await getOpenAiApiKey(app, settings);
   } catch (error) {
-    new import_obsidian8.Notice(error.message || "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 OpenAI API Key");
+    new import_obsidian8.Notice(error?.message || "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 OpenAI API Key");
     return;
   }
   const progress = new ProgressNotice(5);
@@ -1609,7 +1630,7 @@ ${aiText.trim()}`;
     new import_obsidian8.Notice(`\u0421\u043E\u043D \u0443\u0441\u043F\u0456\u0448\u043D\u043E \u043F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u043E\u0432\u0430\u043D\u043E \u0437\u0430 ${totalSec}\u0441!`);
   } catch (error) {
     progress.close();
-    new import_obsidian8.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0430\u043D\u0430\u043B\u0456\u0437\u0443 \u0441\u043D\u0443: " + (error.message || error));
+    new import_obsidian8.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0430\u043D\u0430\u043B\u0456\u0437\u0443 \u0441\u043D\u0443: " + (error?.message || error));
     console.error("Dream analysis failed:", error);
   }
 }
@@ -1636,7 +1657,7 @@ function normalizeStringArray(value) {
 }
 function cleanEntityName(item) {
   let name = typeof item === "object" && item !== null ? item.name : item;
-  let str = String(name || "").replace(/\[\[/g, "").replace(/\]\]/g, "").replace(/[\/\\:*?"<>|]/g, "").replace(/\s+/g, " ").trim();
+  let str = String(name || "").replace(/\[\[/g, "").replace(/\]\]/g, "").replace(/[/\\:*?"<>|]/g, "").replace(/\s+/g, " ").trim();
   if (!str) return "";
   return str.charAt(0).toUpperCase() + str.slice(1);
 }

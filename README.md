@@ -1,63 +1,123 @@
 # 🌙 Dream Analyzer for Obsidian
 
-**Dream Analyzer** is an AI-powered Obsidian plugin for dream journal analysis, automatic entity extraction (Characters, Places, Objects, Emotions, Symbols, Concepts), vector similarity search between dreams, and Lucid Dreaming tracking.
+**Dream Analyzer** is an AI-assisted dream journaling plugin for Obsidian.
+
+It helps organize dream journals by analyzing dream entries, extracting structured entities, discovering connections between dreams, and tracking recurring themes.
+
+Dream Analyzer uses AI to assist reflection and organization. It does not provide psychological or medical interpretations.
 
 ---
 
 ## 🚀 Features
 
-- **🧠 AI-Powered Dream Analysis**: Generates structured dream summaries and extracts entities using OpenAI API (`gpt-5-mini`, `gpt-4o-mini`, `gpt-4o`, `gpt-4.1-mini`).
-- **👤 Automatic Entity Management**: Creates and updates note files in `Characters`, `Places`, `Objects`, `Emotions`, `Symbols`, and `Concepts` folders, preserving appearance history and dream contexts.
-- **⚡ Vector Embeddings & Similarity Matching**: Calculates combined similarity scores between dreams (50% Cosine Similarity + 50% Shared Entities) and displays TOP-5 connected dreams.
-- **📊 Automated Dream Analytics Dashboard (`Dream Dashboard.md`)**: Tracks lucid dreaming metrics (% Lucid Dreams), Dream Signs / Reality Check triggers, emotional trends, and creative writing ideas.
-- **📅 Calendar & Templater Integration**: Exports a ready-to-use template file compatible with Templater and Calendar plugins.
-- **🗓 Flexible Date Picker**: Commands to create today's dream note or pick any custom date via an interactive date-picker modal.
-- **🧹 Native Reset & Cleanup**: Native Obsidian Frontmatter processing (zero regex string manipulation) and a full data reset utility for fresh testing.
-- **🔄 Real-time Rename Sync**: Automatically updates vector database paths in real-time when dream or entity files are renamed in Obsidian.
+### 🧠 AI Dream Analysis
+
+Automatically analyzes dream entries and generates structured information:
+
+- Dream summaries
+- Characters
+- Places
+- Objects
+- Emotions
+- Symbols
+- Concepts
+
+Supports OpenAI models including:
+
+- `gpt-5-mini`
+- `gpt-4o-mini`
+- `gpt-4o`
+- `gpt-4.1-mini`
+
+---
+
+### 👤 Entity Management
+
+Automatically creates and updates entity notes:
+
+- Characters
+- Places
+- Objects
+- Emotions
+- Symbols
+- Concepts
+
+Entity notes preserve:
+
+- appearance history
+- related dreams
+- recurring contexts
+- connections between experiences
+
+Includes smart duplicate prevention across categories.
+
+---
+
+### 🔗 Dream Similarity Analysis
+
+Finds related dreams using combined semantic and entity-based matching:
+
+- 50% Vector Cosine Similarity
+- 50% Shared Entity Similarity
+
+Displays the most connected dreams based on:
+
+- semantic meaning
+- recurring entities
+- shared themes
+
+---
+
+### 📊 Dream Analytics Dashboard
+
+Automatically generates a dream dashboard:
+
+- Lucid dream statistics
+- Dream signs and reality check triggers
+- Emotional trends
+- Recurring concepts
+- Creative ideas
+
+Supports multilingual dashboard files.
+
+---
+
+### 📅 Calendar and Templater Integration
+
+Provides:
+
+- Dream note templates
+- Templater compatibility
+- Calendar integration
+- Date picker for creating historical dream entries
+
+---
+
+### 🔄 Real-Time Synchronization
+
+Automatically updates internal references when:
+
+- dream notes are renamed
+- entity notes are renamed
+- files are moved inside the vault
+
+---
+
+### 🧹 Data Management
+
+Includes utilities for:
+
+- database reset
+- cleanup of generated data
+- rebuilding analysis indexes
+
+Uses native Obsidian APIs for frontmatter processing.
 
 ---
 
 ## 📦 Installation
 
-1. Copy the `dream-analyzer` directory into `.obsidian/plugins/` inside your Obsidian vault.
-2. Ensure the plugin directory contains:
-   - `main.js`
-   - `manifest.json`
-3. Enable the plugin in **Obsidian Settings -> Community plugins -> Dream Analyzer**.
+### Manual Installation
 
----
-
-## ⚙️ Configuration
-
-1. **OpenAI API Key**: Enter your OpenAI API Key (`sk-...`).
-2. **OpenAI Chat Model**: Select your preferred AI model (`gpt-5-mini` default or `gpt-4o-mini` for ultra-fast response).
-3. **Dreams Folder**: Folder path where dream notes are stored (default: `Dreams`).
-4. **Entities Folder**: Folder path where entity notes are created (default: `Entities`).
-5. **Templater & Calendar Template**: Click `💾 Create / Update Template File` to generate `Templates/Dream Template.md`.
-
----
-
-## 📖 How to Use
-
-1. **Create a Dream Note**:
-   - Click the calendar ribbon icon or run the command `🌙 Create Dream Note for Today`.
-   - For a custom date, run `📅 Create Dream Note for Selected Date...`.
-2. **Analyze a Dream**:
-   - Open a dream note and click the brain ribbon icon 🧠 or run `🧠 Analyze Active Dream`.
-   - Alternatively, right-click any dream file in the File Explorer and select `🧠 Analyze Dream`.
-3. **View Dashboard**:
-   - Open `Dream Dashboard.md` (or `Дашборд снів.md` depending on your Obsidian language) inside your Dreams folder to view live Dataview analytics.
-
----
-
-## 🛠 Technical Specifications
-
-- **Language**: TypeScript
-- **Bundler**: ESBuild (bundle size ~88 KB)
-- **API**: Obsidian Native Frontmatter API (`app.fileManager.processFrontMatter`), Obsidian RequestUrl, OpenAI ChatCompletions & Embeddings Batch API.
-
----
-
-## 📄 License
-
-MIT License.
+1. Download the latest release.
+2. Extract files into:

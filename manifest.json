@@ -3,7 +3,7 @@
   "name": "Dream Analyzer",
   "version": "1.0.1",
   "minAppVersion": "1.5.7",
-  "description": "AI-powered dream analysis, entity extraction, vector similarity connections, and lucid dreaming dashboard for Obsidian.",
+  "description": "AI-powered dream analysis, entity extraction, vector similarity connections, and lucid dreaming dashboard.",
   "author": "Poltavtcev",
   "authorUrl": "https://github.com/Poltavtcev",
   "isDesktopOnly": false

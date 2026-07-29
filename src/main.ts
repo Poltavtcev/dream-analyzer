@@ -1,9 +1,9 @@
-import { Plugin, TFile, Notice } from "obsidian";
+import { Plugin, Notice, TFile } from "obsidian";
 import { DreamAnalyzerSettings, DEFAULT_SETTINGS } from "./types";
+import { DreamAnalyzerSettingTab } from "./settings";
 import { analyzeDream } from "./analyzer";
 import { createTodayDreamNote, createDreamNoteForDate, DatePickerModal } from "./dreamCreator";
-import { updateEntityEmbeddings, clearMemoryCache, handleFileRename, getDreamsSubfolder } from "./embeddings";
-import { DreamAnalyzerSettingTab } from "./settings";
+import { updateEntityEmbeddings, clearMemoryCache, getDreamsSubfolder } from "./embeddings";
 import { ConfirmResetModal, resetAllDreamData } from "./resetManager";
 import { getOpenAiApiKey } from "./api";
 import { t } from "./i18n";
@@ -14,36 +14,31 @@ export default class DreamAnalyzerPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		// Add Ribbon Icons
-		this.addRibbonIcon("brain", t("ribbonAnalyze"), () => {
+		// Ribbon icon for quick dream analysis
+		this.addRibbonIcon("sparkles", t("ribbonAnalyze"), () => {
 			const activeFile = this.app.workspace.getActiveFile();
-			if (activeFile instanceof TFile && activeFile.extension === "md") {
+			if (activeFile) {
 				void analyzeDream(this.app, activeFile, this.settings);
 			} else {
 				new Notice(t("openDreamNoteFirst"));
 			}
 		});
 
+		// Ribbon icon for creating dream note for today
 		this.addRibbonIcon("calendar-plus", t("ribbonCreateDream"), () => {
 			void createTodayDreamNote(this.app, this.settings);
 		});
 
-		// Listen to note rename events
-		this.registerEvent(
-			this.app.vault.on("rename", (file, oldPath) => {
-				if (file instanceof TFile && file.extension === "md") {
-					void handleFileRename(this.app, file, oldPath, this.settings);
-				}
-			})
-		);
-
-		// Command 1: Analyze active dream note
+		// Command 1: Analyze current active dream note
 		this.addCommand({
-			id: "analyze-dream",
+			id: "analyze-current-dream",
 			name: t("cmdAnalyze"),
 			checkCallback: (checking: boolean) => {
 				const activeFile = this.app.workspace.getActiveFile();
-				if (activeFile instanceof TFile && activeFile.extension === "md") {
+				const dreamsSubfolder = getDreamsSubfolder(this.app, this.settings);
+				const isDreamFile = activeFile instanceof TFile && activeFile.extension === "md" && activeFile.path.startsWith(dreamsSubfolder);
+
+				if (isDreamFile) {
 					if (!checking) {
 						void analyzeDream(this.app, activeFile, this.settings);
 					}
@@ -55,27 +50,27 @@ export default class DreamAnalyzerPlugin extends Plugin {
 
 		// Command 2: Create dream note for today
 		this.addCommand({
-			id: "create-today-dream",
+			id: "create-today-dream-note",
 			name: t("cmdCreateDream"),
 			callback: () => {
 				void createTodayDreamNote(this.app, this.settings);
 			}
 		});
 
-		// Command 3: Create dream note for custom date
+		// Command 3: Create dream note for custom selected date
 		this.addCommand({
-			id: "create-custom-date-dream",
+			id: "create-custom-date-dream-note",
 			name: t("cmdCreateCustomDateDream"),
 			callback: () => {
-				new DatePickerModal(this.app, (selectedDate) => {
+				new DatePickerModal(this.app, (selectedDate: string) => {
 					void createDreamNoteForDate(this.app, this.settings, selectedDate);
 				}).open();
 			}
 		});
 
-		// Command 4: Rebuild/update entity embeddings database
+		// Command 4: Rebuild vector embeddings for entities
 		this.addCommand({
-			id: "rebuild-embeddings",
+			id: "rebuild-entity-embeddings",
 			name: t("cmdRebuildEmbeddings"),
 			callback: () => {
 				void (async () => {
@@ -85,8 +80,9 @@ export default class DreamAnalyzerPlugin extends Plugin {
 						const count = await updateEntityEmbeddings(this.app, apiKey, this.settings, true);
 						notice.hide();
 						new Notice(t("rebuildSuccess", { count }));
-					} catch (e: any) {
-						new Notice("Помилка: " + (e.message || e));
+					} catch (e: unknown) {
+						const msg = e instanceof Error ? e.message : String(e);
+						new Notice("Помилка: " + msg);
 					}
 				})();
 			}
@@ -104,8 +100,9 @@ export default class DreamAnalyzerPlugin extends Plugin {
 							const res = await resetAllDreamData(this.app, this.settings);
 							notice.hide();
 							new Notice(t("resetSuccess", { dreams: res.dreamsReset, entities: res.entitiesDeleted }));
-						} catch (e: any) {
-							new Notice("Помилка очищення: " + (e.message || e));
+						} catch (e: unknown) {
+							const msg = e instanceof Error ? e.message : String(e);
+							new Notice("Помилка очищення: " + msg);
 						}
 					})();
 				}).open();
@@ -118,8 +115,9 @@ export default class DreamAnalyzerPlugin extends Plugin {
 				const dreamsSubfolder = getDreamsSubfolder(this.app, this.settings);
 				if (file instanceof TFile && file.extension === "md" && file.path.startsWith(dreamsSubfolder)) {
 					menu.addItem((item) => {
-						item.setTitle(t("contextMenuAnalyze"))
-							.setIcon("brain")
+						item
+							.setTitle(t("contextMenuAnalyze"))
+							.setIcon("sparkles")
 							.onClick(() => {
 								void analyzeDream(this.app, file, this.settings);
 							});
@@ -137,7 +135,8 @@ export default class DreamAnalyzerPlugin extends Plugin {
 	}
 
 	async loadSettings() {
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+		const rawData = (await this.loadData()) as Partial<DreamAnalyzerSettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, rawData || {});
 		clearMemoryCache();
 	}
 

@@ -240,13 +240,13 @@ export async function updateEntityEmbeddings(
 
 	for (const file of targetFiles) {
 		const cache = app.metadataCache.getFileCache(file);
-		const fm = cache?.frontmatter as DreamFrontmatter | undefined;
-		if (!fm || fm.type !== "entity") continue;
+		const frontmatterObj: Record<string, unknown> | undefined = cache?.frontmatter;
+		if (!frontmatterObj || frontmatterObj.type !== "entity") continue;
 
 		const entityName = file.basename;
-		const entityType = fm.entity_type || "concept";
-		const aliases = Array.isArray(fm.aliases) ? fm.aliases : [];
-		const description = fm.description || "";
+		const entityType = typeof frontmatterObj.entity_type === "string" ? frontmatterObj.entity_type : "concept";
+		const aliases = Array.isArray(frontmatterObj.aliases) ? (frontmatterObj.aliases as unknown[]).map(x => String(x)) : [];
+		const description = typeof frontmatterObj.description === "string" ? frontmatterObj.description : "";
 
 		const textToEmbed = `${entityName}. ${description}. Aliases: ${aliases.join(", ")}`;
 

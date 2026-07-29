@@ -1,7 +1,19 @@
 import { App, TFile, Notice, Modal, Setting, moment } from "obsidian";
-import { DreamAnalyzerSettings, ENTITY_TYPES, DreamFrontmatter } from "./types";
+import { DreamAnalyzerSettings, ENTITY_TYPES } from "./types";
 import { t, tList, getLocale } from "./i18n";
 import { getDreamsSubfolder, getEntitiesSubfolder } from "./embeddings";
+
+interface TypedMoment {
+	format(fmt: string): string;
+	day(): number;
+	month(): number;
+	isValid(): boolean;
+}
+
+function getMoment(date?: string | number | Date | string[], format?: string | string[]): TypedMoment {
+	const fn = moment as unknown as (d?: unknown, f?: unknown) => TypedMoment;
+	return fn(date, format);
+}
 
 async function ensureFolder(app: App, path: string): Promise<void> {
 	const normalizedPath = path.trim().replace(/\/$/, "");
@@ -22,7 +34,7 @@ export class DatePickerModal extends Modal {
 		const { contentEl } = this;
 		contentEl.createEl("h2", { text: t("dateModalTitle") });
 
-		let selectedDate = moment().format("YYYY-MM-DD");
+		let selectedDate = getMoment().format("YYYY-MM-DD");
 
 		new Setting(contentEl)
 			.setName(t("dateModalLabel"))
@@ -55,7 +67,7 @@ export async function createDreamNoteForDate(
 	settings: DreamAnalyzerSettings,
 	targetDateInput?: string
 ): Promise<TFile | void> {
-	const now = targetDateInput ? moment(targetDateInput, ["YYYY-MM-DD", "D.MM.YYYY", "DD.MM.YYYY"]) : moment();
+	const now = targetDateInput ? getMoment(targetDateInput, ["YYYY-MM-DD", "D.MM.YYYY", "DD.MM.YYYY"]) : getMoment();
 	if (!now.isValid()) {
 		new Notice("Некоректний формат дати");
 		return;
@@ -70,16 +82,13 @@ export async function createDreamNoteForDate(
 	const existingFile = app.vault.getAbstractFileByPath(filePath);
 	if (existingFile instanceof TFile) {
 		new Notice(t("dreamAlreadyExists"));
-		const leaf = app.workspace.getUnlinkableLeaf();
+		const leaf = app.workspace.getLeaf(true);
 		await leaf.openFile(existingFile);
 		return existingFile;
 	}
 
 	const days = tList("days");
-	const months = tList("months");
-
 	const dayOfWeek = days[now.day()] || "";
-	const monthFormatted = months[now.month()] || "";
 
 	const templateContent = `---
 type: dream
@@ -129,7 +138,7 @@ entities_checked: false
 	const newFile = await app.vault.create(filePath, templateContent);
 	new Notice(t("dreamCreated"));
 
-	const leaf = app.workspace.getUnlinkableLeaf();
+	const leaf = app.workspace.getLeaf(true);
 	await leaf.openFile(newFile);
 
 	await ensureDreamDashboard(app, settings);

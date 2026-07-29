@@ -165,7 +165,7 @@ export async function requestChatCompletion(
 		if (response.status !== 200) {
 			let errorDetail = response.text;
 			try {
-				const errJson = JSON.parse(response.text) as OpenAiChatResponse;
+				const errJson = JSON.parse(response.text) as OpenAiEmbeddingResponse;
 				if (errJson.error?.message) {
 					errorDetail = errJson.error.message;
 				}
@@ -181,7 +181,7 @@ export async function requestChatCompletion(
 			throw new Error("Некоректна відповідь ChatCompletion від OpenAI");
 		}
 
-		const parsed = JSON.parse(content);
+		const parsed = JSON.parse(content) as unknown;
 		if (typeof parsed === "object" && parsed !== null) {
 			return parsed as Record<string, unknown>;
 		}

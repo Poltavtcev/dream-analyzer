@@ -69,16 +69,16 @@ export async function resetAllDreamData(
 	const dreamFiles = allFiles.filter(f => f.path.startsWith(dreamsFolder));
 	for (const file of dreamFiles) {
 		try {
-			await app.fileManager.processFrontMatter(file, (fm) => {
-				fm.type = "dream";
-				fm.entities_checked = false;
-				fm.characters = [];
-				fm.places = [];
-				fm.objects = [];
-				fm.emotions = [];
-				fm.symbols = [];
-				fm.concepts = [];
-				fm.keywords = [];
+			await app.fileManager.processFrontMatter(file, (fmRecord: Record<string, unknown>) => {
+				fmRecord["type"] = "dream";
+				fmRecord["entities_checked"] = false;
+				fmRecord["characters"] = [];
+				fmRecord["places"] = [];
+				fmRecord["objects"] = [];
+				fmRecord["emotions"] = [];
+				fmRecord["symbols"] = [];
+				fmRecord["concepts"] = [];
+				fmRecord["keywords"] = [];
 			});
 
 			let content = await app.vault.read(file);

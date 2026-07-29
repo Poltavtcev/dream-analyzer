@@ -18,6 +18,15 @@ import {
 	getEntitiesSubfolder
 } from "./embeddings";
 
+interface TypedMoment {
+	format(fmt: string): string;
+}
+
+function getMoment(): TypedMoment {
+	const fn = moment as unknown as () => TypedMoment;
+	return fn();
+}
+
 const STOP_ENTITIES_LOWER = new Set([
 	// Ukrainian
 	"оповідач", "я", "сновидець", "моє тіло", "власне тіло", "себе", "автор", "моя особа", "самість",
@@ -168,7 +177,7 @@ ENTITY NAMING RULES:
 - Do NOT include symbols: / \\ : * ? " < > |
 
 CATEGORIES:
-characters: Specific people, creatures, or characters with a role in the dream (EXCLUDING the narrator/dreamer).
+characters: Specific people, creatures, or characters with a role in the dream (EXCLUDING the dreamer/narrator).
 places: Independent locations, spaces, or geographic places.
 objects: Physical items that exist in the dream as distinct objects.
 emotions: Feelings, emotions, or internal mental states.
@@ -250,10 +259,10 @@ ${connectionsMarkdown}
 		await app.vault.modify(file, updatedContent);
 
 		// 3. Зберігаємо/оновлюємо вектор даного сну у dream_embeddings.json
-		const createdDate = moment().format("YYYY-MM-DD");
+		const createdDate = getMoment().format("YYYY-MM-DD");
 		const cache = app.metadataCache.getFileCache(file);
-		const fm = cache?.frontmatter as DreamFrontmatter | undefined;
-		const dreamDate = (fm && fm.date) ? String(fm.date) : createdDate;
+		const frontmatterObj: Record<string, unknown> | undefined = cache?.frontmatter;
+		const dreamDate = typeof frontmatterObj?.date === "string" ? frontmatterObj.date : createdDate;
 
 		const updatedDreamDb = dreamDb.filter(d => d.file !== file.path && d.name !== file.basename);
 		updatedDreamDb.push({
@@ -341,11 +350,11 @@ async function createOrUpdateEntities(
 	settings: DreamAnalyzerSettings
 ): Promise<string[]> {
 	const dreamName = dreamFile.basename;
-	const createdDate = moment().format("YYYY-MM-DD");
+	const createdDate = getMoment().format("YYYY-MM-DD");
 
 	const cache = app.metadataCache.getFileCache(dreamFile);
-	const fmCache = cache?.frontmatter as DreamFrontmatter | undefined;
-	const dreamDate = (fmCache && fmCache.date) ? String(fmCache.date) : createdDate;
+	const frontmatterObj: Record<string, unknown> | undefined = cache?.frontmatter;
+	const dreamDate = typeof frontmatterObj?.date === "string" ? frontmatterObj.date : createdDate;
 
 	const baseFolder = getEntitiesSubfolder(app, settings);
 	await ensureFolder(app, baseFolder);
@@ -454,7 +463,7 @@ function makeEntityBodyContent(
 	settings: DreamAnalyzerSettings
 ): string {
 	const dreamsFolder = getDreamsSubfolder(app, settings);
-	const entitiesFolder = getEntitiesSubfolder(app, settings);
+	const entitiesSubfolder = getEntitiesSubfolder(app, settings);
 
 	return `# ${name}
 

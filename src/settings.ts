@@ -23,13 +23,14 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
-		new Setting(containerEl).setName(t("settingsTitle")).setHeading();
+		const titleSetting = new Setting(containerEl).setName(t("settingsTitle"));
+		titleSetting.settingEl.addClass("setting-item-heading");
 
 		// API Key Setting: SecretStorage SecretComponent with Password Text fallback
 		const winObj = window as unknown as Record<string, Record<string, unknown>>;
 		const SecretComp = winObj.Obsidian ? winObj.Obsidian.SecretComponent : undefined;
-		const appWithSecret = this.app as App & { secretStorage?: unknown };
-		const hasSecretStorage = typeof SecretComp === "function" && typeof appWithSecret.secretStorage !== "undefined";
+		const appObj = this.app as unknown as Record<string, unknown>;
+		const hasSecretStorage = typeof SecretComp === "function" && typeof appObj["secretStorage"] !== "undefined";
 
 		if (hasSecretStorage && typeof SecretComp === "function") {
 			const setting = new Setting(containerEl)
@@ -53,7 +54,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					text
 						.setPlaceholder("sk-...")
 						.setValue(this.plugin.settings.openaiApiKey || "")
-						.onChange((value) => {
+						.onChange((value: string) => {
 							void (async () => {
 								this.plugin.settings.openaiApiKey = value.trim();
 								await this.plugin.saveSettings();
@@ -74,14 +75,15 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 				.addOption("gpt-4o", "GPT-4o")
 				.addOption("o3-mini", "o3-mini")
 				.setValue(this.plugin.settings.openaiModel || "gpt-5-mini")
-				.onChange((value) => {
+				.onChange((value: string) => {
 					void (async () => {
 						this.plugin.settings.openaiModel = value;
 						await this.plugin.saveSettings();
 					})();
 				}));
 
-		new Setting(containerEl).setName(t("sectionJournalFolder")).setHeading();
+		const journalSection = new Setting(containerEl).setName(t("sectionJournalFolder"));
+		journalSection.settingEl.addClass("setting-item-heading");
 
 		// Dreams folder (Main Root Folder)
 		new Setting(containerEl)
@@ -102,7 +104,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					}
 				};
 
-				new FolderSuggest(this.app, text, (val) => {
+				new FolderSuggest(this.app, text, (val: string) => {
 					text.setValue(val);
 					void applyFolderChange(val);
 				});
@@ -110,7 +112,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 				text
 					.setPlaceholder("Dreams")
 					.setValue(this.plugin.settings.dreamsFolder)
-					.onChange((value) => {
+					.onChange((value: string) => {
 						void (async () => {
 							this.plugin.settings.dreamsFolder = normalizePath(value.trim());
 							await this.plugin.saveSettings();
@@ -122,13 +124,14 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 				});
 			});
 
-		new Setting(containerEl).setName(t("templateExportName")).setHeading();
+		const templateExportHeader = new Setting(containerEl).setName(t("templateExportName"));
+		templateExportHeader.settingEl.addClass("setting-item-heading");
 
 		new Setting(containerEl)
 			.setName(t("templatePathName"))
 			.setDesc(t("templatePathDesc"))
 			.addText(text => {
-				new FileSuggest(this.app, text, (val) => {
+				new FileSuggest(this.app, text, (val: string) => {
 					void (async () => {
 						this.plugin.settings.templateFilePath = normalizePath(val.trim());
 						await this.plugin.saveSettings();
@@ -137,9 +140,9 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 				text
 					.setPlaceholder("Templates/Dream Template.md")
 					.setValue(this.plugin.settings.templateFilePath || "Templates/Dream Template.md")
-					.onChange((value) => {
+					.onChange((value: string) => {
 						void (async () => {
-							this.plugin.settings.templateFilePath = normalizePath(val.trim());
+							this.plugin.settings.templateFilePath = normalizePath(value.trim());
 							await this.plugin.saveSettings();
 						})();
 					});
@@ -162,14 +165,15 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					})();
 				}));
 
-		new Setting(containerEl).setName(t("sectionVectorSearch")).setHeading();
+		const vectorSection = new Setting(containerEl).setName(t("sectionVectorSearch"));
+		vectorSection.settingEl.addClass("setting-item-heading");
 
 		new Setting(containerEl)
 			.setName(t("autoEmbeddingsName"))
 			.setDesc(t("autoEmbeddingsDesc"))
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.autoUpdateEmbeddings)
-				.onChange((value) => {
+				.onChange((value: boolean) => {
 					void (async () => {
 						this.plugin.settings.autoUpdateEmbeddings = value;
 						await this.plugin.saveSettings();
@@ -182,7 +186,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 			.addText(text => text
 				.setPlaceholder("text-embedding-3-small")
 				.setValue(this.plugin.settings.embeddingModel)
-				.onChange((value) => {
+				.onChange((value: string) => {
 					void (async () => {
 						this.plugin.settings.embeddingModel = value.trim();
 						await this.plugin.saveSettings();
@@ -195,7 +199,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 			.addText(text => text
 				.setPlaceholder("0.35")
 				.setValue(String(this.plugin.settings.similarityThreshold))
-				.onChange((value) => {
+				.onChange((value: string) => {
 					void (async () => {
 						const val = parseFloat(value);
 						if (!isNaN(val) && val >= 0 && val <= 1) {
@@ -211,7 +215,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 			.addText(text => text
 				.setPlaceholder("40")
 				.setValue(String(this.plugin.settings.similarityLimit))
-				.onChange((value) => {
+				.onChange((value: string) => {
 					void (async () => {
 						const val = parseInt(value, 10);
 						if (!isNaN(val) && val > 0) {
@@ -241,7 +245,8 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					})();
 				}));
 
-		new Setting(containerEl).setName(t("resetSectionTitle")).setHeading();
+		const resetSectionHeader = new Setting(containerEl).setName(t("resetSectionTitle"));
+		resetSectionHeader.settingEl.addClass("setting-item-heading");
 
 		new Setting(containerEl)
 			.setName(t("resetSectionTitle"))

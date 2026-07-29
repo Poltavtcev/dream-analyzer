@@ -1,6 +1,6 @@
 {
   "name": "dream-analyzer",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "AI-powered dream analysis, entity extraction, vector similarity connections, and lucid dreaming dashboard for Obsidian.",
   "main": "main.js",
   "scripts": {

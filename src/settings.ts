@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, Notice, normalizePath } from "obsidian";
+import { App, PluginSettingTab, Setting, Notice, normalizePath, SecretComponent } from "obsidian";
 import DreamAnalyzerPlugin from "./main";
 import { updateEntityEmbeddings } from "./embeddings";
 import { exportTemplaterTemplate, ensureDreamDashboard, ensureEntityIndexes } from "./dreamCreator";
@@ -15,6 +15,10 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 		this.plugin = plugin;
 	}
 
+	getSettingDefinitions(): any[] {
+		return [];
+	}
+
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
@@ -22,8 +26,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 		new Setting(containerEl).setName(t("settingsTitle")).setHeading();
 
 		// API Key Setting: SecretStorage SecretComponent with Password Text fallback
-		const obsidianModule = require("obsidian");
-		const SecretComponentClass = obsidianModule ? obsidianModule.SecretComponent : undefined;
+		const SecretComponentClass = typeof SecretComponent !== "undefined" ? SecretComponent : (undefined as any);
 		const hasSecretStorage = typeof SecretComponentClass !== "undefined" && typeof (this.app as any).secretStorage !== "undefined";
 
 		if (hasSecretStorage) {
@@ -32,9 +35,11 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 				.setDesc(t("apiKeyDesc"));
 			new SecretComponentClass(this.app, setting.controlEl)
 				.setValue(this.plugin.settings.openaiApiKey || "")
-				.onChange(async (value: string) => {
-					this.plugin.settings.openaiApiKey = value ? value.trim() : "";
-					await this.plugin.saveSettings();
+				.onChange((value: string) => {
+					void (async () => {
+						this.plugin.settings.openaiApiKey = value ? value.trim() : "";
+						await this.plugin.saveSettings();
+					})();
 				});
 		} else {
 			new Setting(containerEl)
@@ -45,9 +50,11 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					text
 						.setPlaceholder("sk-...")
 						.setValue(this.plugin.settings.openaiApiKey || "")
-						.onChange(async (value) => {
-							this.plugin.settings.openaiApiKey = value.trim();
-							await this.plugin.saveSettings();
+						.onChange((value) => {
+							void (async () => {
+								this.plugin.settings.openaiApiKey = value.trim();
+								await this.plugin.saveSettings();
+							})();
 						});
 				});
 		}
@@ -64,9 +71,11 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 				.addOption("gpt-4o", "GPT-4o")
 				.addOption("o3-mini", "o3-mini")
 				.setValue(this.plugin.settings.openaiModel || "gpt-5-mini")
-				.onChange(async (value) => {
-					this.plugin.settings.openaiModel = value;
-					await this.plugin.saveSettings();
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.openaiModel = value;
+						await this.plugin.saveSettings();
+					})();
 				}));
 
 		new Setting(containerEl).setName(t("sectionJournalFolder")).setHeading();
@@ -90,21 +99,23 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					}
 				};
 
-				new FolderSuggest(this.app, text, async (val) => {
+				new FolderSuggest(this.app, text, (val) => {
 					text.setValue(val);
-					await applyFolderChange(val);
+					void applyFolderChange(val);
 				});
 
 				text
 					.setPlaceholder("Dreams")
 					.setValue(this.plugin.settings.dreamsFolder)
-					.onChange(async (value) => {
-						this.plugin.settings.dreamsFolder = normalizePath(value.trim());
-						await this.plugin.saveSettings();
+					.onChange((value) => {
+						void (async () => {
+							this.plugin.settings.dreamsFolder = normalizePath(value.trim());
+							await this.plugin.saveSettings();
+						})();
 					});
 
-				text.inputEl.addEventListener("blur", async () => {
-					await applyFolderChange(text.getValue());
+				text.inputEl.addEventListener("blur", () => {
+					void applyFolderChange(text.getValue());
 				});
 			});
 
@@ -114,16 +125,20 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 			.setName(t("templatePathName"))
 			.setDesc(t("templatePathDesc"))
 			.addText(text => {
-				new FileSuggest(this.app, text, async (val) => {
-					this.plugin.settings.templateFilePath = normalizePath(val.trim());
-					await this.plugin.saveSettings();
+				new FileSuggest(this.app, text, (val) => {
+					void (async () => {
+						this.plugin.settings.templateFilePath = normalizePath(val.trim());
+						await this.plugin.saveSettings();
+					})();
 				});
 				text
 					.setPlaceholder("Templates/Dream Template.md")
 					.setValue(this.plugin.settings.templateFilePath || "Templates/Dream Template.md")
-					.onChange(async (value) => {
-						this.plugin.settings.templateFilePath = normalizePath(value.trim());
-						await this.plugin.saveSettings();
+					.onChange((value) => {
+						void (async () => {
+							this.plugin.settings.templateFilePath = normalizePath(value.trim());
+							await this.plugin.saveSettings();
+						})();
 					});
 			});
 
@@ -133,12 +148,14 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 			.addButton(button => button
 				.setButtonText(t("templateExportButtonText"))
 				.setCta()
-				.onClick(async () => {
-					try {
-						await exportTemplaterTemplate(this.app, this.plugin.settings);
-					} catch (e: any) {
-						new Notice("Помилка створення шаблону: " + (e.message || e));
-					}
+				.onClick(() => {
+					void (async () => {
+						try {
+							await exportTemplaterTemplate(this.app, this.plugin.settings);
+						} catch (e: any) {
+							new Notice("Помилка створення шаблону: " + (e.message || e));
+						}
+					})();
 				}));
 
 		new Setting(containerEl).setName(t("sectionVectorSearch")).setHeading();
@@ -148,9 +165,11 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 			.setDesc(t("autoEmbeddingsDesc"))
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.autoUpdateEmbeddings)
-				.onChange(async (value) => {
-					this.plugin.settings.autoUpdateEmbeddings = value;
-					await this.plugin.saveSettings();
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.autoUpdateEmbeddings = value;
+						await this.plugin.saveSettings();
+					})();
 				}));
 
 		new Setting(containerEl)
@@ -159,9 +178,11 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 			.addText(text => text
 				.setPlaceholder("text-embedding-3-small")
 				.setValue(this.plugin.settings.embeddingModel)
-				.onChange(async (value) => {
-					this.plugin.settings.embeddingModel = value.trim();
-					await this.plugin.saveSettings();
+				.onChange((value) => {
+					void (async () => {
+						this.plugin.settings.embeddingModel = value.trim();
+						await this.plugin.saveSettings();
+					})();
 				}));
 
 		new Setting(containerEl)
@@ -170,12 +191,14 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 			.addText(text => text
 				.setPlaceholder("0.35")
 				.setValue(String(this.plugin.settings.similarityThreshold))
-				.onChange(async (value) => {
-					const val = parseFloat(value);
-					if (!isNaN(val) && val >= 0 && val <= 1) {
-						this.plugin.settings.similarityThreshold = val;
-						await this.plugin.saveSettings();
-					}
+				.onChange((value) => {
+					void (async () => {
+						const val = parseFloat(value);
+						if (!isNaN(val) && val >= 0 && val <= 1) {
+							this.plugin.settings.similarityThreshold = val;
+							await this.plugin.saveSettings();
+						}
+					})();
 				}));
 
 		new Setting(containerEl)
@@ -184,12 +207,14 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 			.addText(text => text
 				.setPlaceholder("40")
 				.setValue(String(this.plugin.settings.similarityLimit))
-				.onChange(async (value) => {
-					const val = parseInt(value, 10);
-					if (!isNaN(val) && val > 0) {
-						this.plugin.settings.similarityLimit = val;
-						await this.plugin.saveSettings();
-					}
+				.onChange((value) => {
+					void (async () => {
+						const val = parseInt(value, 10);
+						if (!isNaN(val) && val > 0) {
+							this.plugin.settings.similarityLimit = val;
+							await this.plugin.saveSettings();
+						}
+					})();
 				}));
 
 		new Setting(containerEl)
@@ -197,16 +222,18 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 			.setDesc(t("rebuildButtonDesc"))
 			.addButton(button => button
 				.setButtonText(t("rebuildButtonText"))
-				.onClick(async () => {
-					try {
-						const apiKey = await getOpenAiApiKey(this.app, this.plugin.settings);
-						const notice = new Notice(t("rebuildStart"), 0);
-						const count = await updateEntityEmbeddings(this.app, apiKey, this.plugin.settings, true);
-						notice.hide();
-						new Notice(t("rebuildSuccess", { count }));
-					} catch (e: any) {
-						new Notice("Помилка: " + (e.message || e));
-					}
+				.onClick(() => {
+					void (async () => {
+						try {
+							const apiKey = await getOpenAiApiKey(this.app, this.plugin.settings);
+							const notice = new Notice(t("rebuildStart"), 0);
+							const count = await updateEntityEmbeddings(this.app, apiKey, this.plugin.settings, true);
+							notice.hide();
+							new Notice(t("rebuildSuccess", { count }));
+						} catch (e: any) {
+							new Notice("Помилка: " + (e.message || e));
+						}
+					})();
 				}));
 
 		new Setting(containerEl).setName(t("resetSectionTitle")).setHeading();
@@ -222,15 +249,17 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 					(button as any).setWarning();
 				}
 				button.onClick(() => {
-					new ConfirmResetModal(this.app, async () => {
-						try {
-							const notice = new Notice("Очищення даних...", 0);
-							const res = await resetAllDreamData(this.app, this.plugin.settings);
-							notice.hide();
-							new Notice(t("resetSuccess", { dreams: res.dreamsReset, entities: res.entitiesDeleted }));
-						} catch (e: any) {
-							new Notice("Помилка очищення: " + (e.message || e));
-						}
+					new ConfirmResetModal(this.app, () => {
+						void (async () => {
+							try {
+								const notice = new Notice("Очищення даних...", 0);
+								const res = await resetAllDreamData(this.app, this.plugin.settings);
+								notice.hide();
+								new Notice(t("resetSuccess", { dreams: res.dreamsReset, entities: res.entitiesDeleted }));
+							} catch (e: any) {
+								new Notice("Помилка очищення: " + (e.message || e));
+							}
+						})();
 					}).open();
 				});
 			});

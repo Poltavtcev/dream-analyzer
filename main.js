@@ -49,11 +49,8 @@ var ENTITY_TYPES = [
   { field: "concepts", folder: "\u041A\u043E\u043D\u0446\u0435\u043F\u0442\u0438", entity_type: "concept" }
 ];
 
-// src/settings.ts
-var import_obsidian7 = require("obsidian");
-
-// src/embeddings.ts
-var import_obsidian3 = require("obsidian");
+// src/analyzer.ts
+var import_obsidian4 = require("obsidian");
 
 // src/api.ts
 var import_obsidian = require("obsidian");
@@ -189,6 +186,9 @@ async function requestChatCompletion(apiKey, model, systemPrompt, userPrompt) {
     throw new Error(`\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0430\u043F\u0438\u0442\u0443 \u0434\u043E OpenAI: ${error?.message || error}`);
   }
 }
+
+// src/embeddings.ts
+var import_obsidian3 = require("obsidian");
 
 // src/i18n.ts
 var import_obsidian2 = require("obsidian");
@@ -697,677 +697,7 @@ function formatDreamConnectionsMarkdown(connections) {
   return lines.join("\n");
 }
 
-// src/dreamCreator.ts
-var import_obsidian4 = require("obsidian");
-async function ensureFolder(app, path) {
-  const normalizedPath = path.trim().replace(/\/$/, "");
-  if (!app.vault.getAbstractFileByPath(normalizedPath)) {
-    await app.vault.createFolder(normalizedPath);
-  }
-}
-var DatePickerModal = class extends import_obsidian4.Modal {
-  constructor(app, onSubmit) {
-    super(app);
-    this.onSubmit = onSubmit;
-  }
-  onOpen() {
-    const { contentEl } = this;
-    contentEl.createEl("h2", { text: t("dateModalTitle") });
-    let selectedDate = (0, import_obsidian4.moment)().format("YYYY-MM-DD");
-    new import_obsidian4.Setting(contentEl).setName(t("dateModalLabel")).addText((text) => {
-      text.inputEl.type = "date";
-      text.setValue(selectedDate);
-      text.onChange((value) => {
-        if (value) selectedDate = value;
-      });
-    });
-    new import_obsidian4.Setting(contentEl).addButton((btn) => btn.setButtonText(t("dateModalButton")).setCta().onClick(() => {
-      this.close();
-      this.onSubmit(selectedDate);
-    }));
-  }
-  onClose() {
-    const { contentEl } = this;
-    contentEl.empty();
-  }
-};
-async function createDreamNoteForDate(app, settings, targetDateInput) {
-  const now = targetDateInput ? (0, import_obsidian4.moment)(targetDateInput, ["YYYY-MM-DD", "D.MM.YYYY", "DD.MM.YYYY"]) : (0, import_obsidian4.moment)();
-  if (!now.isValid()) {
-    new import_obsidian4.Notice("\u041D\u0435\u043A\u043E\u0440\u0435\u043A\u0442\u043D\u0438\u0439 \u0444\u043E\u0440\u043C\u0430\u0442 \u0434\u0430\u0442\u0438");
-    return;
-  }
-  const year = now.format("YYYY");
-  const monthNum = now.format("MM");
-  const locale = getLocale();
-  const daysUk = ["\u043D\u0435\u0434\u0456\u043B\u044F", "\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0441\u0435\u0440\u0435\u0434\u0430", "\u0447\u0435\u0442\u0432\u0435\u0440", "\u043F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0441\u0443\u0431\u043E\u0442\u0430"];
-  const monthsUk = [
-    "01 - \u0441\u0456\u0447\u0435\u043D\u044C",
-    "02 - \u043B\u044E\u0442\u0438\u0439",
-    "03 - \u0431\u0435\u0440\u0435\u0437\u0435\u043D\u044C",
-    "04 - \u043A\u0432\u0456\u0442\u0435\u043D\u044C",
-    "05 - \u0442\u0440\u0430\u0432\u0435\u043D\u044C",
-    "06 - \u0447\u0435\u0440\u0432\u0435\u043D\u044C",
-    "07 - \u043B\u0438\u043F\u0435\u043D\u044C",
-    "08 - \u0441\u0435\u0440\u043F\u0435\u043D\u044C",
-    "09 - \u0432\u0435\u0440\u0435\u0441\u0435\u043D\u044C",
-    "10 - \u0436\u043E\u0432\u0442\u0435\u043D\u044C",
-    "11 - \u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434",
-    "12 - \u0433\u0440\u0443\u0434\u0435\u043D\u044C"
-  ];
-  const dayIdx = parseInt(now.format("d"), 10);
-  const monthIdx = parseInt(now.format("M"), 10) - 1;
-  const dayName = locale === "uk" ? daysUk[dayIdx] : now.format("dddd");
-  const monthFolder = locale === "uk" ? monthsUk[monthIdx] : `${monthNum} - ${now.format("MMMM")}`;
-  const rootFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
-  const dreamsSubfolder = getDreamsSubfolder(app, settings);
-  const yearFolder = `${dreamsSubfolder}/${year}`;
-  const folderPath = `${yearFolder}/${monthFolder}`;
-  await ensureFolder(app, rootFolder);
-  await ensureFolder(app, dreamsSubfolder);
-  await ensureFolder(app, yearFolder);
-  await ensureFolder(app, folderPath);
-  const dateShort = now.format("D.MM.YYYY");
-  const dateIso = now.format("YYYY-MM-DD");
-  const fileName = `${dateShort} ${dayName}`;
-  const filePath = `${folderPath}/${fileName}.md`;
-  const existingFile = app.vault.getAbstractFileByPath(filePath);
-  if (existingFile instanceof import_obsidian4.TFile) {
-    new import_obsidian4.Notice(t("dreamAlreadyExists"));
-    const leaf2 = app.workspace.getLeaf(false);
-    await leaf2.openFile(existingFile);
-    return existingFile;
-  }
-  const initialBody = `# \u0421\u043E\u043D
-
-\u0422\u0435\u043A\u0441\u0442 \u0441\u043D\u0443
-
-
-# AI \u0430\u043D\u0430\u043B\u0456\u0437
-
-## \u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441
-
-
-## \u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u0437\u0432'\u044F\u0437\u043A\u0438 \u0437 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u043C\u0438 \u0441\u043D\u0430\u043C\u0438
-
--
-`;
-  const newFile = await app.vault.create(filePath, initialBody);
-  await app.fileManager.processFrontMatter(newFile, (fm) => {
-    fm.type = "dream";
-    fm.date = dateIso;
-    fm.lucid = false;
-    fm.entities_checked = false;
-    fm.characters = [];
-    fm.places = [];
-    fm.objects = [];
-    fm.emotions = [];
-    fm.symbols = [];
-    fm.concepts = [];
-    fm.keywords = [];
-  });
-  new import_obsidian4.Notice(t("dreamCreated"));
-  const leaf = app.workspace.getLeaf(false);
-  await leaf.openFile(newFile);
-  return newFile;
-}
-async function createTodayDreamNote(app, settings) {
-  return createDreamNoteForDate(app, settings);
-}
-async function exportTemplaterTemplate(app, settings) {
-  const templatePath = (settings.templateFilePath || "Templates/Dream Template.md").trim();
-  const dreamsSubfolder = getDreamsSubfolder(app, settings);
-  const dirIndex = templatePath.lastIndexOf("/");
-  if (dirIndex > 0) {
-    const dirPath = templatePath.substring(0, dirIndex);
-    await ensureFolder(app, dirPath);
-  }
-  const templaterCode = `<%*
-let title = tp.file.title;
-let dateObj = window.moment(title, ["YYYY-MM-DD", "D.MM.YYYY", "DD.MM.YYYY"], true);
-
-if (!dateObj.isValid()) {
-    const match = String(title || "").match(/\\b(\\d{4}-\\d{2}-\\d{2}|\\d{1,2}\\.\\d{2}\\.\\d{4})\\b/);
-    if (match) {
-        dateObj = window.moment(match[0], ["YYYY-MM-DD", "D.MM.YYYY", "DD.MM.YYYY"]);
-    }
-}
-
-if (!dateObj || !dateObj.isValid()) {
-    dateObj = window.moment();
-}
-
-const year = dateObj.format("YYYY");
-const monthNum = dateObj.format("MM");
-
-const daysUk = ["\u043D\u0435\u0434\u0456\u043B\u044F", "\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0441\u0435\u0440\u0435\u0434\u0430", "\u0447\u0435\u0442\u0432\u0435\u0440", "\u043F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0441\u0443\u0431\u043E\u0442\u0430"];
-const monthsUk = [
-  "01 - \u0441\u0456\u0447\u0435\u043D\u044C", "02 - \u043B\u044E\u0442\u0438\u0439", "03 - \u0431\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "04 - \u043A\u0432\u0456\u0442\u0435\u043D\u044C",
-  "05 - \u0442\u0440\u0430\u0432\u0435\u043D\u044C", "06 - \u0447\u0435\u0440\u0432\u0435\u043D\u044C", "07 - \u043B\u0438\u043F\u0435\u043D\u044C", "08 - \u0441\u0435\u0440\u043F\u0435\u043D\u044C",
-  "09 - \u0432\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "10 - \u0436\u043E\u0432\u0442\u0435\u043D\u044C", "11 - \u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "12 - \u0433\u0440\u0443\u0434\u0435\u043D\u044C"
-];
-
-const dayIdx = parseInt(dateObj.format("d"), 10);
-const monthIdx = parseInt(dateObj.format("M"), 10) - 1;
-
-const dayName = daysUk[dayIdx];
-const monthFolder = monthsUk[monthIdx];
-
-const baseFolder = "${dreamsSubfolder}";
-const yearFolder = \`\${baseFolder}/\${year}\`;
-const folder = \`\${yearFolder}/\${monthFolder}\`;
-
-if (!app.vault.getAbstractFileByPath(baseFolder)) {
-    await app.vault.createFolder(baseFolder);
-}
-if (!app.vault.getAbstractFileByPath(yearFolder)) {
-    await app.vault.createFolder(yearFolder);
-}
-if (!app.vault.getAbstractFileByPath(folder)) {
-    await app.vault.createFolder(folder);
-}
-
-await tp.file.move(\`\${folder}/\${dateObj.format("D.MM.YYYY")} \${dayName}\`);
--%>---
-type: dream
-date: <% dateObj.format("YYYY-MM-DD") %>
-lucid: false
-entities_checked: false
-
-characters: []
-places: []
-objects: []
-emotions: []
-symbols: []
-concepts: []
-keywords: []
----
-
-# \u0421\u043E\u043D
-
-\u0422\u0435\u043A\u0441\u0442 \u0441\u043D\u0443
-
-
-# AI \u0430\u043D\u0430\u043B\u0456\u0437
-
-## \u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441
-
-
-## \u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u0437\u0432'\u044F\u0437\u043A\u0438 \u0437 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u043C\u0438 \u0441\u043D\u0430\u043C\u0438
-
--
-`;
-  const existing = app.vault.getAbstractFileByPath(templatePath);
-  if (existing instanceof import_obsidian4.TFile) {
-    await app.vault.modify(existing, templaterCode);
-  } else {
-    await app.vault.create(templatePath, templaterCode);
-  }
-  new import_obsidian4.Notice(t("templateExportSuccess", { path: templatePath }));
-}
-async function ensureEntityIndexes(app, settings) {
-  const entitiesFolder = getEntitiesSubfolder(app, settings);
-  const locale = getLocale();
-  let indexFolderName = locale === "uk" ? "! \u0406\u043D\u0434\u0435\u043A\u0441" : "! Indexes";
-  if (app.vault.getAbstractFileByPath(`${entitiesFolder}/! \u0406\u043D\u0434\u0435\u043A\u0441`)) {
-    indexFolderName = "! \u0406\u043D\u0434\u0435\u043A\u0441";
-  } else if (app.vault.getAbstractFileByPath(`${entitiesFolder}/! Indexes`)) {
-    indexFolderName = "! Indexes";
-  }
-  const indexesFolderPath = `${entitiesFolder}/${indexFolderName}`;
-  await ensureFolder(app, indexesFolderPath);
-  for (const type of ENTITY_TYPES) {
-    const categoryFolder = `${entitiesFolder}/${type.folder}`;
-    await ensureFolder(app, categoryFolder);
-    let fileName = locale === "uk" ? `\u0406\u043D\u0434\u0435\u043A\u0441 - ${type.folder}.md` : `Index - ${type.folder}.md`;
-    const ukFile = `${indexesFolderPath}/\u0406\u043D\u0434\u0435\u043A\u0441 - ${type.folder}.md`;
-    const enFile = `${indexesFolderPath}/Index - ${type.folder}.md`;
-    if (app.vault.getAbstractFileByPath(ukFile)) {
-      fileName = `\u0406\u043D\u0434\u0435\u043A\u0441 - ${type.folder}.md`;
-    } else if (app.vault.getAbstractFileByPath(enFile)) {
-      fileName = `Index - ${type.folder}.md`;
-    }
-    const filePath = `${indexesFolderPath}/${fileName}`;
-    const title = locale === "uk" ? `\u0406\u043D\u0434\u0435\u043A\u0441 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439: ${type.folder}` : `Entity Index: ${type.folder}`;
-    const desc = locale === "uk" ? `\u041A\u0430\u0442\u0430\u043B\u043E\u0433 \u0443\u0441\u0456\u0445 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 **${type.folder}** \u0437 \u0457\u0445\u043D\u0456\u043C\u0438 \u043E\u043F\u0438\u0441\u0430\u043C\u0438 \u0442\u0430 \u0447\u0430\u0441\u0442\u043E\u0442\u043E\u044E \u043F\u043E\u044F\u0432 \u0443 \u0441\u043D\u0430\u0445.` : `Catalog of all saved **${type.folder}** entities with descriptions and dream frequency.`;
-    const content = `# ${title}
-
-> [!INFO] ${title}
-> ${desc}
-
----
-
-\`\`\`dataview
-TABLE WITHOUT ID
-file.link AS "${locale === "uk" ? "\u0421\u0443\u0442\u043D\u0456\u0441\u0442\u044C" : "Entity"}",
-description AS "${locale === "uk" ? "\u041E\u043F\u0438\u0441" : "Description"}",
-dream_count AS "${locale === "uk" ? "\u041F\u043E\u044F\u0432 \u0443 \u0441\u043D\u0430\u0445" : "Dream Count"}",
-last_seen AS "${locale === "uk" ? "\u041E\u0441\u0442\u0430\u043D\u043D\u044F \u043F\u043E\u044F\u0432\u0430" : "Last Seen"}"
-FROM "${categoryFolder}"
-WHERE file.name != "${fileName.replace(/\.md$/, "")}"
-SORT dream_count DESC
-\`\`\`
-`;
-    const existing = app.vault.getAbstractFileByPath(filePath);
-    if (existing instanceof import_obsidian4.TFile) {
-      const currentContent = await app.vault.read(existing);
-      if (currentContent !== content) {
-        await app.vault.modify(existing, content);
-      }
-    } else {
-      await app.vault.create(filePath, content);
-    }
-  }
-}
-async function ensureDreamDashboard(app, settings) {
-  const rootFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
-  const dreamsSubfolder = getDreamsSubfolder(app, settings);
-  const entitiesFolder = getEntitiesSubfolder(app, settings);
-  const locale = getLocale();
-  await ensureFolder(app, rootFolder);
-  await ensureFolder(app, dreamsSubfolder);
-  await ensureFolder(app, entitiesFolder);
-  await ensureEntityIndexes(app, settings);
-  let dashboardPath = `${rootFolder}/${t("dashboardFileName")}`;
-  const ukPath = `${rootFolder}/\u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0441\u043D\u0456\u0432.md`;
-  const enPath = `${rootFolder}/Dream Dashboard.md`;
-  if (app.vault.getAbstractFileByPath(ukPath)) {
-    dashboardPath = ukPath;
-  } else if (app.vault.getAbstractFileByPath(enPath)) {
-    dashboardPath = enPath;
-  }
-  const indexLinks = ENTITY_TYPES.map((tObj) => {
-    const idxName = locale === "uk" ? `\u0406\u043D\u0434\u0435\u043A\u0441 - ${tObj.folder}` : `Index - ${tObj.folder}`;
-    return `- [[${idxName}]]`;
-  }).join("\n");
-  const content = `${t("dashboardTitle")}
-
-${t("dashboardCallout")}
-
----
-
-## ${locale === "uk" ? "\u0406\u043D\u0434\u0435\u043A\u0441\u0438 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439" : "Entity Category Indexes"}
-${indexLinks}
-
----
-
-${t("dashboardSectionStats")}
-
-\`\`\`dataview
-TABLE WITHOUT ID
-  length(rows) AS "\u0412\u0441\u044C\u043E\u0433\u043E \u0441\u043D\u0456\u0432",
-  length(filter(rows, (r) => r.lucid = true)) AS "\u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u0445 (\u041E\u0421)",
-  round((length(filter(rows, (r) => r.lucid = true)) / length(rows)) * 100, 1) + "%" AS "% \u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043E\u0441\u0442\u0456"
-FROM "${dreamsSubfolder}"
-WHERE file.name != "${pathBasename(dashboardPath)}" AND file.name != "\u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0441\u043D\u0456\u0432" AND file.name != "Dream Dashboard"
-GROUP BY true
-\`\`\`
-
----
-
-${t("dashboardSectionSigns")}
-
-\`\`\`dataview
-TABLE WITHOUT ID
-  file.link AS "\u041C\u0430\u0440\u043A\u0435\u0440 / \u0421\u0443\u0442\u043D\u0456\u0441\u0442\u044C",
-  entity_type AS "\u0422\u0438\u043F",
-  dream_count AS "\u041F\u043E\u044F\u0432 \u0443 \u0441\u043D\u0430\u0445",
-  last_seen AS "\u041E\u0441\u0442\u0430\u043D\u043D\u044F \u043F\u043E\u044F\u0432\u0430"
-FROM "${entitiesFolder}"
-WHERE contains(["symbol", "character", "place"], entity_type)
-SORT dream_count DESC
-LIMIT 15
-\`\`\`
-
----
-
-${t("dashboardSectionEmotions")}
-
-\`\`\`dataview
-TABLE WITHOUT ID
-  file.link AS "\u0415\u043C\u043E\u0446\u0456\u044F / \u0421\u0442\u0430\u043D",
-  dream_count AS "\u0417\u0433\u0430\u0434\u043E\u043A \u0443 \u0441\u043D\u0430\u0445",
-  last_seen AS "\u041E\u0441\u0442\u0430\u043D\u043D\u044F \u043F\u043E\u044F\u0432\u0430"
-FROM "${entitiesFolder}"
-WHERE entity_type = "emotion"
-SORT dream_count DESC
-LIMIT 10
-\`\`\`
-
----
-
-${t("dashboardSectionCreative")}
-
-\`\`\`dataview
-TABLE WITHOUT ID
-  file.link AS "\u041A\u043E\u043D\u0446\u0435\u043F\u0442 / \u041B\u043E\u043A\u0430\u0446\u0456\u044F",
-  entity_type AS "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F",
-  description AS "\u041E\u043F\u0438\u0441 \u0437 \u0430\u043D\u0430\u043B\u0456\u0437\u0443",
-  dream_count AS "\u041F\u043E\u044F\u0432"
-FROM "${entitiesFolder}"
-WHERE contains(["concept", "place", "character"], entity_type) AND description != ""
-SORT dream_count DESC
-LIMIT 15
-\`\`\`
-
----
-
-${t("dashboardSectionLucid")}
-
-\`\`\`dataview
-TABLE WITHOUT ID
-  file.link AS "\u041D\u0430\u0437\u0432\u0430 \u0441\u043D\u0443",
-  date AS "\u0414\u0430\u0442\u0430",
-  length(characters) + length(places) + length(objects) AS "\u0421\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439 \u0443 \u0441\u043D\u0456"
-FROM "${dreamsSubfolder}"
-WHERE lucid = true
-SORT date DESC
-LIMIT 20
-\`\`\`
-
----
-
-${t("dashboardSectionRecent")}
-
-\`\`\`dataview
-TABLE WITHOUT ID
-  file.link AS "\u0417\u0430\u043F\u0438\u0441 \u0441\u043D\u0443",
-  date AS "\u0414\u0430\u0442\u0430",
-  choice(lucid, "\u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u0439 (\u041E\u0421)", "\u0417\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0439") AS "\u0422\u0438\u043F \u0441\u043D\u0443",
-  length(keywords) AS "\u041A\u043B\u044E\u0447\u043E\u0432\u0438\u0445 \u0441\u043B\u0456\u0432"
-FROM "${dreamsSubfolder}"
-WHERE file.name != "${pathBasename(dashboardPath)}" AND file.name != "\u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0441\u043D\u0456\u0432" AND file.name != "Dream Dashboard"
-SORT file.name DESC
-LIMIT 15
-\`\`\`
-`;
-  const existing = app.vault.getAbstractFileByPath(dashboardPath);
-  if (existing instanceof import_obsidian4.TFile) {
-    const currentContent = await app.vault.read(existing);
-    if (currentContent !== content) {
-      await app.vault.modify(existing, content);
-    }
-  } else {
-    await app.vault.create(dashboardPath, content);
-  }
-}
-function pathBasename(pathStr) {
-  const idx = pathStr.lastIndexOf("/");
-  const file = idx >= 0 ? pathStr.substring(idx + 1) : pathStr;
-  return file.replace(/\.md$/, "");
-}
-
-// src/resetManager.ts
-var import_obsidian5 = require("obsidian");
-var ConfirmResetModal = class extends import_obsidian5.Modal {
-  constructor(app, onConfirm) {
-    super(app);
-    this.onConfirm = onConfirm;
-  }
-  onOpen() {
-    const { contentEl } = this;
-    contentEl.createEl("h2", { text: t("resetModalTitle") });
-    contentEl.createEl("p", { text: t("resetModalDesc") });
-    new import_obsidian5.Setting(contentEl).addButton((btn) => {
-      btn.setButtonText(t("resetModalConfirmButton"));
-      if (typeof btn.setDestructive === "function") {
-        btn.setDestructive(true);
-      } else if (typeof btn.setWarning === "function") {
-        btn.setWarning();
-      }
-      btn.onClick(() => {
-        this.close();
-        this.onConfirm();
-      });
-    }).addButton((btn) => btn.setButtonText(t("resetModalCancelButton")).onClick(() => {
-      this.close();
-    }));
-  }
-  onClose() {
-    const { contentEl } = this;
-    contentEl.empty();
-  }
-};
-async function resetAllDreamData(app, settings) {
-  const dreamsFolder = getDreamsSubfolder(app, settings);
-  const entitiesFolder = getEntitiesSubfolder(app, settings);
-  let entitiesDeleted = 0;
-  let dreamsReset = 0;
-  const allFiles = app.vault.getMarkdownFiles();
-  const entityFiles = allFiles.filter((f) => f.path.startsWith(entitiesFolder));
-  for (const file of entityFiles) {
-    try {
-      await app.fileManager.trashFile(file);
-      entitiesDeleted++;
-    } catch (e) {
-      console.error("Could not trash entity file:", file.path, e);
-    }
-  }
-  const dreamFiles = allFiles.filter((f) => f.path.startsWith(dreamsFolder));
-  for (const file of dreamFiles) {
-    try {
-      await app.fileManager.processFrontMatter(file, (fm) => {
-        fm.type = "dream";
-        fm.entities_checked = false;
-        fm.characters = [];
-        fm.places = [];
-        fm.objects = [];
-        fm.emotions = [];
-        fm.symbols = [];
-        fm.concepts = [];
-        fm.keywords = [];
-      });
-      let content = await app.vault.read(file);
-      if (content.includes("# AI \u0430\u043D\u0430\u043B\u0456\u0437")) {
-        content = content.replace(/# AI аналіз[\s\S]*/, "# AI \u0430\u043D\u0430\u043B\u0456\u0437\n\n## \u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441\n\n\n## \u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u0437\u0432'\u044F\u0437\u043A\u0438 \u0437 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u043C\u0438 \u0441\u043D\u0430\u043C\u0438\n\n-");
-        await app.vault.modify(file, content);
-      }
-      dreamsReset++;
-    } catch (e) {
-      console.error("Could not reset dream file:", file.path, e);
-    }
-  }
-  await saveEmbeddingsDatabase(app, settings, []);
-  await saveDreamEmbeddingsDatabase(app, settings, []);
-  return { dreamsReset, entitiesDeleted };
-}
-
-// src/suggest.ts
-var import_obsidian6 = require("obsidian");
-var FolderSuggest = class extends import_obsidian6.AbstractInputSuggest {
-  constructor(app, textComponent, onSelectCallback) {
-    super(app, textComponent.inputEl);
-    this.textComponent = textComponent;
-    this.onSelectCallback = onSelectCallback;
-  }
-  getSuggestions(inputStr) {
-    const abstractFiles = this.app.vault.getAllLoadedFiles();
-    const folders = [];
-    const lowerInputStr = (inputStr || "").toLowerCase();
-    for (const file of abstractFiles) {
-      if (file instanceof import_obsidian6.TFolder) {
-        if (!inputStr || file.path.toLowerCase().includes(lowerInputStr)) {
-          folders.push(file);
-        }
-      }
-    }
-    return folders.slice(0, 50);
-  }
-  renderSuggestion(folder, el) {
-    el.setText(folder.path);
-  }
-  selectSuggestion(folder, evt) {
-    this.textComponent.setValue(folder.path);
-    this.onSelectCallback(folder.path);
-    this.close();
-  }
-};
-var FileSuggest = class extends import_obsidian6.AbstractInputSuggest {
-  constructor(app, textComponent, onSelectCallback) {
-    super(app, textComponent.inputEl);
-    this.textComponent = textComponent;
-    this.onSelectCallback = onSelectCallback;
-  }
-  getSuggestions(inputStr) {
-    const abstractFiles = this.app.vault.getAllLoadedFiles();
-    const files = [];
-    const lowerInputStr = (inputStr || "").toLowerCase();
-    for (const file of abstractFiles) {
-      if (file instanceof import_obsidian6.TFile) {
-        if (!inputStr || file.path.toLowerCase().includes(lowerInputStr)) {
-          files.push(file);
-        }
-      }
-    }
-    return files.slice(0, 50);
-  }
-  renderSuggestion(file, el) {
-    el.setText(file.path);
-  }
-  selectSuggestion(file, evt) {
-    this.textComponent.setValue(file.path);
-    this.onSelectCallback(file.path);
-    this.close();
-  }
-};
-
-// src/settings.ts
-var DreamAnalyzerSettingTab = class extends import_obsidian7.PluginSettingTab {
-  constructor(app, plugin) {
-    super(app, plugin);
-    this.plugin = plugin;
-  }
-  display() {
-    const { containerEl } = this;
-    containerEl.empty();
-    new import_obsidian7.Setting(containerEl).setName(t("settingsTitle")).setHeading();
-    const obsidianModule = require("obsidian");
-    const SecretComponentClass = obsidianModule ? obsidianModule.SecretComponent : void 0;
-    const hasSecretStorage = typeof SecretComponentClass !== "undefined" && typeof this.app.secretStorage !== "undefined";
-    if (hasSecretStorage) {
-      const setting = new import_obsidian7.Setting(containerEl).setName(t("apiKeyName")).setDesc(t("apiKeyDesc"));
-      new SecretComponentClass(this.app, setting.controlEl).setValue(this.plugin.settings.openaiApiKey || "").onChange(async (value) => {
-        this.plugin.settings.openaiApiKey = value ? value.trim() : "";
-        await this.plugin.saveSettings();
-      });
-    } else {
-      new import_obsidian7.Setting(containerEl).setName(t("apiKeyName")).setDesc(t("apiKeyDesc")).addText((text) => {
-        text.inputEl.type = "password";
-        text.setPlaceholder("sk-...").setValue(this.plugin.settings.openaiApiKey || "").onChange(async (value) => {
-          this.plugin.settings.openaiApiKey = value.trim();
-          await this.plugin.saveSettings();
-        });
-      });
-    }
-    new import_obsidian7.Setting(containerEl).setName(t("modelName")).setDesc(t("modelDesc")).addDropdown((dropdown) => dropdown.addOption("gpt-5-mini", t("gptDefaultLabel")).addOption("gpt-4.1-mini", "GPT-4.1 mini").addOption("gpt-5", "GPT-5").addOption("gpt-4o-mini", "GPT-4o mini").addOption("gpt-4o", "GPT-4o").addOption("o3-mini", "o3-mini").setValue(this.plugin.settings.openaiModel || "gpt-5-mini").onChange(async (value) => {
-      this.plugin.settings.openaiModel = value;
-      await this.plugin.saveSettings();
-    }));
-    new import_obsidian7.Setting(containerEl).setName(t("sectionJournalFolder")).setHeading();
-    new import_obsidian7.Setting(containerEl).setName(t("dreamsFolderName")).setDesc(t("dreamsFolderDesc")).addText((text) => {
-      const applyFolderChange = async (val) => {
-        const cleaned = (0, import_obsidian7.normalizePath)(val.trim());
-        if (cleaned) {
-          this.plugin.settings.dreamsFolder = cleaned;
-          await this.plugin.saveSettings();
-          try {
-            await ensureEntityIndexes(this.app, this.plugin.settings);
-            await ensureDreamDashboard(this.app, this.plugin.settings);
-          } catch (e) {
-            console.warn("Could not ensure dream dashboard/indexes on folder change:", e);
-          }
-        }
-      };
-      new FolderSuggest(this.app, text, async (val) => {
-        text.setValue(val);
-        await applyFolderChange(val);
-      });
-      text.setPlaceholder("Dreams").setValue(this.plugin.settings.dreamsFolder).onChange(async (value) => {
-        this.plugin.settings.dreamsFolder = (0, import_obsidian7.normalizePath)(value.trim());
-        await this.plugin.saveSettings();
-      });
-      text.inputEl.addEventListener("blur", async () => {
-        await applyFolderChange(text.getValue());
-      });
-    });
-    new import_obsidian7.Setting(containerEl).setName(t("templateExportName")).setHeading();
-    new import_obsidian7.Setting(containerEl).setName(t("templatePathName")).setDesc(t("templatePathDesc")).addText((text) => {
-      new FileSuggest(this.app, text, async (val) => {
-        this.plugin.settings.templateFilePath = (0, import_obsidian7.normalizePath)(val.trim());
-        await this.plugin.saveSettings();
-      });
-      text.setPlaceholder("Templates/Dream Template.md").setValue(this.plugin.settings.templateFilePath || "Templates/Dream Template.md").onChange(async (value) => {
-        this.plugin.settings.templateFilePath = (0, import_obsidian7.normalizePath)(value.trim());
-        await this.plugin.saveSettings();
-      });
-    });
-    new import_obsidian7.Setting(containerEl).setName(t("templateExportName")).setDesc(t("templateExportDesc")).addButton((button) => button.setButtonText(t("templateExportButtonText")).setCta().onClick(async () => {
-      try {
-        await exportTemplaterTemplate(this.app, this.plugin.settings);
-      } catch (e) {
-        new import_obsidian7.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0448\u0430\u0431\u043B\u043E\u043D\u0443: " + (e.message || e));
-      }
-    }));
-    new import_obsidian7.Setting(containerEl).setName(t("sectionVectorSearch")).setHeading();
-    new import_obsidian7.Setting(containerEl).setName(t("autoEmbeddingsName")).setDesc(t("autoEmbeddingsDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.autoUpdateEmbeddings).onChange(async (value) => {
-      this.plugin.settings.autoUpdateEmbeddings = value;
-      await this.plugin.saveSettings();
-    }));
-    new import_obsidian7.Setting(containerEl).setName(t("embeddingModelName")).setDesc(t("embeddingModelDesc")).addText((text) => text.setPlaceholder("text-embedding-3-small").setValue(this.plugin.settings.embeddingModel).onChange(async (value) => {
-      this.plugin.settings.embeddingModel = value.trim();
-      await this.plugin.saveSettings();
-    }));
-    new import_obsidian7.Setting(containerEl).setName(t("thresholdName")).setDesc(t("thresholdDesc")).addText((text) => text.setPlaceholder("0.35").setValue(String(this.plugin.settings.similarityThreshold)).onChange(async (value) => {
-      const val = parseFloat(value);
-      if (!isNaN(val) && val >= 0 && val <= 1) {
-        this.plugin.settings.similarityThreshold = val;
-        await this.plugin.saveSettings();
-      }
-    }));
-    new import_obsidian7.Setting(containerEl).setName(t("limitName")).setDesc(t("limitDesc")).addText((text) => text.setPlaceholder("40").setValue(String(this.plugin.settings.similarityLimit)).onChange(async (value) => {
-      const val = parseInt(value, 10);
-      if (!isNaN(val) && val > 0) {
-        this.plugin.settings.similarityLimit = val;
-        await this.plugin.saveSettings();
-      }
-    }));
-    new import_obsidian7.Setting(containerEl).setName(t("rebuildButtonName")).setDesc(t("rebuildButtonDesc")).addButton((button) => button.setButtonText(t("rebuildButtonText")).onClick(async () => {
-      try {
-        const apiKey = await getOpenAiApiKey(this.app, this.plugin.settings);
-        const notice = new import_obsidian7.Notice(t("rebuildStart"), 0);
-        const count = await updateEntityEmbeddings(this.app, apiKey, this.plugin.settings, true);
-        notice.hide();
-        new import_obsidian7.Notice(t("rebuildSuccess", { count }));
-      } catch (e) {
-        new import_obsidian7.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (e.message || e));
-      }
-    }));
-    new import_obsidian7.Setting(containerEl).setName(t("resetSectionTitle")).setHeading();
-    new import_obsidian7.Setting(containerEl).setName(t("resetSectionTitle")).setDesc(t("resetSectionDesc")).addButton((button) => {
-      button.setButtonText(t("resetButtonText"));
-      if (typeof button.setDestructive === "function") {
-        button.setDestructive(true);
-      } else if (typeof button.setWarning === "function") {
-        button.setWarning();
-      }
-      button.onClick(() => {
-        new ConfirmResetModal(this.app, async () => {
-          try {
-            const notice = new import_obsidian7.Notice("\u041E\u0447\u0438\u0449\u0435\u043D\u043D\u044F \u0434\u0430\u043D\u0438\u0445...", 0);
-            const res = await resetAllDreamData(this.app, this.plugin.settings);
-            notice.hide();
-            new import_obsidian7.Notice(t("resetSuccess", { dreams: res.dreamsReset, entities: res.entitiesDeleted }));
-          } catch (e) {
-            new import_obsidian7.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u043E\u0447\u0438\u0449\u0435\u043D\u043D\u044F: " + (e.message || e));
-          }
-        }).open();
-      });
-    });
-  }
-};
-
 // src/analyzer.ts
-var import_obsidian8 = require("obsidian");
 var STOP_ENTITIES_LOWER = /* @__PURE__ */ new Set([
   // Ukrainian
   "\u043E\u043F\u043E\u0432\u0456\u0434\u0430\u0447",
@@ -1401,7 +731,7 @@ var ProgressNotice = class {
     this.step = 1;
     this.currentMessage = "";
     this.startTime = Date.now();
-    this.notice = new import_obsidian8.Notice("", 0);
+    this.notice = new import_obsidian4.Notice("", 0);
     this.startTimer();
   }
   setStep(step, message) {
@@ -1431,14 +761,14 @@ var ProgressNotice = class {
 };
 async function analyzeDream(app, file, settings) {
   if (!file) {
-    new import_obsidian8.Notice("\u041D\u0435\u043C\u0430\u0454 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u043E\u0457 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0441\u043D\u0443");
+    new import_obsidian4.Notice("\u041D\u0435\u043C\u0430\u0454 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u043E\u0457 \u043D\u043E\u0442\u0430\u0442\u043A\u0438 \u0441\u043D\u0443");
     return;
   }
   let apiKey;
   try {
     apiKey = await getOpenAiApiKey(app, settings);
   } catch (error) {
-    new import_obsidian8.Notice(error?.message || "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 OpenAI API Key");
+    new import_obsidian4.Notice(error?.message || "\u041F\u043E\u043C\u0438\u043B\u043A\u0430 OpenAI API Key");
     return;
   }
   const progress = new ProgressNotice(5);
@@ -1584,7 +914,7 @@ ${connectionsMarkdown}
 ${aiText.trim()}`;
     }
     await app.vault.modify(file, updatedContent);
-    const createdDate = (0, import_obsidian8.moment)().format("YYYY-MM-DD");
+    const createdDate = (0, import_obsidian4.moment)().format("YYYY-MM-DD");
     const cache = app.metadataCache.getFileCache(file);
     const dreamDate = cache && cache.frontmatter && cache.frontmatter.date ? String(cache.frontmatter.date) : createdDate;
     const updatedDreamDb = dreamDb.filter((d) => d.file !== file.path && d.name !== file.basename);
@@ -1603,10 +933,10 @@ ${aiText.trim()}`;
     }
     const totalSec = progress.getElapsedSeconds();
     progress.close();
-    new import_obsidian8.Notice(`\u0421\u043E\u043D \u0443\u0441\u043F\u0456\u0448\u043D\u043E \u043F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u043E\u0432\u0430\u043D\u043E \u0437\u0430 ${totalSec}\u0441!`);
+    new import_obsidian4.Notice(`\u0421\u043E\u043D \u0443\u0441\u043F\u0456\u0448\u043D\u043E \u043F\u0440\u043E\u0430\u043D\u0430\u043B\u0456\u0437\u043E\u0432\u0430\u043D\u043E \u0437\u0430 ${totalSec}\u0441!`);
   } catch (error) {
     progress.close();
-    new import_obsidian8.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0430\u043D\u0430\u043B\u0456\u0437\u0443 \u0441\u043D\u0443: " + (error?.message || error));
+    new import_obsidian4.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0430\u043D\u0430\u043B\u0456\u0437\u0443 \u0441\u043D\u0443: " + (error?.message || error));
     console.error("Dream analysis failed:", error);
   }
 }
@@ -1642,7 +972,7 @@ function findExistingEntityFile(app, baseFolder, safeName) {
     const categoryFolderPath = `${baseFolder}/${type.folder}`;
     const candidatePath = `${categoryFolderPath}/${safeName}.md`;
     const file = app.vault.getAbstractFileByPath(candidatePath);
-    if (file instanceof import_obsidian8.TFile) {
+    if (file instanceof import_obsidian4.TFile) {
       return file;
     }
   }
@@ -1650,21 +980,21 @@ function findExistingEntityFile(app, baseFolder, safeName) {
 }
 async function createOrUpdateEntities(app, result, dreamFile, settings) {
   const dreamName = dreamFile.basename;
-  const createdDate = (0, import_obsidian8.moment)().format("YYYY-MM-DD");
+  const createdDate = (0, import_obsidian4.moment)().format("YYYY-MM-DD");
   const cache = app.metadataCache.getFileCache(dreamFile);
   const dreamDate = cache && cache.frontmatter && cache.frontmatter.date ? String(cache.frontmatter.date) : createdDate;
   const baseFolder = getEntitiesSubfolder(app, settings);
-  await ensureFolder2(app, baseFolder);
+  await ensureFolder(app, baseFolder);
   const modifiedPaths = [];
   for (const type of ENTITY_TYPES) {
     const folderPath = `${baseFolder}/${type.folder}`;
-    await ensureFolder2(app, folderPath);
+    await ensureFolder(app, folderPath);
     const items = result[type.field] || [];
     for (const item of items) {
       const safeName = cleanEntityName(item.name);
       if (!safeName || isStopEntity(safeName)) continue;
       const existingFile = findExistingEntityFile(app, baseFolder, safeName);
-      if (existingFile instanceof import_obsidian8.TFile) {
+      if (existingFile instanceof import_obsidian4.TFile) {
         await app.fileManager.processFrontMatter(existingFile, (fm) => {
           fm.last_seen = dreamDate;
           fm.embedding_status = "pending";
@@ -1722,7 +1052,7 @@ async function createOrUpdateEntities(app, result, dreamFile, settings) {
   }
   return modifiedPaths;
 }
-async function ensureFolder2(app, path) {
+async function ensureFolder(app, path) {
   const normalizedPath = path.replace(/\/$/, "");
   if (!app.vault.getAbstractFileByPath(normalizedPath)) {
     await app.vault.createFolder(normalizedPath);
@@ -1812,36 +1142,728 @@ function makeInlineText(text) {
   return String(text || "").replace(/\s+/g, " ").trim();
 }
 
+// src/dreamCreator.ts
+var import_obsidian5 = require("obsidian");
+async function ensureFolder2(app, path) {
+  const normalizedPath = path.trim().replace(/\/$/, "");
+  if (!app.vault.getAbstractFileByPath(normalizedPath)) {
+    await app.vault.createFolder(normalizedPath);
+  }
+}
+var DatePickerModal = class extends import_obsidian5.Modal {
+  constructor(app, onSubmit) {
+    super(app);
+    this.onSubmit = onSubmit;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.createEl("h2", { text: t("dateModalTitle") });
+    let selectedDate = (0, import_obsidian5.moment)().format("YYYY-MM-DD");
+    new import_obsidian5.Setting(contentEl).setName(t("dateModalLabel")).addText((text) => {
+      text.inputEl.type = "date";
+      text.setValue(selectedDate);
+      text.onChange((value) => {
+        if (value) selectedDate = value;
+      });
+    });
+    new import_obsidian5.Setting(contentEl).addButton((btn) => btn.setButtonText(t("dateModalButton")).setCta().onClick(() => {
+      this.close();
+      this.onSubmit(selectedDate);
+    }));
+  }
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+};
+async function createDreamNoteForDate(app, settings, targetDateInput) {
+  const now = targetDateInput ? (0, import_obsidian5.moment)(targetDateInput, ["YYYY-MM-DD", "D.MM.YYYY", "DD.MM.YYYY"]) : (0, import_obsidian5.moment)();
+  if (!now.isValid()) {
+    new import_obsidian5.Notice("\u041D\u0435\u043A\u043E\u0440\u0435\u043A\u0442\u043D\u0438\u0439 \u0444\u043E\u0440\u043C\u0430\u0442 \u0434\u0430\u0442\u0438");
+    return;
+  }
+  const year = now.format("YYYY");
+  const monthNum = now.format("MM");
+  const locale = getLocale();
+  const daysUk = ["\u043D\u0435\u0434\u0456\u043B\u044F", "\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0441\u0435\u0440\u0435\u0434\u0430", "\u0447\u0435\u0442\u0432\u0435\u0440", "\u043F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0441\u0443\u0431\u043E\u0442\u0430"];
+  const monthsUk = [
+    "01 - \u0441\u0456\u0447\u0435\u043D\u044C",
+    "02 - \u043B\u044E\u0442\u0438\u0439",
+    "03 - \u0431\u0435\u0440\u0435\u0437\u0435\u043D\u044C",
+    "04 - \u043A\u0432\u0456\u0442\u0435\u043D\u044C",
+    "05 - \u0442\u0440\u0430\u0432\u0435\u043D\u044C",
+    "06 - \u0447\u0435\u0440\u0432\u0435\u043D\u044C",
+    "07 - \u043B\u0438\u043F\u0435\u043D\u044C",
+    "08 - \u0441\u0435\u0440\u043F\u0435\u043D\u044C",
+    "09 - \u0432\u0435\u0440\u0435\u0441\u0435\u043D\u044C",
+    "10 - \u0436\u043E\u0432\u0442\u0435\u043D\u044C",
+    "11 - \u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434",
+    "12 - \u0433\u0440\u0443\u0434\u0435\u043D\u044C"
+  ];
+  const dayIdx = parseInt(now.format("d"), 10);
+  const monthIdx = parseInt(now.format("M"), 10) - 1;
+  const dayName = locale === "uk" ? daysUk[dayIdx] : now.format("dddd");
+  const monthFolder = locale === "uk" ? monthsUk[monthIdx] : `${monthNum} - ${now.format("MMMM")}`;
+  const rootFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
+  const dreamsSubfolder = getDreamsSubfolder(app, settings);
+  const yearFolder = `${dreamsSubfolder}/${year}`;
+  const folderPath = `${yearFolder}/${monthFolder}`;
+  await ensureFolder2(app, rootFolder);
+  await ensureFolder2(app, dreamsSubfolder);
+  await ensureFolder2(app, yearFolder);
+  await ensureFolder2(app, folderPath);
+  const dateShort = now.format("D.MM.YYYY");
+  const dateIso = now.format("YYYY-MM-DD");
+  const fileName = `${dateShort} ${dayName}`;
+  const filePath = `${folderPath}/${fileName}.md`;
+  const existingFile = app.vault.getAbstractFileByPath(filePath);
+  if (existingFile instanceof import_obsidian5.TFile) {
+    new import_obsidian5.Notice(t("dreamAlreadyExists"));
+    const leaf2 = app.workspace.getLeaf(false);
+    await leaf2.openFile(existingFile);
+    return existingFile;
+  }
+  const initialBody = `# \u0421\u043E\u043D
+
+\u0422\u0435\u043A\u0441\u0442 \u0441\u043D\u0443
+
+
+# AI \u0430\u043D\u0430\u043B\u0456\u0437
+
+## \u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441
+
+
+## \u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u0437\u0432'\u044F\u0437\u043A\u0438 \u0437 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u043C\u0438 \u0441\u043D\u0430\u043C\u0438
+
+-
+`;
+  const newFile = await app.vault.create(filePath, initialBody);
+  await app.fileManager.processFrontMatter(newFile, (fm) => {
+    fm.type = "dream";
+    fm.date = dateIso;
+    fm.lucid = false;
+    fm.entities_checked = false;
+    fm.characters = [];
+    fm.places = [];
+    fm.objects = [];
+    fm.emotions = [];
+    fm.symbols = [];
+    fm.concepts = [];
+    fm.keywords = [];
+  });
+  new import_obsidian5.Notice(t("dreamCreated"));
+  const leaf = app.workspace.getLeaf(false);
+  await leaf.openFile(newFile);
+  return newFile;
+}
+async function createTodayDreamNote(app, settings) {
+  return createDreamNoteForDate(app, settings);
+}
+async function exportTemplaterTemplate(app, settings) {
+  const templatePath = (settings.templateFilePath || "Templates/Dream Template.md").trim();
+  const dreamsSubfolder = getDreamsSubfolder(app, settings);
+  const dirIndex = templatePath.lastIndexOf("/");
+  if (dirIndex > 0) {
+    const dirPath = templatePath.substring(0, dirIndex);
+    await ensureFolder2(app, dirPath);
+  }
+  const templaterCode = `<%*
+let title = tp.file.title;
+let dateObj = window.moment(title, ["YYYY-MM-DD", "D.MM.YYYY", "DD.MM.YYYY"], true);
+
+if (!dateObj.isValid()) {
+    const match = String(title || "").match(/\\b(\\d{4}-\\d{2}-\\d{2}|\\d{1,2}\\.\\d{2}\\.\\d{4})\\b/);
+    if (match) {
+        dateObj = window.moment(match[0], ["YYYY-MM-DD", "D.MM.YYYY", "DD.MM.YYYY"]);
+    }
+}
+
+if (!dateObj || !dateObj.isValid()) {
+    dateObj = window.moment();
+}
+
+const year = dateObj.format("YYYY");
+const monthNum = dateObj.format("MM");
+
+const daysUk = ["\u043D\u0435\u0434\u0456\u043B\u044F", "\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0441\u0435\u0440\u0435\u0434\u0430", "\u0447\u0435\u0442\u0432\u0435\u0440", "\u043F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0441\u0443\u0431\u043E\u0442\u0430"];
+const monthsUk = [
+  "01 - \u0441\u0456\u0447\u0435\u043D\u044C", "02 - \u043B\u044E\u0442\u0438\u0439", "03 - \u0431\u0435\u0440\u0435\u0437\u0435\u043D\u044C", "04 - \u043A\u0432\u0456\u0442\u0435\u043D\u044C",
+  "05 - \u0442\u0440\u0430\u0432\u0435\u043D\u044C", "06 - \u0447\u0435\u0440\u0432\u0435\u043D\u044C", "07 - \u043B\u0438\u043F\u0435\u043D\u044C", "08 - \u0441\u0435\u0440\u043F\u0435\u043D\u044C",
+  "09 - \u0432\u0435\u0440\u0435\u0441\u0435\u043D\u044C", "10 - \u0436\u043E\u0432\u0442\u0435\u043D\u044C", "11 - \u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434", "12 - \u0433\u0440\u0443\u0434\u0435\u043D\u044C"
+];
+
+const dayIdx = parseInt(dateObj.format("d"), 10);
+const monthIdx = parseInt(dateObj.format("M"), 10) - 1;
+
+const dayName = daysUk[dayIdx];
+const monthFolder = monthsUk[monthIdx];
+
+const baseFolder = "${dreamsSubfolder}";
+const yearFolder = \`\${baseFolder}/\${year}\`;
+const folder = \`\${yearFolder}/\${monthFolder}\`;
+
+if (!app.vault.getAbstractFileByPath(baseFolder)) {
+    await app.vault.createFolder(baseFolder);
+}
+if (!app.vault.getAbstractFileByPath(yearFolder)) {
+    await app.vault.createFolder(yearFolder);
+}
+if (!app.vault.getAbstractFileByPath(folder)) {
+    await app.vault.createFolder(folder);
+}
+
+await tp.file.move(\`\${folder}/\${dateObj.format("D.MM.YYYY")} \${dayName}\`);
+-%>---
+type: dream
+date: <% dateObj.format("YYYY-MM-DD") %>
+lucid: false
+entities_checked: false
+
+characters: []
+places: []
+objects: []
+emotions: []
+symbols: []
+concepts: []
+keywords: []
+---
+
+# \u0421\u043E\u043D
+
+\u0422\u0435\u043A\u0441\u0442 \u0441\u043D\u0443
+
+
+# AI \u0430\u043D\u0430\u043B\u0456\u0437
+
+## \u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441
+
+
+## \u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u0437\u0432'\u044F\u0437\u043A\u0438 \u0437 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u043C\u0438 \u0441\u043D\u0430\u043C\u0438
+
+-
+`;
+  const existing = app.vault.getAbstractFileByPath(templatePath);
+  if (existing instanceof import_obsidian5.TFile) {
+    await app.vault.modify(existing, templaterCode);
+  } else {
+    await app.vault.create(templatePath, templaterCode);
+  }
+  new import_obsidian5.Notice(t("templateExportSuccess", { path: templatePath }));
+}
+async function ensureEntityIndexes(app, settings) {
+  const entitiesFolder = getEntitiesSubfolder(app, settings);
+  const locale = getLocale();
+  let indexFolderName = locale === "uk" ? "! \u0406\u043D\u0434\u0435\u043A\u0441" : "! Indexes";
+  if (app.vault.getAbstractFileByPath(`${entitiesFolder}/! \u0406\u043D\u0434\u0435\u043A\u0441`)) {
+    indexFolderName = "! \u0406\u043D\u0434\u0435\u043A\u0441";
+  } else if (app.vault.getAbstractFileByPath(`${entitiesFolder}/! Indexes`)) {
+    indexFolderName = "! Indexes";
+  }
+  const indexesFolderPath = `${entitiesFolder}/${indexFolderName}`;
+  await ensureFolder2(app, indexesFolderPath);
+  for (const type of ENTITY_TYPES) {
+    const categoryFolder = `${entitiesFolder}/${type.folder}`;
+    await ensureFolder2(app, categoryFolder);
+    let fileName = locale === "uk" ? `\u0406\u043D\u0434\u0435\u043A\u0441 - ${type.folder}.md` : `Index - ${type.folder}.md`;
+    const ukFile = `${indexesFolderPath}/\u0406\u043D\u0434\u0435\u043A\u0441 - ${type.folder}.md`;
+    const enFile = `${indexesFolderPath}/Index - ${type.folder}.md`;
+    if (app.vault.getAbstractFileByPath(ukFile)) {
+      fileName = `\u0406\u043D\u0434\u0435\u043A\u0441 - ${type.folder}.md`;
+    } else if (app.vault.getAbstractFileByPath(enFile)) {
+      fileName = `Index - ${type.folder}.md`;
+    }
+    const filePath = `${indexesFolderPath}/${fileName}`;
+    const title = locale === "uk" ? `\u0406\u043D\u0434\u0435\u043A\u0441 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439: ${type.folder}` : `Entity Index: ${type.folder}`;
+    const desc = locale === "uk" ? `\u041A\u0430\u0442\u0430\u043B\u043E\u0433 \u0443\u0441\u0456\u0445 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 **${type.folder}** \u0437 \u0457\u0445\u043D\u0456\u043C\u0438 \u043E\u043F\u0438\u0441\u0430\u043C\u0438 \u0442\u0430 \u0447\u0430\u0441\u0442\u043E\u0442\u043E\u044E \u043F\u043E\u044F\u0432 \u0443 \u0441\u043D\u0430\u0445.` : `Catalog of all saved **${type.folder}** entities with descriptions and dream frequency.`;
+    const content = `# ${title}
+
+> [!INFO] ${title}
+> ${desc}
+
+---
+
+\`\`\`dataview
+TABLE WITHOUT ID
+file.link AS "${locale === "uk" ? "\u0421\u0443\u0442\u043D\u0456\u0441\u0442\u044C" : "Entity"}",
+description AS "${locale === "uk" ? "\u041E\u043F\u0438\u0441" : "Description"}",
+dream_count AS "${locale === "uk" ? "\u041F\u043E\u044F\u0432 \u0443 \u0441\u043D\u0430\u0445" : "Dream Count"}",
+last_seen AS "${locale === "uk" ? "\u041E\u0441\u0442\u0430\u043D\u043D\u044F \u043F\u043E\u044F\u0432\u0430" : "Last Seen"}"
+FROM "${categoryFolder}"
+WHERE file.name != "${fileName.replace(/\.md$/, "")}"
+SORT dream_count DESC
+\`\`\`
+`;
+    const existing = app.vault.getAbstractFileByPath(filePath);
+    if (existing instanceof import_obsidian5.TFile) {
+      const currentContent = await app.vault.read(existing);
+      if (currentContent !== content) {
+        await app.vault.modify(existing, content);
+      }
+    } else {
+      await app.vault.create(filePath, content);
+    }
+  }
+}
+async function ensureDreamDashboard(app, settings) {
+  const rootFolder = (settings.dreamsFolder || "Dreams").trim().replace(/\/$/, "");
+  const dreamsSubfolder = getDreamsSubfolder(app, settings);
+  const entitiesFolder = getEntitiesSubfolder(app, settings);
+  const locale = getLocale();
+  await ensureFolder2(app, rootFolder);
+  await ensureFolder2(app, dreamsSubfolder);
+  await ensureFolder2(app, entitiesFolder);
+  await ensureEntityIndexes(app, settings);
+  let dashboardPath = `${rootFolder}/${t("dashboardFileName")}`;
+  const ukPath = `${rootFolder}/\u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0441\u043D\u0456\u0432.md`;
+  const enPath = `${rootFolder}/Dream Dashboard.md`;
+  if (app.vault.getAbstractFileByPath(ukPath)) {
+    dashboardPath = ukPath;
+  } else if (app.vault.getAbstractFileByPath(enPath)) {
+    dashboardPath = enPath;
+  }
+  const indexLinks = ENTITY_TYPES.map((tObj) => {
+    const idxName = locale === "uk" ? `\u0406\u043D\u0434\u0435\u043A\u0441 - ${tObj.folder}` : `Index - ${tObj.folder}`;
+    return `- [[${idxName}]]`;
+  }).join("\n");
+  const content = `${t("dashboardTitle")}
+
+${t("dashboardCallout")}
+
+---
+
+## ${locale === "uk" ? "\u0406\u043D\u0434\u0435\u043A\u0441\u0438 \u0441\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439" : "Entity Category Indexes"}
+${indexLinks}
+
+---
+
+${t("dashboardSectionStats")}
+
+\`\`\`dataview
+TABLE WITHOUT ID
+  length(rows) AS "\u0412\u0441\u044C\u043E\u0433\u043E \u0441\u043D\u0456\u0432",
+  length(filter(rows, (r) => r.lucid = true)) AS "\u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u0445 (\u041E\u0421)",
+  round((length(filter(rows, (r) => r.lucid = true)) / length(rows)) * 100, 1) + "%" AS "% \u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043E\u0441\u0442\u0456"
+FROM "${dreamsSubfolder}"
+WHERE file.name != "${pathBasename(dashboardPath)}" AND file.name != "\u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0441\u043D\u0456\u0432" AND file.name != "Dream Dashboard"
+GROUP BY true
+\`\`\`
+
+---
+
+${t("dashboardSectionSigns")}
+
+\`\`\`dataview
+TABLE WITHOUT ID
+  file.link AS "\u041C\u0430\u0440\u043A\u0435\u0440 / \u0421\u0443\u0442\u043D\u0456\u0441\u0442\u044C",
+  entity_type AS "\u0422\u0438\u043F",
+  dream_count AS "\u041F\u043E\u044F\u0432 \u0443 \u0441\u043D\u0430\u0445",
+  last_seen AS "\u041E\u0441\u0442\u0430\u043D\u043D\u044F \u043F\u043E\u044F\u0432\u0430"
+FROM "${entitiesFolder}"
+WHERE contains(["symbol", "character", "place"], entity_type)
+SORT dream_count DESC
+LIMIT 15
+\`\`\`
+
+---
+
+${t("dashboardSectionEmotions")}
+
+\`\`\`dataview
+TABLE WITHOUT ID
+  file.link AS "\u0415\u043C\u043E\u0446\u0456\u044F / \u0421\u0442\u0430\u043D",
+  dream_count AS "\u0417\u0433\u0430\u0434\u043E\u043A \u0443 \u0441\u043D\u0430\u0445",
+  last_seen AS "\u041E\u0441\u0442\u0430\u043D\u043D\u044F \u043F\u043E\u044F\u0432\u0430"
+FROM "${entitiesFolder}"
+WHERE entity_type = "emotion"
+SORT dream_count DESC
+LIMIT 10
+\`\`\`
+
+---
+
+${t("dashboardSectionCreative")}
+
+\`\`\`dataview
+TABLE WITHOUT ID
+  file.link AS "\u041A\u043E\u043D\u0446\u0435\u043F\u0442 / \u041B\u043E\u043A\u0430\u0446\u0456\u044F",
+  entity_type AS "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F",
+  description AS "\u041E\u043F\u0438\u0441 \u0437 \u0430\u043D\u0430\u043B\u0456\u0437\u0443",
+  dream_count AS "\u041F\u043E\u044F\u0432"
+FROM "${entitiesFolder}"
+WHERE contains(["concept", "place", "character"], entity_type) AND description != ""
+SORT dream_count DESC
+LIMIT 15
+\`\`\`
+
+---
+
+${t("dashboardSectionLucid")}
+
+\`\`\`dataview
+TABLE WITHOUT ID
+  file.link AS "\u041D\u0430\u0437\u0432\u0430 \u0441\u043D\u0443",
+  date AS "\u0414\u0430\u0442\u0430",
+  length(characters) + length(places) + length(objects) AS "\u0421\u0443\u0442\u043D\u043E\u0441\u0442\u0435\u0439 \u0443 \u0441\u043D\u0456"
+FROM "${dreamsSubfolder}"
+WHERE lucid = true
+SORT date DESC
+LIMIT 20
+\`\`\`
+
+---
+
+${t("dashboardSectionRecent")}
+
+\`\`\`dataview
+TABLE WITHOUT ID
+  file.link AS "\u0417\u0430\u043F\u0438\u0441 \u0441\u043D\u0443",
+  date AS "\u0414\u0430\u0442\u0430",
+  choice(lucid, "\u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u0439 (\u041E\u0421)", "\u0417\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0439") AS "\u0422\u0438\u043F \u0441\u043D\u0443",
+  length(keywords) AS "\u041A\u043B\u044E\u0447\u043E\u0432\u0438\u0445 \u0441\u043B\u0456\u0432"
+FROM "${dreamsSubfolder}"
+WHERE file.name != "${pathBasename(dashboardPath)}" AND file.name != "\u0414\u0430\u0448\u0431\u043E\u0440\u0434 \u0441\u043D\u0456\u0432" AND file.name != "Dream Dashboard"
+SORT file.name DESC
+LIMIT 15
+\`\`\`
+`;
+  const existing = app.vault.getAbstractFileByPath(dashboardPath);
+  if (existing instanceof import_obsidian5.TFile) {
+    const currentContent = await app.vault.read(existing);
+    if (currentContent !== content) {
+      await app.vault.modify(existing, content);
+    }
+  } else {
+    await app.vault.create(dashboardPath, content);
+  }
+}
+function pathBasename(pathStr) {
+  const idx = pathStr.lastIndexOf("/");
+  const file = idx >= 0 ? pathStr.substring(idx + 1) : pathStr;
+  return file.replace(/\.md$/, "");
+}
+
+// src/settings.ts
+var import_obsidian8 = require("obsidian");
+
+// src/resetManager.ts
+var import_obsidian6 = require("obsidian");
+var ConfirmResetModal = class extends import_obsidian6.Modal {
+  constructor(app, onConfirm) {
+    super(app);
+    this.onConfirm = onConfirm;
+  }
+  onOpen() {
+    const { contentEl } = this;
+    contentEl.createEl("h2", { text: t("resetModalTitle") });
+    contentEl.createEl("p", { text: t("resetModalDesc") });
+    new import_obsidian6.Setting(contentEl).addButton((btn) => {
+      btn.setButtonText(t("resetModalConfirmButton"));
+      if (typeof btn.setDestructive === "function") {
+        btn.setDestructive(true);
+      } else if (typeof btn.setWarning === "function") {
+        btn.setWarning();
+      }
+      btn.onClick(() => {
+        this.close();
+        this.onConfirm();
+      });
+    }).addButton((btn) => btn.setButtonText(t("resetModalCancelButton")).onClick(() => {
+      this.close();
+    }));
+  }
+  onClose() {
+    const { contentEl } = this;
+    contentEl.empty();
+  }
+};
+async function resetAllDreamData(app, settings) {
+  const dreamsFolder = getDreamsSubfolder(app, settings);
+  const entitiesFolder = getEntitiesSubfolder(app, settings);
+  let entitiesDeleted = 0;
+  let dreamsReset = 0;
+  const allFiles = app.vault.getMarkdownFiles();
+  const entityFiles = allFiles.filter((f) => f.path.startsWith(entitiesFolder));
+  for (const file of entityFiles) {
+    try {
+      await app.fileManager.trashFile(file);
+      entitiesDeleted++;
+    } catch (e) {
+      console.error("Could not trash entity file:", file.path, e);
+    }
+  }
+  const dreamFiles = allFiles.filter((f) => f.path.startsWith(dreamsFolder));
+  for (const file of dreamFiles) {
+    try {
+      await app.fileManager.processFrontMatter(file, (fm) => {
+        fm.type = "dream";
+        fm.entities_checked = false;
+        fm.characters = [];
+        fm.places = [];
+        fm.objects = [];
+        fm.emotions = [];
+        fm.symbols = [];
+        fm.concepts = [];
+        fm.keywords = [];
+      });
+      let content = await app.vault.read(file);
+      if (content.includes("# AI \u0430\u043D\u0430\u043B\u0456\u0437")) {
+        content = content.replace(/# AI аналіз[\s\S]*/, "# AI \u0430\u043D\u0430\u043B\u0456\u0437\n\n## \u041A\u043E\u0440\u043E\u0442\u043A\u0438\u0439 \u043E\u043F\u0438\u0441\n\n\n## \u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u0437\u0432'\u044F\u0437\u043A\u0438 \u0437 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456\u043C\u0438 \u0441\u043D\u0430\u043C\u0438\n\n-");
+        await app.vault.modify(file, content);
+      }
+      dreamsReset++;
+    } catch (e) {
+      console.error("Could not reset dream file:", file.path, e);
+    }
+  }
+  await saveEmbeddingsDatabase(app, settings, []);
+  await saveDreamEmbeddingsDatabase(app, settings, []);
+  return { dreamsReset, entitiesDeleted };
+}
+
+// src/suggest.ts
+var import_obsidian7 = require("obsidian");
+var FolderSuggest = class extends import_obsidian7.AbstractInputSuggest {
+  constructor(app, textComponent, onSelectCallback) {
+    super(app, textComponent.inputEl);
+    this.textComponent = textComponent;
+    this.onSelectCallback = onSelectCallback;
+  }
+  getSuggestions(inputStr) {
+    const abstractFiles = this.app.vault.getAllLoadedFiles();
+    const folders = [];
+    const lowerInputStr = (inputStr || "").toLowerCase();
+    for (const file of abstractFiles) {
+      if (file instanceof import_obsidian7.TFolder) {
+        if (!inputStr || file.path.toLowerCase().includes(lowerInputStr)) {
+          folders.push(file);
+        }
+      }
+    }
+    return folders.slice(0, 50);
+  }
+  renderSuggestion(folder, el) {
+    el.setText(folder.path);
+  }
+  selectSuggestion(folder, evt) {
+    this.textComponent.setValue(folder.path);
+    this.onSelectCallback(folder.path);
+    this.close();
+  }
+};
+var FileSuggest = class extends import_obsidian7.AbstractInputSuggest {
+  constructor(app, textComponent, onSelectCallback) {
+    super(app, textComponent.inputEl);
+    this.textComponent = textComponent;
+    this.onSelectCallback = onSelectCallback;
+  }
+  getSuggestions(inputStr) {
+    const abstractFiles = this.app.vault.getAllLoadedFiles();
+    const files = [];
+    const lowerInputStr = (inputStr || "").toLowerCase();
+    for (const file of abstractFiles) {
+      if (file instanceof import_obsidian7.TFile) {
+        if (!inputStr || file.path.toLowerCase().includes(lowerInputStr)) {
+          files.push(file);
+        }
+      }
+    }
+    return files.slice(0, 50);
+  }
+  renderSuggestion(file, el) {
+    el.setText(file.path);
+  }
+  selectSuggestion(file, evt) {
+    this.textComponent.setValue(file.path);
+    this.onSelectCallback(file.path);
+    this.close();
+  }
+};
+
+// src/settings.ts
+var DreamAnalyzerSettingTab = class extends import_obsidian8.PluginSettingTab {
+  constructor(app, plugin) {
+    super(app, plugin);
+    this.plugin = plugin;
+  }
+  getSettingDefinitions() {
+    return [];
+  }
+  display() {
+    const { containerEl } = this;
+    containerEl.empty();
+    new import_obsidian8.Setting(containerEl).setName(t("settingsTitle")).setHeading();
+    const SecretComponentClass = typeof import_obsidian8.SecretComponent !== "undefined" ? import_obsidian8.SecretComponent : void 0;
+    const hasSecretStorage = typeof SecretComponentClass !== "undefined" && typeof this.app.secretStorage !== "undefined";
+    if (hasSecretStorage) {
+      const setting = new import_obsidian8.Setting(containerEl).setName(t("apiKeyName")).setDesc(t("apiKeyDesc"));
+      new SecretComponentClass(this.app, setting.controlEl).setValue(this.plugin.settings.openaiApiKey || "").onChange((value) => {
+        void (async () => {
+          this.plugin.settings.openaiApiKey = value ? value.trim() : "";
+          await this.plugin.saveSettings();
+        })();
+      });
+    } else {
+      new import_obsidian8.Setting(containerEl).setName(t("apiKeyName")).setDesc(t("apiKeyDesc")).addText((text) => {
+        text.inputEl.type = "password";
+        text.setPlaceholder("sk-...").setValue(this.plugin.settings.openaiApiKey || "").onChange((value) => {
+          void (async () => {
+            this.plugin.settings.openaiApiKey = value.trim();
+            await this.plugin.saveSettings();
+          })();
+        });
+      });
+    }
+    new import_obsidian8.Setting(containerEl).setName(t("modelName")).setDesc(t("modelDesc")).addDropdown((dropdown) => dropdown.addOption("gpt-5-mini", t("gptDefaultLabel")).addOption("gpt-4.1-mini", "GPT-4.1 mini").addOption("gpt-5", "GPT-5").addOption("gpt-4o-mini", "GPT-4o mini").addOption("gpt-4o", "GPT-4o").addOption("o3-mini", "o3-mini").setValue(this.plugin.settings.openaiModel || "gpt-5-mini").onChange((value) => {
+      void (async () => {
+        this.plugin.settings.openaiModel = value;
+        await this.plugin.saveSettings();
+      })();
+    }));
+    new import_obsidian8.Setting(containerEl).setName(t("sectionJournalFolder")).setHeading();
+    new import_obsidian8.Setting(containerEl).setName(t("dreamsFolderName")).setDesc(t("dreamsFolderDesc")).addText((text) => {
+      const applyFolderChange = async (val) => {
+        const cleaned = (0, import_obsidian8.normalizePath)(val.trim());
+        if (cleaned) {
+          this.plugin.settings.dreamsFolder = cleaned;
+          await this.plugin.saveSettings();
+          try {
+            await ensureEntityIndexes(this.app, this.plugin.settings);
+            await ensureDreamDashboard(this.app, this.plugin.settings);
+          } catch (e) {
+            console.warn("Could not ensure dream dashboard/indexes on folder change:", e);
+          }
+        }
+      };
+      new FolderSuggest(this.app, text, (val) => {
+        text.setValue(val);
+        void applyFolderChange(val);
+      });
+      text.setPlaceholder("Dreams").setValue(this.plugin.settings.dreamsFolder).onChange((value) => {
+        void (async () => {
+          this.plugin.settings.dreamsFolder = (0, import_obsidian8.normalizePath)(value.trim());
+          await this.plugin.saveSettings();
+        })();
+      });
+      text.inputEl.addEventListener("blur", () => {
+        void applyFolderChange(text.getValue());
+      });
+    });
+    new import_obsidian8.Setting(containerEl).setName(t("templateExportName")).setHeading();
+    new import_obsidian8.Setting(containerEl).setName(t("templatePathName")).setDesc(t("templatePathDesc")).addText((text) => {
+      new FileSuggest(this.app, text, (val) => {
+        void (async () => {
+          this.plugin.settings.templateFilePath = (0, import_obsidian8.normalizePath)(val.trim());
+          await this.plugin.saveSettings();
+        })();
+      });
+      text.setPlaceholder("Templates/Dream Template.md").setValue(this.plugin.settings.templateFilePath || "Templates/Dream Template.md").onChange((value) => {
+        void (async () => {
+          this.plugin.settings.templateFilePath = (0, import_obsidian8.normalizePath)(value.trim());
+          await this.plugin.saveSettings();
+        })();
+      });
+    });
+    new import_obsidian8.Setting(containerEl).setName(t("templateExportName")).setDesc(t("templateExportDesc")).addButton((button) => button.setButtonText(t("templateExportButtonText")).setCta().onClick(() => {
+      void (async () => {
+        try {
+          await exportTemplaterTemplate(this.app, this.plugin.settings);
+        } catch (e) {
+          new import_obsidian8.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0448\u0430\u0431\u043B\u043E\u043D\u0443: " + (e.message || e));
+        }
+      })();
+    }));
+    new import_obsidian8.Setting(containerEl).setName(t("sectionVectorSearch")).setHeading();
+    new import_obsidian8.Setting(containerEl).setName(t("autoEmbeddingsName")).setDesc(t("autoEmbeddingsDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.autoUpdateEmbeddings).onChange((value) => {
+      void (async () => {
+        this.plugin.settings.autoUpdateEmbeddings = value;
+        await this.plugin.saveSettings();
+      })();
+    }));
+    new import_obsidian8.Setting(containerEl).setName(t("embeddingModelName")).setDesc(t("embeddingModelDesc")).addText((text) => text.setPlaceholder("text-embedding-3-small").setValue(this.plugin.settings.embeddingModel).onChange((value) => {
+      void (async () => {
+        this.plugin.settings.embeddingModel = value.trim();
+        await this.plugin.saveSettings();
+      })();
+    }));
+    new import_obsidian8.Setting(containerEl).setName(t("thresholdName")).setDesc(t("thresholdDesc")).addText((text) => text.setPlaceholder("0.35").setValue(String(this.plugin.settings.similarityThreshold)).onChange((value) => {
+      void (async () => {
+        const val = parseFloat(value);
+        if (!isNaN(val) && val >= 0 && val <= 1) {
+          this.plugin.settings.similarityThreshold = val;
+          await this.plugin.saveSettings();
+        }
+      })();
+    }));
+    new import_obsidian8.Setting(containerEl).setName(t("limitName")).setDesc(t("limitDesc")).addText((text) => text.setPlaceholder("40").setValue(String(this.plugin.settings.similarityLimit)).onChange((value) => {
+      void (async () => {
+        const val = parseInt(value, 10);
+        if (!isNaN(val) && val > 0) {
+          this.plugin.settings.similarityLimit = val;
+          await this.plugin.saveSettings();
+        }
+      })();
+    }));
+    new import_obsidian8.Setting(containerEl).setName(t("rebuildButtonName")).setDesc(t("rebuildButtonDesc")).addButton((button) => button.setButtonText(t("rebuildButtonText")).onClick(() => {
+      void (async () => {
+        try {
+          const apiKey = await getOpenAiApiKey(this.app, this.plugin.settings);
+          const notice = new import_obsidian8.Notice(t("rebuildStart"), 0);
+          const count = await updateEntityEmbeddings(this.app, apiKey, this.plugin.settings, true);
+          notice.hide();
+          new import_obsidian8.Notice(t("rebuildSuccess", { count }));
+        } catch (e) {
+          new import_obsidian8.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (e.message || e));
+        }
+      })();
+    }));
+    new import_obsidian8.Setting(containerEl).setName(t("resetSectionTitle")).setHeading();
+    new import_obsidian8.Setting(containerEl).setName(t("resetSectionTitle")).setDesc(t("resetSectionDesc")).addButton((button) => {
+      button.setButtonText(t("resetButtonText"));
+      if (typeof button.setDestructive === "function") {
+        button.setDestructive(true);
+      } else if (typeof button.setWarning === "function") {
+        button.setWarning();
+      }
+      button.onClick(() => {
+        new ConfirmResetModal(this.app, () => {
+          void (async () => {
+            try {
+              const notice = new import_obsidian8.Notice("\u041E\u0447\u0438\u0449\u0435\u043D\u043D\u044F \u0434\u0430\u043D\u0438\u0445...", 0);
+              const res = await resetAllDreamData(this.app, this.plugin.settings);
+              notice.hide();
+              new import_obsidian8.Notice(t("resetSuccess", { dreams: res.dreamsReset, entities: res.entitiesDeleted }));
+            } catch (e) {
+              new import_obsidian8.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u043E\u0447\u0438\u0449\u0435\u043D\u043D\u044F: " + (e.message || e));
+            }
+          })();
+        }).open();
+      });
+    });
+  }
+};
+
 // src/main.ts
 var DreamAnalyzerPlugin = class extends import_obsidian9.Plugin {
   async onload() {
     await this.loadSettings();
-    this.app.workspace.onLayoutReady(async () => {
-      try {
-        await ensureEntityIndexes(this.app, this.settings);
-        await ensureDreamDashboard(this.app, this.settings);
-      } catch (e) {
-        console.warn("Could not ensure dream dashboard/indexes:", e);
-      }
-    });
-    this.registerEvent(
-      this.app.vault.on("rename", async (file, oldPath) => {
-        if (file instanceof import_obsidian9.TFile) {
-          await handleFileRename(this.app, this.settings, file, oldPath);
-        }
-      })
-    );
-    this.addRibbonIcon("brain", t("ribbonAnalyze"), async () => {
+    this.addRibbonIcon("brain", t("ribbonAnalyze"), () => {
       const activeFile = this.app.workspace.getActiveFile();
       if (activeFile instanceof import_obsidian9.TFile && activeFile.extension === "md") {
-        await analyzeDream(this.app, activeFile, this.settings);
+        void analyzeDream(this.app, activeFile, this.settings);
       } else {
         new import_obsidian9.Notice(t("openDreamNoteFirst"));
       }
     });
-    this.addRibbonIcon("calendar-plus", t("ribbonCreateDream"), async () => {
-      await createTodayDreamNote(this.app, this.settings);
+    this.addRibbonIcon("calendar-plus", t("ribbonCreateDream"), () => {
+      void createTodayDreamNote(this.app, this.settings);
     });
+    this.registerEvent(
+      this.app.vault.on("rename", (file, oldPath) => {
+        if (file instanceof import_obsidian9.TFile && file.extension === "md") {
+          void handleFileRename(this.app, file, oldPath, this.settings);
+        }
+      })
+    );
     this.addCommand({
       id: "analyze-dream",
       name: t("cmdAnalyze"),
@@ -1849,7 +1871,7 @@ var DreamAnalyzerPlugin = class extends import_obsidian9.Plugin {
         const activeFile = this.app.workspace.getActiveFile();
         if (activeFile instanceof import_obsidian9.TFile && activeFile.extension === "md") {
           if (!checking) {
-            analyzeDream(this.app, activeFile, this.settings);
+            void analyzeDream(this.app, activeFile, this.settings);
           }
           return true;
         }
@@ -1859,67 +1881,69 @@ var DreamAnalyzerPlugin = class extends import_obsidian9.Plugin {
     this.addCommand({
       id: "create-today-dream",
       name: t("cmdCreateDream"),
-      callback: async () => {
-        await createTodayDreamNote(this.app, this.settings);
+      callback: () => {
+        void createTodayDreamNote(this.app, this.settings);
       }
     });
     this.addCommand({
       id: "create-custom-date-dream",
       name: t("cmdCreateCustomDateDream"),
       callback: () => {
-        new DatePickerModal(this.app, async (selectedDate) => {
-          await createDreamNoteForDate(this.app, this.settings, selectedDate);
+        new DatePickerModal(this.app, (selectedDate) => {
+          void createDreamNoteForDate(this.app, this.settings, selectedDate);
         }).open();
       }
     });
     this.addCommand({
       id: "rebuild-embeddings",
       name: t("cmdRebuildEmbeddings"),
-      callback: async () => {
-        try {
-          const apiKey = await getOpenAiApiKey(this.app, this.settings);
-          const notice = new import_obsidian9.Notice(t("rebuildStart"), 0);
-          const count = await updateEntityEmbeddings(this.app, apiKey, this.settings, true);
-          notice.hide();
-          new import_obsidian9.Notice(t("rebuildSuccess", { count }));
-        } catch (e) {
-          new import_obsidian9.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (e.message || e));
-        }
+      callback: () => {
+        void (async () => {
+          try {
+            const apiKey = await getOpenAiApiKey(this.app, this.settings);
+            const notice = new import_obsidian9.Notice(t("rebuildStart"), 0);
+            const count = await updateEntityEmbeddings(this.app, apiKey, this.settings, true);
+            notice.hide();
+            new import_obsidian9.Notice(t("rebuildSuccess", { count }));
+          } catch (e) {
+            new import_obsidian9.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (e.message || e));
+          }
+        })();
       }
     });
     this.addCommand({
       id: "reset-all-data",
       name: t("cmdResetAllData"),
       callback: () => {
-        new ConfirmResetModal(this.app, async () => {
-          try {
-            const notice = new import_obsidian9.Notice("\u041E\u0447\u0438\u0449\u0435\u043D\u043D\u044F \u0434\u0430\u043D\u0438\u0445...", 0);
-            const res = await resetAllDreamData(this.app, this.settings);
-            notice.hide();
-            new import_obsidian9.Notice(t("resetSuccess", { dreams: res.dreamsReset, entities: res.entitiesDeleted }));
-          } catch (e) {
-            new import_obsidian9.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u043E\u0447\u0438\u0449\u0435\u043D\u043D\u044F: " + (e.message || e));
-          }
+        new ConfirmResetModal(this.app, () => {
+          void (async () => {
+            try {
+              const notice = new import_obsidian9.Notice("\u041E\u0447\u0438\u0449\u0435\u043D\u043D\u044F \u0434\u0430\u043D\u0438\u0445...", 0);
+              const res = await resetAllDreamData(this.app, this.settings);
+              notice.hide();
+              new import_obsidian9.Notice(t("resetSuccess", { dreams: res.dreamsReset, entities: res.entitiesDeleted }));
+            } catch (e) {
+              new import_obsidian9.Notice("\u041F\u043E\u043C\u0438\u043B\u043A\u0430 \u043E\u0447\u0438\u0449\u0435\u043D\u043D\u044F: " + (e.message || e));
+            }
+          })();
         }).open();
       }
     });
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
-        const dreamsSubfolder = getDreamsSubfolder(this.settings);
+        const dreamsSubfolder = getDreamsSubfolder(this.app, this.settings);
         if (file instanceof import_obsidian9.TFile && file.extension === "md" && file.path.startsWith(dreamsSubfolder)) {
           menu.addItem((item) => {
-            item.setTitle(t("contextMenuAnalyze")).setIcon("brain").onClick(async () => {
-              await analyzeDream(this.app, file, this.settings);
+            item.setTitle(t("contextMenuAnalyze")).setIcon("brain").onClick(() => {
+              void analyzeDream(this.app, file, this.settings);
             });
           });
         }
       })
     );
     this.addSettingTab(new DreamAnalyzerSettingTab(this.app, this));
-    console.log("Dream Analyzer Plugin loaded");
   }
   onunload() {
-    console.log("Dream Analyzer Plugin unloaded");
   }
   async loadSettings() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());

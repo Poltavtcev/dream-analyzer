@@ -10,7 +10,7 @@ import { getOpenAiApiKey, requestChatCompletion, getEmbedding } from "./api";
 import {
 	getSimilarEntitiesContext,
 	updateEntityEmbeddings,
-	loadDreamEmbeddingsDatabase,
+	syncUnindexedDreams,
 	saveDreamEmbeddingsDatabase,
 	analyzeDreamConnections,
 	formatDreamConnectionsMarkdown,
@@ -218,7 +218,7 @@ A short summary of the dream in 2-5 sentences in the dream's language.
 			...result.concepts
 		].map(e => cleanEntityName(e.name)).filter(Boolean);
 
-		const dreamDb = await loadDreamEmbeddingsDatabase(app, settings);
+		const dreamDb = await syncUnindexedDreams(app, apiKey, settings);
 		const connections = analyzeDreamConnections(app, file, dreamEmbedding, currentEntityNames, dreamDb);
 		const connectionsMarkdown = formatDreamConnectionsMarkdown(connections);
 

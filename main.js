@@ -525,6 +525,68 @@ async function saveDreamEmbeddingsDatabase(app, settings, data) {
     await app.vault.create(dbPath, jsonContent);
   }
 }
+async function syncUnindexedDreams(app, apiKey, settings) {
+  let dreamDb = await loadDreamEmbeddingsDatabase(app, settings);
+  const dreamsSubfolder = getDreamsSubfolder(app, settings);
+  const allFiles = app.vault.getMarkdownFiles();
+  const dreamFiles = allFiles.filter((f) => f.path.startsWith(dreamsSubfolder));
+  const dbMap = /* @__PURE__ */ new Map();
+  for (const item of dreamDb) {
+    if (app.vault.getAbstractFileByPath(item.file) instanceof import_obsidian3.TFile) {
+      dbMap.set(item.file, item);
+    }
+  }
+  const missingFiles = [];
+  for (const file of dreamFiles) {
+    const cache = app.metadataCache.getFileCache(file);
+    const frontmatterObj = cache?.frontmatter;
+    if (!frontmatterObj || frontmatterObj.type !== "dream") continue;
+    if (!dbMap.has(file.path)) {
+      missingFiles.push(file);
+    }
+  }
+  if (missingFiles.length === 0) {
+    return Array.from(dbMap.values());
+  }
+  for (const file of missingFiles) {
+    try {
+      const content = await app.vault.read(file);
+      const vec = await getEmbedding(apiKey, settings.embeddingModel, content);
+      const cache = app.metadataCache.getFileCache(file);
+      const frontmatterObj = cache?.frontmatter;
+      const extractEntities = (arr) => {
+        if (!Array.isArray(arr)) return [];
+        return arr.map((x) => {
+          const str = String(x || "").replace(/\[\[/g, "").replace(/\]\]/g, "").trim();
+          return str.charAt(0).toUpperCase() + str.slice(1);
+        }).filter(Boolean);
+      };
+      const entities = frontmatterObj ? [
+        ...extractEntities(frontmatterObj.characters),
+        ...extractEntities(frontmatterObj.places),
+        ...extractEntities(frontmatterObj.objects),
+        ...extractEntities(frontmatterObj.emotions),
+        ...extractEntities(frontmatterObj.symbols),
+        ...extractEntities(frontmatterObj.concepts),
+        ...extractEntities(frontmatterObj.keywords)
+      ] : [];
+      const dreamDate = frontmatterObj && typeof frontmatterObj.date === "string" ? frontmatterObj.date : file.basename;
+      const item = {
+        id: `dream_${file.basename}`,
+        file: file.path,
+        name: file.basename,
+        date: dreamDate,
+        entities,
+        vector: vec
+      };
+      dbMap.set(file.path, item);
+    } catch {
+    }
+  }
+  const updatedList = Array.from(dbMap.values());
+  await saveDreamEmbeddingsDatabase(app, settings, updatedList);
+  return updatedList;
+}
 function cosineSimilarity(vecA, vecB) {
   if (!vecA || !vecB || vecA.length === 0 || vecB.length === 0 || vecA.length !== vecB.length) {
     return 0;
@@ -664,61 +726,35 @@ function simpleHash(str) {
   return hash.toString(36);
 }
 function analyzeDreamConnections(app, currentDreamFile, currentVector, currentEntities, dreamDatabase, limit = 5) {
+  if (dreamDatabase.length === 0) return [];
   const results = [];
   const curEntitySet = new Set(currentEntities.map((e) => e.toLowerCase()));
-  const dbDreamMap = /* @__PURE__ */ new Map();
-  for (const item of dreamDatabase) {
-    const targetFile = app.vault.getAbstractFileByPath(item.file);
-    if (targetFile instanceof import_obsidian3.TFile) {
-      dbDreamMap.set(item.file, item);
+  for (const dream of dreamDatabase) {
+    if (dream.file === currentDreamFile.path || dream.name === currentDreamFile.basename) {
+      continue;
     }
-  }
-  const dreamsSubfolder = getDreamsSubfolder(app, settingsFromPath(currentDreamFile));
-  const allFiles = app.vault.getMarkdownFiles();
-  const dreamFiles = allFiles.filter((f) => f.path.startsWith(dreamsSubfolder) && f.path !== currentDreamFile.path);
-  for (const dreamFile of dreamFiles) {
-    const cache = app.metadataCache.getFileCache(dreamFile);
-    const frontmatterObj = cache?.frontmatter;
-    if (!frontmatterObj || frontmatterObj.type !== "dream") continue;
-    const extractEntities = (arr) => {
-      if (!Array.isArray(arr)) return [];
-      return arr.map((x) => {
-        const str = String(x || "").replace(/\[\[/g, "").replace(/\]\]/g, "").trim();
-        return str.charAt(0).toUpperCase() + str.slice(1);
-      }).filter(Boolean);
-    };
-    const noteEntities = [
-      ...extractEntities(frontmatterObj.characters),
-      ...extractEntities(frontmatterObj.places),
-      ...extractEntities(frontmatterObj.objects),
-      ...extractEntities(frontmatterObj.emotions),
-      ...extractEntities(frontmatterObj.symbols),
-      ...extractEntities(frontmatterObj.concepts),
-      ...extractEntities(frontmatterObj.keywords)
-    ];
-    const dbItem = dbDreamMap.get(dreamFile.path);
+    const targetFile = app.vault.getAbstractFileByPath(dream.file);
+    if (!(targetFile instanceof import_obsidian3.TFile)) {
+      continue;
+    }
     let vectorSim = 0;
-    if (currentVector && dbItem && dbItem.vector && dbItem.vector.length > 0) {
-      vectorSim = cosineSimilarity(currentVector, dbItem.vector);
+    if (currentVector && dream.vector && dream.vector.length > 0) {
+      vectorSim = cosineSimilarity(currentVector, dream.vector);
     }
-    const mergedEntities = Array.from(/* @__PURE__ */ new Set([
-      ...noteEntities.map((e) => e.toLowerCase()),
-      ...(dbItem?.entities || []).map((e) => e.toLowerCase())
-    ]));
+    const otherEntities = (dream.entities || []).map((e) => e.toLowerCase());
     const sharedEntities = [];
-    for (const entity of mergedEntities) {
+    for (const entity of otherEntities) {
       if (curEntitySet.has(entity)) {
         sharedEntities.push(entity);
       }
     }
-    const entitySim = mergedEntities.length > 0 ? sharedEntities.length / Math.max(curEntitySet.size, mergedEntities.length) : 0;
+    const entitySim = (dream.entities || []).length > 0 ? sharedEntities.length / Math.max(curEntitySet.size, dream.entities.length) : 0;
     const combinedScore = vectorSim > 0 ? vectorSim * 0.5 + entitySim * 0.5 : entitySim;
     if (combinedScore > 0.1 || sharedEntities.length > 0) {
-      const dreamDate = frontmatterObj && typeof frontmatterObj.date === "string" ? frontmatterObj.date : dbItem?.date || "";
       results.push({
-        dreamFile: dreamFile.path,
-        dreamName: dreamFile.basename,
-        date: dreamDate,
+        dreamFile: dream.file,
+        dreamName: dream.name,
+        date: dream.date || "",
         vectorSimilarity: vectorSim,
         sharedEntities: sharedEntities.map((e) => e.charAt(0).toUpperCase() + e.slice(1)),
         score: combinedScore
@@ -727,28 +763,6 @@ function analyzeDreamConnections(app, currentDreamFile, currentVector, currentEn
   }
   results.sort((a, b) => b.score - a.score);
   return results.slice(0, limit);
-}
-function settingsFromPath(file) {
-  let dreamsFolder = "Dreams";
-  const parts = file.path.split("/");
-  if (parts.length > 1) {
-    const idx = parts.indexOf("\u0421\u043D\u0438");
-    if (idx > 0) {
-      dreamsFolder = parts.slice(0, idx).join("/");
-    } else {
-      dreamsFolder = parts[0];
-    }
-  }
-  return {
-    openaiApiKey: "",
-    openaiModel: "gpt-5-mini",
-    embeddingModel: "text-embedding-3-small",
-    dreamsFolder,
-    templateFilePath: "Templates/Dream Template.md",
-    similarityThreshold: 0.35,
-    similarityLimit: 40,
-    autoUpdateEmbeddings: true
-  };
 }
 function formatDreamConnectionsMarkdown(connections) {
   if (connections.length === 0) {
@@ -1540,7 +1554,7 @@ A short summary of the dream in 2-5 sentences in the dream's language.
       ...result.symbols,
       ...result.concepts
     ].map((e) => cleanEntityName(e.name)).filter(Boolean);
-    const dreamDb = await loadDreamEmbeddingsDatabase(app, settings);
+    const dreamDb = await syncUnindexedDreams(app, apiKey, settings);
     const connections = analyzeDreamConnections(app, file, dreamEmbedding, currentEntityNames, dreamDb);
     const connectionsMarkdown = formatDreamConnectionsMarkdown(connections);
     await app.fileManager.processFrontMatter(file, (fm) => {

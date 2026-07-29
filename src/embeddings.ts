@@ -7,7 +7,7 @@ import {
 	DreamConnectionResult,
 	DreamFrontmatter
 } from "./types";
-import { getBatchEmbeddings } from "./api";
+import { getBatchEmbeddings, getEmbedding } from "./api";
 import { getLocale } from "./i18n";
 
 let cachedEntityDb: { dbPath: string; data: VectorDatabaseItem[] } | null = null;
@@ -94,7 +94,7 @@ export async function loadDreamEmbeddingsDatabase(
 			const content = await app.vault.read(file);
 			const parsed = JSON.parse(content) as DreamVectorDatabaseItem[];
 			if (Array.isArray(parsed)) {
-				// Filter out any entries whose dream file no longer exists in vault
+				// Filter out non-existent dream files
 				const validParsed = parsed.filter(d => {
 					const abstractFile = app.vault.getAbstractFileByPath(d.file);
 					return abstractFile instanceof TFile;
@@ -130,6 +130,88 @@ export async function saveDreamEmbeddingsDatabase(
 	} else {
 		await app.vault.create(dbPath, jsonContent);
 	}
+}
+
+export async function syncUnindexedDreams(
+	app: App,
+	apiKey: string,
+	settings: DreamAnalyzerSettings
+): Promise<DreamVectorDatabaseItem[]> {
+	let dreamDb = await loadDreamEmbeddingsDatabase(app, settings);
+	const dreamsSubfolder = getDreamsSubfolder(app, settings);
+	const allFiles = app.vault.getMarkdownFiles();
+	const dreamFiles = allFiles.filter(f => f.path.startsWith(dreamsSubfolder));
+
+	const dbMap = new Map<string, DreamVectorDatabaseItem>();
+	for (const item of dreamDb) {
+		if (app.vault.getAbstractFileByPath(item.file) instanceof TFile) {
+			dbMap.set(item.file, item);
+		}
+	}
+
+	const missingFiles: TFile[] = [];
+	for (const file of dreamFiles) {
+		const cache = app.metadataCache.getFileCache(file);
+		const frontmatterObj: Record<string, unknown> | undefined = cache?.frontmatter;
+		if (!frontmatterObj || frontmatterObj.type !== "dream") continue;
+
+		if (!dbMap.has(file.path)) {
+			missingFiles.push(file);
+		}
+	}
+
+	if (missingFiles.length === 0) {
+		return Array.from(dbMap.values());
+	}
+
+	for (const file of missingFiles) {
+		try {
+			const content = await app.vault.read(file);
+			const vec = await getEmbedding(apiKey, settings.embeddingModel, content);
+
+			const cache = app.metadataCache.getFileCache(file);
+			const frontmatterObj: Record<string, unknown> | undefined = cache?.frontmatter;
+
+			const extractEntities = (arr: unknown): string[] => {
+				if (!Array.isArray(arr)) return [];
+				return arr.map(x => {
+					const str = String(x || "").replace(/\[\[/g, "").replace(/\]\]/g, "").trim();
+					return str.charAt(0).toUpperCase() + str.slice(1);
+				}).filter(Boolean);
+			};
+
+			const entities: string[] = frontmatterObj ? [
+				...extractEntities(frontmatterObj.characters),
+				...extractEntities(frontmatterObj.places),
+				...extractEntities(frontmatterObj.objects),
+				...extractEntities(frontmatterObj.emotions),
+				...extractEntities(frontmatterObj.symbols),
+				...extractEntities(frontmatterObj.concepts),
+				...extractEntities(frontmatterObj.keywords)
+			] : [];
+
+			const dreamDate = (frontmatterObj && typeof frontmatterObj.date === "string")
+				? frontmatterObj.date
+				: file.basename;
+
+			const item: DreamVectorDatabaseItem = {
+				id: `dream_${file.basename}`,
+				file: file.path,
+				name: file.basename,
+				date: dreamDate,
+				entities,
+				vector: vec
+			};
+
+			dbMap.set(file.path, item);
+		} catch {
+			// Continue on single file error
+		}
+	}
+
+	const updatedList = Array.from(dbMap.values());
+	await saveDreamEmbeddingsDatabase(app, settings, updatedList);
+	return updatedList;
 }
 
 export async function handleFileRename(
@@ -367,66 +449,36 @@ export function analyzeDreamConnections(
 	dreamDatabase: DreamVectorDatabaseItem[],
 	limit: number = 5
 ): DreamConnectionResult[] {
+	if (dreamDatabase.length === 0) return [];
 	const results: DreamConnectionResult[] = [];
 	const curEntitySet = new Set(currentEntities.map(e => e.toLowerCase()));
 
-	// 1. Build map of existing dreams from dreamDatabase (vector DB)
-	const dbDreamMap = new Map<string, DreamVectorDatabaseItem>();
-	for (const item of dreamDatabase) {
-		const targetFile = app.vault.getAbstractFileByPath(item.file);
-		if (targetFile instanceof TFile) {
-			dbDreamMap.set(item.file, item);
+	for (const dream of dreamDatabase) {
+		if (dream.file === currentDreamFile.path || dream.name === currentDreamFile.basename) {
+			continue;
 		}
-	}
 
-	// 2. Scan all dream markdown files in dreamsSubfolder
-	const dreamsSubfolder = getDreamsSubfolder(app, settingsFromPath(currentDreamFile));
-	const allFiles = app.vault.getMarkdownFiles();
-	const dreamFiles = allFiles.filter(f => f.path.startsWith(dreamsSubfolder) && f.path !== currentDreamFile.path);
+		// Verify target dream file actually exists in vault!
+		const targetFile = app.vault.getAbstractFileByPath(dream.file);
+		if (!(targetFile instanceof TFile)) {
+			continue; // Skip deleted or missing dream files
+		}
 
-	for (const dreamFile of dreamFiles) {
-		const cache = app.metadataCache.getFileCache(dreamFile);
-		const frontmatterObj: Record<string, unknown> | undefined = cache?.frontmatter;
-		if (!frontmatterObj || frontmatterObj.type !== "dream") continue;
-
-		const extractEntities = (arr: unknown): string[] => {
-			if (!Array.isArray(arr)) return [];
-			return arr.map(x => {
-				const str = String(x || "").replace(/\[\[/g, "").replace(/\]\]/g, "").trim();
-				return str.charAt(0).toUpperCase() + str.slice(1);
-			}).filter(Boolean);
-		};
-
-		const noteEntities: string[] = [
-			...extractEntities(frontmatterObj.characters),
-			...extractEntities(frontmatterObj.places),
-			...extractEntities(frontmatterObj.objects),
-			...extractEntities(frontmatterObj.emotions),
-			...extractEntities(frontmatterObj.symbols),
-			...extractEntities(frontmatterObj.concepts),
-			...extractEntities(frontmatterObj.keywords)
-		];
-
-		const dbItem = dbDreamMap.get(dreamFile.path);
 		let vectorSim = 0;
-		if (currentVector && dbItem && dbItem.vector && dbItem.vector.length > 0) {
-			vectorSim = cosineSimilarity(currentVector, dbItem.vector);
+		if (currentVector && dream.vector && dream.vector.length > 0) {
+			vectorSim = cosineSimilarity(currentVector, dream.vector);
 		}
 
-		const mergedEntities = Array.from(new Set([
-			...noteEntities.map(e => e.toLowerCase()),
-			...((dbItem?.entities || []).map(e => e.toLowerCase()))
-		]));
-
+		const otherEntities = (dream.entities || []).map(e => e.toLowerCase());
 		const sharedEntities: string[] = [];
-		for (const entity of mergedEntities) {
+		for (const entity of otherEntities) {
 			if (curEntitySet.has(entity)) {
 				sharedEntities.push(entity);
 			}
 		}
 
-		const entitySim = mergedEntities.length > 0
-			? sharedEntities.length / Math.max(curEntitySet.size, mergedEntities.length)
+		const entitySim = (dream.entities || []).length > 0
+			? sharedEntities.length / Math.max(curEntitySet.size, dream.entities.length)
 			: 0;
 
 		const combinedScore = vectorSim > 0
@@ -434,14 +486,10 @@ export function analyzeDreamConnections(
 			: entitySim;
 
 		if (combinedScore > 0.10 || sharedEntities.length > 0) {
-			const dreamDate = (frontmatterObj && typeof frontmatterObj.date === "string")
-				? frontmatterObj.date
-				: (dbItem?.date || "");
-
 			results.push({
-				dreamFile: dreamFile.path,
-				dreamName: dreamFile.basename,
-				date: dreamDate,
+				dreamFile: dream.file,
+				dreamName: dream.name,
+				date: dream.date || "",
 				vectorSimilarity: vectorSim,
 				sharedEntities: sharedEntities.map(e => e.charAt(0).toUpperCase() + e.slice(1)),
 				score: combinedScore
@@ -451,29 +499,6 @@ export function analyzeDreamConnections(
 
 	results.sort((a, b) => b.score - a.score);
 	return results.slice(0, limit);
-}
-
-function settingsFromPath(file: TFile): DreamAnalyzerSettings {
-	let dreamsFolder = "Dreams";
-	const parts = file.path.split("/");
-	if (parts.length > 1) {
-		const idx = parts.indexOf("Сни");
-		if (idx > 0) {
-			dreamsFolder = parts.slice(0, idx).join("/");
-		} else {
-			dreamsFolder = parts[0];
-		}
-	}
-	return {
-		openaiApiKey: "",
-		openaiModel: "gpt-5-mini",
-		embeddingModel: "text-embedding-3-small",
-		dreamsFolder,
-		templateFilePath: "Templates/Dream Template.md",
-		similarityThreshold: 0.35,
-		similarityLimit: 40,
-		autoUpdateEmbeddings: true
-	};
 }
 
 export function formatDreamConnectionsMarkdown(connections: DreamConnectionResult[]): string {

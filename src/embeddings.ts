@@ -209,7 +209,8 @@ export async function getSimilarEntitiesContext(
 	);
 	if (matches.length === 0) return "";
 	const lines = matches.map(m => {
-		const aliasesText = m.item.aliases && m.item.aliases.length > 0 ? ` (aliases: ${m.item.aliases.join(", ")})` : "";
+		const cleanAliases = Array.isArray(m.item.aliases) ? m.item.aliases.filter(Boolean) : [];
+		const aliasesText = cleanAliases.length > 0 ? ` (aliases: ${cleanAliases.join(", ")})` : "";
 		return `- ${m.item.name} [Type: ${m.item.type || "concept"}]${aliasesText}: ${m.item.description || "No description"}`;
 	});
 	return lines.join("\n");
@@ -225,8 +226,12 @@ export async function updateEntityEmbeddings(
 	const entitiesFolder = getEntitiesSubfolder(app, settings);
 	const db = forceRebuildAll ? [] : await loadEmbeddingsDatabase(app, settings);
 	const dbMap = new Map<string, VectorDatabaseItem>();
+
 	for (const item of db) {
 		dbMap.set(item.file, item);
+		if (item.name) {
+			dbMap.set(item.name.toLowerCase(), item);
+		}
 	}
 
 	const allFiles = app.vault.getMarkdownFiles();
@@ -236,7 +241,15 @@ export async function updateEntityEmbeddings(
 		? entityFiles.filter(f => specificFilePaths.includes(f.path))
 		: entityFiles;
 
-	const toProcess: { file: TFile; textToEmbed: string; name: string; type: string; aliases: string[]; description: string }[] = [];
+	const toProcess: {
+		file: TFile;
+		textToEmbed: string;
+		name: string;
+		type: string;
+		aliases: string[];
+		description: string;
+		existingId?: string;
+	}[] = [];
 
 	for (const file of targetFiles) {
 		const cache = app.metadataCache.getFileCache(file);
@@ -245,12 +258,16 @@ export async function updateEntityEmbeddings(
 
 		const entityName = file.basename;
 		const entityType = typeof frontmatterObj.entity_type === "string" ? frontmatterObj.entity_type : "concept";
-		const aliases = Array.isArray(frontmatterObj.aliases) ? (frontmatterObj.aliases as unknown[]).map(x => String(x)) : [];
+		const rawAliases = Array.isArray(frontmatterObj.aliases) ? frontmatterObj.aliases : [];
+		const aliases = rawAliases.map(x => String(x || "")).filter(Boolean);
 		const description = typeof frontmatterObj.description === "string" ? frontmatterObj.description : "";
+		const existingEmbeddingId = typeof frontmatterObj.embedding_id === "string" ? frontmatterObj.embedding_id : "";
 
 		const textToEmbed = `${entityName}. ${description}. Aliases: ${aliases.join(", ")}`;
 
-		const existing = dbMap.get(file.path);
+		const existing = dbMap.get(file.path) || dbMap.get(entityName.toLowerCase());
+		const existingId = existing?.id || existingEmbeddingId;
+
 		if (!forceRebuildAll && existing && existing.textHash === simpleHash(textToEmbed)) {
 			continue;
 		}
@@ -261,7 +278,8 @@ export async function updateEntityEmbeddings(
 			name: entityName,
 			type: entityType,
 			aliases,
-			description
+			description,
+			existingId
 		});
 	}
 
@@ -281,8 +299,10 @@ export async function updateEntityEmbeddings(
 			if (!vec) continue;
 
 			const hash = simpleHash(item.textToEmbed);
+			const generatedId = item.existingId || `emb_${Date.now()}_${item.name.toLowerCase()}`;
+
 			const dbItem: VectorDatabaseItem = {
-				id: `entity_${item.file.basename}`,
+				id: generatedId,
 				file: item.file.path,
 				name: item.name,
 				type: item.type,
@@ -295,7 +315,7 @@ export async function updateEntityEmbeddings(
 			dbMap.set(item.file.path, dbItem);
 
 			await app.fileManager.processFrontMatter(item.file, (fmFront: DreamFrontmatter) => {
-				fmFront.embedding_status = "active";
+				fmFront.embedding_status = "done";
 				fmFront.embedding_id = dbItem.id;
 			});
 
@@ -303,7 +323,7 @@ export async function updateEntityEmbeddings(
 		}
 	}
 
-	const updatedDb = Array.from(dbMap.values());
+	const updatedDb = Array.from(new Set(dbMap.values()));
 	await saveEmbeddingsDatabase(app, settings, updatedDb);
 	return processedCount;
 }

@@ -556,7 +556,8 @@ async function getSimilarEntitiesContext(app, apiKey, settings, dreamEmbedding) 
   );
   if (matches.length === 0) return "";
   const lines = matches.map((m) => {
-    const aliasesText = m.item.aliases && m.item.aliases.length > 0 ? ` (aliases: ${m.item.aliases.join(", ")})` : "";
+    const cleanAliases = Array.isArray(m.item.aliases) ? m.item.aliases.filter(Boolean) : [];
+    const aliasesText = cleanAliases.length > 0 ? ` (aliases: ${cleanAliases.join(", ")})` : "";
     return `- ${m.item.name} [Type: ${m.item.type || "concept"}]${aliasesText}: ${m.item.description || "No description"}`;
   });
   return lines.join("\n");
@@ -567,6 +568,9 @@ async function updateEntityEmbeddings(app, apiKey, settings, forceRebuildAll = f
   const dbMap = /* @__PURE__ */ new Map();
   for (const item of db) {
     dbMap.set(item.file, item);
+    if (item.name) {
+      dbMap.set(item.name.toLowerCase(), item);
+    }
   }
   const allFiles = app.vault.getMarkdownFiles();
   const entityFiles = allFiles.filter((f) => f.path.startsWith(entitiesFolder));
@@ -578,10 +582,13 @@ async function updateEntityEmbeddings(app, apiKey, settings, forceRebuildAll = f
     if (!frontmatterObj || frontmatterObj.type !== "entity") continue;
     const entityName = file.basename;
     const entityType = typeof frontmatterObj.entity_type === "string" ? frontmatterObj.entity_type : "concept";
-    const aliases = Array.isArray(frontmatterObj.aliases) ? frontmatterObj.aliases.map((x) => String(x)) : [];
+    const rawAliases = Array.isArray(frontmatterObj.aliases) ? frontmatterObj.aliases : [];
+    const aliases = rawAliases.map((x) => String(x || "")).filter(Boolean);
     const description = typeof frontmatterObj.description === "string" ? frontmatterObj.description : "";
+    const existingEmbeddingId = typeof frontmatterObj.embedding_id === "string" ? frontmatterObj.embedding_id : "";
     const textToEmbed = `${entityName}. ${description}. Aliases: ${aliases.join(", ")}`;
-    const existing = dbMap.get(file.path);
+    const existing = dbMap.get(file.path) || dbMap.get(entityName.toLowerCase());
+    const existingId = existing?.id || existingEmbeddingId;
     if (!forceRebuildAll && existing && existing.textHash === simpleHash(textToEmbed)) {
       continue;
     }
@@ -591,7 +598,8 @@ async function updateEntityEmbeddings(app, apiKey, settings, forceRebuildAll = f
       name: entityName,
       type: entityType,
       aliases,
-      description
+      description,
+      existingId
     });
   }
   if (toProcess.length === 0) return 0;
@@ -606,8 +614,9 @@ async function updateEntityEmbeddings(app, apiKey, settings, forceRebuildAll = f
       const vec = embeddings[j];
       if (!vec) continue;
       const hash = simpleHash(item.textToEmbed);
+      const generatedId = item.existingId || `emb_${Date.now()}_${item.name.toLowerCase()}`;
       const dbItem = {
-        id: `entity_${item.file.basename}`,
+        id: generatedId,
         file: item.file.path,
         name: item.name,
         type: item.type,
@@ -618,13 +627,13 @@ async function updateEntityEmbeddings(app, apiKey, settings, forceRebuildAll = f
       };
       dbMap.set(item.file.path, dbItem);
       await app.fileManager.processFrontMatter(item.file, (fmFront) => {
-        fmFront.embedding_status = "active";
+        fmFront.embedding_status = "done";
         fmFront.embedding_id = dbItem.id;
       });
       processedCount++;
     }
   }
-  const updatedDb = Array.from(dbMap.values());
+  const updatedDb = Array.from(new Set(dbMap.values()));
   await saveEmbeddingsDatabase(app, settings, updatedDb);
   return processedCount;
 }
@@ -1619,6 +1628,7 @@ async function createOrUpdateEntities(app, result, dreamFile, settings) {
           settings
         );
         const newFile = await app.vault.create(path, bodyContent);
+        const newEmbeddingId = `emb_${Date.now()}_${safeName.toLowerCase()}`;
         await app.fileManager.processFrontMatter(newFile, (fm) => {
           fm.type = "entity";
           fm.entity_type = type.entity_type;
@@ -1631,7 +1641,7 @@ async function createOrUpdateEntities(app, result, dreamFile, settings) {
           fm.tags = [type.entity_type];
           fm.description = item.description || "";
           fm.embedding_status = "pending";
-          fm.embedding_id = "";
+          fm.embedding_id = newEmbeddingId;
         });
         modifiedPaths.push(path);
       }
@@ -1648,7 +1658,7 @@ async function ensureFolder2(app, path) {
 function makeEntityBodyContent(app, name, item, dreamName, settings) {
   const dreamsFolder = getDreamsSubfolder(app, settings);
   const entitiesSubfolder = getEntitiesSubfolder(app, settings);
-  return `# ${name}
+  return `# ${name.toLowerCase()}
 
 ## \u041E\u043F\u0438\u0441
 

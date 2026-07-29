@@ -421,6 +421,7 @@ async function createOrUpdateEntities(
 					settings
 				);
 				const newFile = await app.vault.create(path, bodyContent);
+				const newEmbeddingId = `emb_${Date.now()}_${safeName.toLowerCase()}`;
 
 				await app.fileManager.processFrontMatter(newFile, (fm: DreamFrontmatter) => {
 					fm.type = "entity";
@@ -437,7 +438,7 @@ async function createOrUpdateEntities(
 					fm.tags = [type.entity_type];
 					fm.description = item.description || "";
 					fm.embedding_status = "pending";
-					fm.embedding_id = "";
+					fm.embedding_id = newEmbeddingId;
 				});
 
 				modifiedPaths.push(path);
@@ -465,7 +466,7 @@ function makeEntityBodyContent(
 	const dreamsFolder = getDreamsSubfolder(app, settings);
 	const entitiesSubfolder = getEntitiesSubfolder(app, settings);
 
-	return `# ${name}
+	return `# ${name.toLowerCase()}
 
 ## Опис
 

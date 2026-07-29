@@ -3,7 +3,8 @@ import {
 	DreamAnalyzerSettings,
 	DreamAnalysisResult,
 	EntityItem,
-	ENTITY_TYPES
+	ENTITY_TYPES,
+	DreamFrontmatter
 } from "./types";
 import { getOpenAiApiKey, requestChatCompletion, getEmbedding } from "./api";
 import {
@@ -213,7 +214,7 @@ A short summary of the dream in 2-5 sentences in the dream's language.
 		const connectionsMarkdown = formatDreamConnectionsMarkdown(connections);
 
 		// 1. Оновлюємо frontmatter файлу сну
-		await app.fileManager.processFrontMatter(file, (fm) => {
+		await app.fileManager.processFrontMatter(file, (fm: DreamFrontmatter) => {
 			fm.type = "dream";
 			fm.entities_checked = true;
 
@@ -251,9 +252,8 @@ ${connectionsMarkdown}
 		// 3. Зберігаємо/оновлюємо вектор даного сну у dream_embeddings.json
 		const createdDate = moment().format("YYYY-MM-DD");
 		const cache = app.metadataCache.getFileCache(file);
-		const dreamDate = (cache && cache.frontmatter && cache.frontmatter.date)
-			? String(cache.frontmatter.date)
-			: createdDate;
+		const fm = cache?.frontmatter as DreamFrontmatter | undefined;
+		const dreamDate = (fm && fm.date) ? String(fm.date) : createdDate;
 
 		const updatedDreamDb = dreamDb.filter(d => d.file !== file.path && d.name !== file.basename);
 		updatedDreamDb.push({
@@ -344,9 +344,8 @@ async function createOrUpdateEntities(
 	const createdDate = moment().format("YYYY-MM-DD");
 
 	const cache = app.metadataCache.getFileCache(dreamFile);
-	const dreamDate = (cache && cache.frontmatter && cache.frontmatter.date)
-		? String(cache.frontmatter.date)
-		: createdDate;
+	const fmCache = cache?.frontmatter as DreamFrontmatter | undefined;
+	const dreamDate = (fmCache && fmCache.date) ? String(fmCache.date) : createdDate;
 
 	const baseFolder = getEntitiesSubfolder(app, settings);
 	await ensureFolder(app, baseFolder);
@@ -372,13 +371,13 @@ async function createOrUpdateEntities(
 			const existingFile = findExistingEntityFile(app, baseFolder, safeName);
 
 			if (existingFile instanceof TFile) {
-				await app.fileManager.processFrontMatter(existingFile, (fm) => {
+				await app.fileManager.processFrontMatter(existingFile, (fm: DreamFrontmatter) => {
 					fm.last_seen = dreamDate;
 					fm.embedding_status = "pending";
 
 					const dreamLink = `[[${dreamName}]]`;
 					if (!Array.isArray(fm.created_from)) {
-						fm.created_from = fm.created_from ? [fm.created_from] : [];
+						fm.created_from = fm.created_from ? [String(fm.created_from)] : [];
 					}
 					if (!fm.created_from.includes(dreamLink)) {
 						fm.created_from.push(dreamLink);
@@ -386,7 +385,7 @@ async function createOrUpdateEntities(
 					fm.dream_count = fm.created_from.length;
 
 					if (item.aliases && item.aliases.length > 0) {
-						if (!Array.isArray(fm.aliases)) fm.aliases = fm.aliases ? [fm.aliases] : [];
+						if (!Array.isArray(fm.aliases)) fm.aliases = fm.aliases ? [String(fm.aliases)] : [];
 						for (const alias of item.aliases) {
 							const cleanAlias = cleanEntityName(alias);
 							if (cleanAlias && !isStopEntity(cleanAlias) && !fm.aliases.includes(cleanAlias)) {
@@ -414,7 +413,7 @@ async function createOrUpdateEntities(
 				);
 				const newFile = await app.vault.create(path, bodyContent);
 
-				await app.fileManager.processFrontMatter(newFile, (fm) => {
+				await app.fileManager.processFrontMatter(newFile, (fm: DreamFrontmatter) => {
 					fm.type = "entity";
 					fm.entity_type = type.entity_type;
 					fm.created = createdDate;
@@ -498,7 +497,7 @@ TABLE WITHOUT ID
 file.link AS "Сутність",
 entity_type AS "Тип",
 length(filter(created_from, (d) => contains(this.created_from, d))) AS "Спільних снів"
-FROM "${entitiesFolder}"
+FROM "${entitiesSubfolder}"
 WHERE length(filter(created_from, (d) => contains(this.created_from, d))) > 0
 AND file.path != this.file.path
 SORT length(filter(created_from, (d) => contains(this.created_from, d))) DESC

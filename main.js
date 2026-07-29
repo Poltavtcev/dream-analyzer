@@ -275,22 +275,6 @@ var strings = {
     rebuildSuccess: "\u0413\u043E\u0442\u043E\u0432\u043E! \u0417\u0433\u0435\u043D\u0435\u0440\u043E\u0432\u0430\u043D\u043E/\u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E \u0435\u043C\u0431\u0435\u0434\u0456\u043D\u0433\u0456\u0432: {count}",
     dreamAlreadyExists: "\u041D\u043E\u0442\u0430\u0442\u043A\u0430 \u0441\u043D\u0443 \u043D\u0430 \u0446\u044E \u0434\u0430\u0442\u0443 \u0432\u0436\u0435 \u0456\u0441\u043D\u0443\u0454!",
     dreamCreated: "\u0421\u0442\u0432\u043E\u0440\u0435\u043D\u043E \u043D\u043E\u0432\u0443 \u043D\u043E\u0442\u0430\u0442\u043A\u0443 \u0441\u043D\u0443!",
-    // Days & Months
-    days: ["\u043D\u0435\u0434\u0456\u043B\u044F", "\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0441\u0435\u0440\u0435\u0434\u0430", "\u0447\u0435\u0442\u0432\u0435\u0440", "\u043F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0441\u0443\u0431\u043E\u0442\u0430"],
-    months: [
-      "01 - \u0441\u0456\u0447\u0435\u043D\u044C",
-      "02 - \u043B\u044E\u0442\u0438\u0439",
-      "03 - \u0431\u0435\u0440\u0435\u0437\u0435\u043D\u044C",
-      "04 - \u043A\u0432\u0456\u0442\u0435\u043D\u044C",
-      "05 - \u0442\u0440\u0430\u0432\u0435\u043D\u044C",
-      "06 - \u0447\u0435\u0440\u0432\u0435\u043D\u044C",
-      "07 - \u043B\u0438\u043F\u0435\u043D\u044C",
-      "08 - \u0441\u0435\u0440\u043F\u0435\u043D\u044C",
-      "09 - \u0432\u0435\u0440\u0435\u0441\u0435\u043D\u044C",
-      "10 - \u0436\u043E\u0432\u0442\u0435\u043D\u044C",
-      "11 - \u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434",
-      "12 - \u0433\u0440\u0443\u0434\u0435\u043D\u044C"
-    ],
     // Settings
     settingsTitle: "\u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F Dream Analyzer",
     apiKeyName: "OpenAI API Key",
@@ -369,22 +353,6 @@ var strings = {
     rebuildSuccess: "Done! Generated/updated embeddings: {count}",
     dreamAlreadyExists: "Dream note for this date already exists!",
     dreamCreated: "Created new dream note!",
-    // Days & Months
-    days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-    months: [
-      "01 - January",
-      "02 - February",
-      "03 - March",
-      "04 - April",
-      "05 - May",
-      "06 - June",
-      "07 - July",
-      "08 - August",
-      "09 - September",
-      "10 - October",
-      "11 - November",
-      "12 - December"
-    ],
     // Settings
     settingsTitle: "Dream Analyzer Settings",
     apiKeyName: "OpenAI API Key",
@@ -409,15 +377,55 @@ var strings = {
     rebuildButtonText: "Rebuild All Embeddings"
   }
 };
+var lists = {
+  uk: {
+    days: ["\u043D\u0435\u0434\u0456\u043B\u044F", "\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0441\u0435\u0440\u0435\u0434\u0430", "\u0447\u0435\u0442\u0432\u0435\u0440", "\u043F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0441\u0443\u0431\u043E\u0442\u0430"],
+    months: [
+      "01 - \u0441\u0456\u0447\u0435\u043D\u044C",
+      "02 - \u043B\u044E\u0442\u0438\u0439",
+      "03 - \u0431\u0435\u0440\u0435\u0437\u0435\u043D\u044C",
+      "04 - \u043A\u0432\u0456\u0442\u0435\u043D\u044C",
+      "05 - \u0442\u0440\u0430\u0432\u0435\u043D\u044C",
+      "06 - \u0447\u0435\u0440\u0432\u0435\u043D\u044C",
+      "07 - \u043B\u0438\u043F\u0435\u043D\u044C",
+      "08 - \u0441\u0435\u0440\u043F\u0435\u043D\u044C",
+      "09 - \u0432\u0435\u0440\u0435\u0441\u0435\u043D\u044C",
+      "10 - \u0436\u043E\u0432\u0442\u0435\u043D\u044C",
+      "11 - \u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434",
+      "12 - \u0433\u0440\u0443\u0434\u0435\u043D\u044C"
+    ]
+  },
+  en: {
+    days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+    months: [
+      "01 - January",
+      "02 - February",
+      "03 - March",
+      "04 - April",
+      "05 - May",
+      "06 - June",
+      "07 - July",
+      "08 - August",
+      "09 - September",
+      "10 - October",
+      "11 - November",
+      "12 - December"
+    ]
+  }
+};
 function t(key, vars) {
   const locale = getLocale();
-  let template = strings[locale] && strings[locale][key] || strings["en"][key] || strings["uk"][key] || "";
-  if (typeof template === "string" && vars) {
+  let template = strings[locale][key] || strings["en"][key] || strings["uk"][key] || "";
+  if (vars) {
     for (const [k, v] of Object.entries(vars)) {
       template = template.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
     }
   }
-  return typeof template === "string" ? template : "";
+  return template;
+}
+function tList(key) {
+  const locale = getLocale();
+  return lists[locale][key] || lists["en"][key] || lists["uk"][key] || [];
 }
 
 // src/embeddings.ts
@@ -578,7 +586,7 @@ async function getSimilarEntitiesContext(app, apiKey, settings, dreamEmbedding) 
   if (matches.length === 0) return "";
   const lines = matches.map((m) => {
     const aliasesText = m.item.aliases && m.item.aliases.length > 0 ? ` (aliases: ${m.item.aliases.join(", ")})` : "";
-    return `- ${m.item.name} [Type: ${m.item.type}]${aliasesText}: ${m.item.description || "No description"}`;
+    return `- ${m.item.name} [Type: ${m.item.type || "concept"}]${aliasesText}: ${m.item.description || "No description"}`;
   });
   return lines.join("\n");
 }
@@ -638,9 +646,9 @@ async function updateEntityEmbeddings(app, apiKey, settings, forceRebuildAll = f
         textHash: hash
       };
       dbMap.set(item.file.path, dbItem);
-      await app.fileManager.processFrontMatter(item.file, (fm) => {
-        fm.embedding_status = "active";
-        fm.embedding_id = dbItem.id;
+      await app.fileManager.processFrontMatter(item.file, (fmFront) => {
+        fmFront.embedding_status = "active";
+        fmFront.embedding_id = dbItem.id;
       });
       processedCount++;
     }
@@ -892,17 +900,17 @@ A short summary of the dream in 2-5 sentences in the dream's language.
     const dreamDb = await loadDreamEmbeddingsDatabase(app, settings);
     const connections = analyzeDreamConnections(file, dreamEmbedding, currentEntityNames, dreamDb);
     const connectionsMarkdown = formatDreamConnectionsMarkdown(connections);
-    await app.fileManager.processFrontMatter(file, (fm) => {
-      fm.type = "dream";
-      fm.entities_checked = true;
+    await app.fileManager.processFrontMatter(file, (fm2) => {
+      fm2.type = "dream";
+      fm2.entities_checked = true;
       const toLinks = (arr) => arr.map((x) => `[[${cleanEntityName(x.name)}]]`);
-      fm.characters = toLinks(result.characters);
-      fm.places = toLinks(result.places);
-      fm.objects = toLinks(result.objects);
-      fm.emotions = toLinks(result.emotions);
-      fm.symbols = toLinks(result.symbols);
-      fm.concepts = toLinks(result.concepts);
-      fm.keywords = result.keywords.map((x) => cleanEntityName(x));
+      fm2.characters = toLinks(result.characters);
+      fm2.places = toLinks(result.places);
+      fm2.objects = toLinks(result.objects);
+      fm2.emotions = toLinks(result.emotions);
+      fm2.symbols = toLinks(result.symbols);
+      fm2.concepts = toLinks(result.concepts);
+      fm2.keywords = result.keywords.map((x) => cleanEntityName(x));
     });
     const aiText = `
 # AI \u0430\u043D\u0430\u043B\u0456\u0437
@@ -926,7 +934,8 @@ ${aiText.trim()}`;
     await app.vault.modify(file, updatedContent);
     const createdDate = (0, import_obsidian4.moment)().format("YYYY-MM-DD");
     const cache = app.metadataCache.getFileCache(file);
-    const dreamDate = cache && cache.frontmatter && cache.frontmatter.date ? String(cache.frontmatter.date) : createdDate;
+    const fm = cache?.frontmatter;
+    const dreamDate = fm && fm.date ? String(fm.date) : createdDate;
     const updatedDreamDb = dreamDb.filter((d) => d.file !== file.path && d.name !== file.basename);
     updatedDreamDb.push({
       id: `dream_${file.basename}`,
@@ -994,7 +1003,8 @@ async function createOrUpdateEntities(app, result, dreamFile, settings) {
   const dreamName = dreamFile.basename;
   const createdDate = (0, import_obsidian4.moment)().format("YYYY-MM-DD");
   const cache = app.metadataCache.getFileCache(dreamFile);
-  const dreamDate = cache && cache.frontmatter && cache.frontmatter.date ? String(cache.frontmatter.date) : createdDate;
+  const fmCache = cache?.frontmatter;
+  const dreamDate = fmCache && fmCache.date ? String(fmCache.date) : createdDate;
   const baseFolder = getEntitiesSubfolder(app, settings);
   await ensureFolder(app, baseFolder);
   const modifiedPaths = [];
@@ -1012,14 +1022,14 @@ async function createOrUpdateEntities(app, result, dreamFile, settings) {
           fm.embedding_status = "pending";
           const dreamLink = `[[${dreamName}]]`;
           if (!Array.isArray(fm.created_from)) {
-            fm.created_from = fm.created_from ? [fm.created_from] : [];
+            fm.created_from = fm.created_from ? [String(fm.created_from)] : [];
           }
           if (!fm.created_from.includes(dreamLink)) {
             fm.created_from.push(dreamLink);
           }
           fm.dream_count = fm.created_from.length;
           if (item.aliases && item.aliases.length > 0) {
-            if (!Array.isArray(fm.aliases)) fm.aliases = fm.aliases ? [fm.aliases] : [];
+            if (!Array.isArray(fm.aliases)) fm.aliases = fm.aliases ? [String(fm.aliases)] : [];
             for (const alias of item.aliases) {
               const cleanAlias = cleanEntityName(alias);
               if (cleanAlias && !isStopEntity(cleanAlias) && !fm.aliases.includes(cleanAlias)) {
@@ -1114,7 +1124,7 @@ TABLE WITHOUT ID
 file.link AS "\u0421\u0443\u0442\u043D\u0456\u0441\u0442\u044C",
 entity_type AS "\u0422\u0438\u043F",
 length(filter(created_from, (d) => contains(this.created_from, d))) AS "\u0421\u043F\u0456\u043B\u044C\u043D\u0438\u0445 \u0441\u043D\u0456\u0432"
-FROM "${entitiesFolder}"
+FROM "${entitiesSubfolder}"
 WHERE length(filter(created_from, (d) => contains(this.created_from, d))) > 0
 AND file.path != this.file.path
 SORT length(filter(created_from, (d) => contains(this.created_from, d))) DESC
@@ -1205,8 +1215,8 @@ async function createDreamNoteForDate(app, settings, targetDateInput) {
     await leaf2.openFile(existingFile);
     return existingFile;
   }
-  const days = t("days");
-  const months = t("months");
+  const days = tList("days");
+  const months = tList("months");
   const dayOfWeek = days[now.day()] || "";
   const monthFormatted = months[now.month()] || "";
   const templateContent = `---
@@ -1274,7 +1284,7 @@ async function ensureDreamDashboard(app, settings) {
   const targetPath = enFile instanceof import_obsidian5.TFile ? enDashboardPath : ukDashboardPath;
   const existingFile = enFile instanceof import_obsidian5.TFile ? enFile : ukFile instanceof import_obsidian5.TFile ? ukFile : null;
   const dreamsSubfolder = getDreamsSubfolder(app, settings);
-  const entitiesSubfolder = getEntitiesSubfolder(app, settings);
+  const entitiesSubfolder2 = getEntitiesSubfolder(app, settings);
   const content = `${t("dashboardTitle")}
 
 ${t("dashboardCallout")}
@@ -1300,7 +1310,7 @@ file.link AS "\u0422\u0440\u0438\u0433\u0435\u0440 / \u041F\u043E\u043D\u044F\u0
 entity_type AS "\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F",
 dream_count AS "\u0427\u0430\u0441\u0442\u043E\u0442\u0430 \u0443 \u0441\u043D\u0430\u0445",
 last_seen AS "\u041E\u0441\u0442\u0430\u043D\u043D\u044F \u043F\u043E\u044F\u0432\u0430"
-FROM "${entitiesSubfolder}"
+FROM "${entitiesSubfolder2}"
 WHERE type = "entity" AND contains(list("character", "place", "symbol", "object"), entity_type)
 SORT dream_count DESC
 LIMIT 15
@@ -1313,7 +1323,7 @@ TABLE WITHOUT ID
 file.link AS "\u0415\u043C\u043E\u0446\u0456\u044F / \u0421\u0442\u0430\u043D",
 dream_count AS "\u041F\u043E\u044F\u0432 \u0443 \u0441\u043D\u0430\u0445",
 last_seen AS "\u041E\u0441\u0442\u0430\u043D\u043D\u0456\u0439 \u0441\u043E\u043D"
-FROM "${entitiesSubfolder}"
+FROM "${entitiesSubfolder2}"
 WHERE entity_type = "emotion"
 SORT dream_count DESC
 LIMIT 15
@@ -1327,7 +1337,7 @@ file.link AS "\u0406\u0434\u0435\u044F / \u041A\u043E\u043D\u0446\u0435\u043F\u0
 entity_type AS "\u0422\u0438\u043F",
 description AS "\u041E\u043F\u0438\u0441 \u0442\u0430 \u0441\u044E\u0436\u0435\u0442\u043D\u0438\u0439 \u043F\u043E\u0442\u0435\u043D\u0446\u0456\u0430\u043B",
 dream_count AS "\u0417\u0433\u0430\u0434\u043E\u043A \u0443 \u0441\u043D\u0430\u0445"
-FROM "${entitiesSubfolder}"
+FROM "${entitiesSubfolder2}"
 WHERE type = "entity" AND contains(list("concept", "character", "place"), entity_type) AND length(description) > 0
 SORT dream_count DESC
 LIMIT 20

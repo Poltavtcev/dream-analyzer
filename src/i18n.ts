@@ -86,14 +86,6 @@ const strings = {
 		dreamAlreadyExists: "Нотатка сну на цю дату вже існує!",
 		dreamCreated: "Створено нову нотатку сну!",
 
-		// Days & Months
-		days: ["неділя", "понеділок", "вівторок", "середа", "четвер", "п'ятниця", "субота"],
-		months: [
-			"01 - січень", "02 - лютий", "03 - березень", "04 - квітень",
-			"05 - травень", "06 - червень", "07 - липень", "08 - серпень",
-			"09 - вересень", "10 - жовтень", "11 - листопад", "12 - грудень"
-		],
-
 		// Settings
 		settingsTitle: "Налаштування Dream Analyzer",
 		apiKeyName: "OpenAI API Key",
@@ -178,14 +170,6 @@ const strings = {
 		dreamAlreadyExists: "Dream note for this date already exists!",
 		dreamCreated: "Created new dream note!",
 
-		// Days & Months
-		days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-		months: [
-			"01 - January", "02 - February", "03 - March", "04 - April",
-			"05 - May", "06 - June", "07 - July", "08 - August",
-			"09 - September", "10 - October", "11 - November", "12 - December"
-		],
-
 		// Settings
 		settingsTitle: "Dream Analyzer Settings",
 		apiKeyName: "OpenAI API Key",
@@ -211,13 +195,39 @@ const strings = {
 	}
 };
 
-export function t(key: keyof typeof strings["uk"], vars?: Record<string, string | number>): string {
+const lists = {
+	uk: {
+		days: ["неділя", "понеділок", "вівторок", "середа", "четвер", "п'ятниця", "субота"],
+		months: [
+			"01 - січень", "02 - лютий", "03 - березень", "04 - квітень",
+			"05 - травень", "06 - червень", "07 - липень", "08 - серпень",
+			"09 - вересень", "10 - жовтень", "11 - листопад", "12 - грудень"
+		]
+	},
+	en: {
+		days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+		months: [
+			"01 - January", "02 - February", "03 - March", "04 - April",
+			"05 - May", "06 - June", "07 - July", "08 - August",
+			"09 - September", "10 - October", "11 - November", "12 - December"
+		]
+	}
+};
+
+export type TranslationKey = keyof typeof strings["uk"];
+
+export function t(key: TranslationKey, vars?: Record<string, string | number>): string {
 	const locale = getLocale();
-	let template = (strings[locale] && strings[locale][key]) || strings["en"][key] || strings["uk"][key] || "";
-	if (typeof template === "string" && vars) {
+	let template = strings[locale][key] || strings["en"][key] || strings["uk"][key] || "";
+	if (vars) {
 		for (const [k, v] of Object.entries(vars)) {
 			template = template.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
 		}
 	}
-	return typeof template === "string" ? template : "";
+	return template;
+}
+
+export function tList(key: "days" | "months"): string[] {
+	const locale = getLocale();
+	return lists[locale][key] || lists["en"][key] || lists["uk"][key] || [];
 }

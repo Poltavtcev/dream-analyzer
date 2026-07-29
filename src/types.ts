@@ -45,6 +45,7 @@ export interface VectorDatabaseItem {
 	description?: string;
 	aliases?: string[];
 	vector: number[];
+	textHash?: string;
 }
 
 export interface DreamVectorDatabaseItem {
@@ -57,21 +58,17 @@ export interface DreamVectorDatabaseItem {
 }
 
 export interface SimilarEntity {
-	name: string;
-	type: string;
-	description: string;
-	aliases: string[];
-	file: string;
-	score: number;
+	item: VectorDatabaseItem;
+	similarity: number;
 }
 
 export interface DreamConnectionResult {
+	dreamFile: string;
 	dreamName: string;
-	dreamPath: string;
-	scorePercent: number;
-	embeddingSimilarity: number;
-	entityScore: number;
-	commonEntities: string[];
+	date: string;
+	vectorSimilarity: number;
+	sharedEntities: string[];
+	score: number;
 }
 
 export interface EntityTypeConfig {
@@ -88,3 +85,32 @@ export const ENTITY_TYPES: EntityTypeConfig[] = [
 	{ field: "emotions", folder: "Емоції", entity_type: "emotion" },
 	{ field: "concepts", folder: "Концепти", entity_type: "concept" }
 ];
+
+export interface DreamFrontmatter {
+	type?: string;
+	date?: string;
+	lucid?: boolean;
+	lucidity_level?: number;
+	vividness?: number;
+	sleep_quality?: number;
+	dream_signs?: string[];
+	emotions?: string[];
+	characters?: string[];
+	places?: string[];
+	objects?: string[];
+	symbols?: string[];
+	concepts?: string[];
+	keywords?: string[];
+	entities_checked?: boolean;
+	entity_type?: string;
+	created?: string;
+	last_seen?: string;
+	created_from?: string[];
+	dream_count?: number;
+	aliases?: string[];
+	tags?: string[];
+	description?: string;
+	embedding_status?: string;
+	embedding_id?: string;
+	[key: string]: unknown;
+}

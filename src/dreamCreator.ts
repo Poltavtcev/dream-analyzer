@@ -1,6 +1,6 @@
 import { App, TFile, Notice, Modal, Setting, moment } from "obsidian";
-import { DreamAnalyzerSettings, ENTITY_TYPES } from "./types";
-import { t, getLocale } from "./i18n";
+import { DreamAnalyzerSettings, ENTITY_TYPES, DreamFrontmatter } from "./types";
+import { t, tList, getLocale } from "./i18n";
 import { getDreamsSubfolder, getEntitiesSubfolder } from "./embeddings";
 
 async function ensureFolder(app: App, path: string): Promise<void> {
@@ -75,8 +75,8 @@ export async function createDreamNoteForDate(
 		return existingFile;
 	}
 
-	const days = t("days") as unknown as string[];
-	const months = t("months") as unknown as string[];
+	const days = tList("days");
+	const months = tList("months");
 
 	const dayOfWeek = days[now.day()] || "";
 	const monthFormatted = months[now.month()] || "";

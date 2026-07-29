@@ -4,7 +4,8 @@ import {
 	VectorDatabaseItem,
 	DreamVectorDatabaseItem,
 	SimilarEntity,
-	DreamConnectionResult
+	DreamConnectionResult,
+	DreamFrontmatter
 } from "./types";
 import { getBatchEmbeddings } from "./api";
 import { getLocale } from "./i18n";
@@ -50,7 +51,7 @@ export async function loadEmbeddingsDatabase(app: App, settings: DreamAnalyzerSe
 		const file = app.vault.getAbstractFileByPath(dbPath);
 		if (file instanceof TFile) {
 			const content = await app.vault.read(file);
-			const parsed = JSON.parse(content);
+			const parsed = JSON.parse(content) as VectorDatabaseItem[];
 			if (Array.isArray(parsed)) {
 				cachedEntityDb = { dbPath, data: parsed };
 				return parsed;
@@ -91,7 +92,7 @@ export async function loadDreamEmbeddingsDatabase(
 		const file = app.vault.getAbstractFileByPath(dbPath);
 		if (file instanceof TFile) {
 			const content = await app.vault.read(file);
-			const parsed = JSON.parse(content);
+			const parsed = JSON.parse(content) as DreamVectorDatabaseItem[];
 			if (Array.isArray(parsed)) {
 				cachedDreamDb = { dbPath, data: parsed };
 				return parsed;
@@ -209,7 +210,7 @@ export async function getSimilarEntitiesContext(
 	if (matches.length === 0) return "";
 	const lines = matches.map(m => {
 		const aliasesText = m.item.aliases && m.item.aliases.length > 0 ? ` (aliases: ${m.item.aliases.join(", ")})` : "";
-		return `- ${m.item.name} [Type: ${m.item.type}]${aliasesText}: ${m.item.description || "No description"}`;
+		return `- ${m.item.name} [Type: ${m.item.type || "concept"}]${aliasesText}: ${m.item.description || "No description"}`;
 	});
 	return lines.join("\n");
 }
@@ -239,7 +240,7 @@ export async function updateEntityEmbeddings(
 
 	for (const file of targetFiles) {
 		const cache = app.metadataCache.getFileCache(file);
-		const fm = cache?.frontmatter;
+		const fm = cache?.frontmatter as DreamFrontmatter | undefined;
 		if (!fm || fm.type !== "entity") continue;
 
 		const entityName = file.basename;
@@ -293,9 +294,9 @@ export async function updateEntityEmbeddings(
 
 			dbMap.set(item.file.path, dbItem);
 
-			await app.fileManager.processFrontMatter(item.file, (fm) => {
-				fm.embedding_status = "active";
-				fm.embedding_id = dbItem.id;
+			await app.fileManager.processFrontMatter(item.file, (fmFront: DreamFrontmatter) => {
+				fmFront.embedding_status = "active";
+				fmFront.embedding_id = dbItem.id;
 			});
 
 			processedCount++;

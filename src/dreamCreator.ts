@@ -77,7 +77,20 @@ export async function createDreamNoteForDate(
 	const dreamsFolder = getDreamsSubfolder(app, settings);
 	await ensureFolder(app, dreamsFolder);
 
-	const filePath = `${dreamsFolder}/${dateStr}.md`;
+	const yearFolder = now.format("YYYY");
+	const months = tList("months");
+	const monthFolderName = months[now.month()] || now.format("MM");
+
+	const yearFolderPath = `${dreamsFolder}/${yearFolder}`;
+	await ensureFolder(app, yearFolderPath);
+
+	const monthFolderPath = `${yearFolderPath}/${monthFolderName}`;
+	await ensureFolder(app, monthFolderPath);
+
+	const days = tList("days");
+	const dayName = days[now.day()] || "";
+	const fileName = `${now.format("D.MM.YYYY")} ${dayName}`.trim();
+	const filePath = `${monthFolderPath}/${fileName}.md`;
 
 	const existingFile = app.vault.getAbstractFileByPath(filePath);
 	if (existingFile instanceof TFile) {
@@ -87,42 +100,23 @@ export async function createDreamNoteForDate(
 		return existingFile;
 	}
 
-	const days = tList("days");
-	const dayOfWeek = days[now.day()] || "";
-
 	const templateContent = `---
 type: dream
 date: ${dateStr}
-tags:
-  - dream
 lucid: false
-lucidity_level: 0
-vividness: 3
-sleep_quality: 3
-dream_signs: []
-emotions: []
+entities_checked: false
 characters: []
 places: []
 objects: []
+emotions: []
 symbols: []
 concepts: []
 keywords: []
-entities_checked: false
 ---
 
-# Сон від ${dateStr} (${dayOfWeek})
-
-## 📝 Запис сновидіння
+# Сон
 
 > Введіть сюди свій текст сну...
-
-## 📊 Метадані та Оцінки
-
-- **Тип сну**: 🟥 Звичайний / 🟩 Усвідомлений (ОС)
-- **Рівень усвідомленості (0-5)**: 0
-- **Яскравість (1-5)**: 3
-- **Якість сну (1-5)**: 3
-- **Маркери сну (Dream Signs)**: -
 
 # AI аналіз
 
@@ -180,9 +174,7 @@ ${t("dashboardSectionStats")}
 TABLE WITHOUT ID
 length(rows) AS "Всього снів",
 length(filter(rows, (r) => r.lucid = true)) AS "Усвідомлених (ОС)",
-round(length(filter(rows, (r) => r.lucid = true)) / length(rows) * 100, 1) + "%" AS "% ОС",
-round(average(rows.vividness), 1) AS "Сер. яскравість",
-round(average(rows.sleep_quality), 1) AS "Сер. якість сну"
+round(length(filter(rows, (r) => r.lucid = true)) / length(rows) * 100, 1) + "%" AS "% ОС"
 FROM "${dreamsSubfolder}"
 WHERE type = "dream"
 \`\`\`
@@ -233,10 +225,7 @@ ${t("dashboardSectionLucid")}
 \`\`\`dataview
 TABLE WITHOUT ID
 file.link AS "Сон",
-date AS "Дата",
-lucidity_level AS "Рівень ОС (1-5)",
-vividness AS "Яскравість",
-dream_signs AS "Маркери усвідомлення"
+date AS "Дата"
 FROM "${dreamsSubfolder}"
 WHERE type = "dream" AND lucid = true
 SORT date DESC
@@ -249,7 +238,6 @@ TABLE WITHOUT ID
 file.link AS "Сон",
 date AS "Дата",
 choice(lucid, "ОС", "Звичайний") AS "Тип",
-vividness AS "Яскравість",
 characters AS "Персонажі",
 places AS "Локації",
 concepts AS "Концепти"
@@ -315,36 +303,20 @@ export async function exportTemplaterTemplate(app: App, settings: DreamAnalyzerS
 	const content = `---
 type: dream
 date: <% tp.file.creation_date("YYYY-MM-DD") %>
-tags:
-  - dream
 lucid: false
-lucidity_level: 0
-vividness: 3
-sleep_quality: 3
-dream_signs: []
-emotions: []
+entities_checked: false
 characters: []
 places: []
 objects: []
+emotions: []
 symbols: []
 concepts: []
 keywords: []
-entities_checked: false
 ---
 
-# Сон від <% tp.file.title %> (<% tp.file.creation_date("dddd") %>)
-
-## 📝 Запис сновидіння
+# Сон
 
 > Введіть сюди свій текст сну...
-
-## 📊 Метадані та Оцінки
-
-- **Тип сну**: 🟥 Звичайний / 🟩 Усвідомлений (ОС)
-- **Рівень усвідомленості (0-5)**: 0
-- **Яскравість (1-5)**: 3
-- **Якість сну (1-5)**: 3
-- **Маркери сну (Dream Signs)**: -
 
 # AI аналіз
 

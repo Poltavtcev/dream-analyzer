@@ -732,7 +732,17 @@ async function createDreamNoteForDate(app, settings, targetDateInput) {
   const dateStr = now.format("YYYY-MM-DD");
   const dreamsFolder = getDreamsSubfolder(app, settings);
   await ensureFolder(app, dreamsFolder);
-  const filePath = `${dreamsFolder}/${dateStr}.md`;
+  const yearFolder = now.format("YYYY");
+  const months = tList("months");
+  const monthFolderName = months[now.month()] || now.format("MM");
+  const yearFolderPath = `${dreamsFolder}/${yearFolder}`;
+  await ensureFolder(app, yearFolderPath);
+  const monthFolderPath = `${yearFolderPath}/${monthFolderName}`;
+  await ensureFolder(app, monthFolderPath);
+  const days = tList("days");
+  const dayName = days[now.day()] || "";
+  const fileName = `${now.format("D.MM.YYYY")} ${dayName}`.trim();
+  const filePath = `${monthFolderPath}/${fileName}.md`;
   const existingFile = app.vault.getAbstractFileByPath(filePath);
   if (existingFile instanceof import_obsidian4.TFile) {
     new import_obsidian4.Notice(t("dreamAlreadyExists"));
@@ -740,41 +750,23 @@ async function createDreamNoteForDate(app, settings, targetDateInput) {
     await leaf2.openFile(existingFile);
     return existingFile;
   }
-  const days = tList("days");
-  const dayOfWeek = days[now.day()] || "";
   const templateContent = `---
 type: dream
 date: ${dateStr}
-tags:
-  - dream
 lucid: false
-lucidity_level: 0
-vividness: 3
-sleep_quality: 3
-dream_signs: []
-emotions: []
+entities_checked: false
 characters: []
 places: []
 objects: []
+emotions: []
 symbols: []
 concepts: []
 keywords: []
-entities_checked: false
 ---
 
-# \u0421\u043E\u043D \u0432\u0456\u0434 ${dateStr} (${dayOfWeek})
-
-## \u{1F4DD} \u0417\u0430\u043F\u0438\u0441 \u0441\u043D\u043E\u0432\u0438\u0434\u0456\u043D\u043D\u044F
+# \u0421\u043E\u043D
 
 > \u0412\u0432\u0435\u0434\u0456\u0442\u044C \u0441\u044E\u0434\u0438 \u0441\u0432\u0456\u0439 \u0442\u0435\u043A\u0441\u0442 \u0441\u043D\u0443...
-
-## \u{1F4CA} \u041C\u0435\u0442\u0430\u0434\u0430\u043D\u0456 \u0442\u0430 \u041E\u0446\u0456\u043D\u043A\u0438
-
-- **\u0422\u0438\u043F \u0441\u043D\u0443**: \u{1F7E5} \u0417\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0439 / \u{1F7E9} \u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u0439 (\u041E\u0421)
-- **\u0420\u0456\u0432\u0435\u043D\u044C \u0443\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043E\u0441\u0442\u0456 (0-5)**: 0
-- **\u042F\u0441\u043A\u0440\u0430\u0432\u0456\u0441\u0442\u044C (1-5)**: 3
-- **\u042F\u043A\u0456\u0441\u0442\u044C \u0441\u043D\u0443 (1-5)**: 3
-- **\u041C\u0430\u0440\u043A\u0435\u0440\u0438 \u0441\u043D\u0443 (Dream Signs)**: -
 
 # AI \u0430\u043D\u0430\u043B\u0456\u0437
 
@@ -818,9 +810,7 @@ ${t("dashboardSectionStats")}
 TABLE WITHOUT ID
 length(rows) AS "\u0412\u0441\u044C\u043E\u0433\u043E \u0441\u043D\u0456\u0432",
 length(filter(rows, (r) => r.lucid = true)) AS "\u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u0445 (\u041E\u0421)",
-round(length(filter(rows, (r) => r.lucid = true)) / length(rows) * 100, 1) + "%" AS "% \u041E\u0421",
-round(average(rows.vividness), 1) AS "\u0421\u0435\u0440. \u044F\u0441\u043A\u0440\u0430\u0432\u0456\u0441\u0442\u044C",
-round(average(rows.sleep_quality), 1) AS "\u0421\u0435\u0440. \u044F\u043A\u0456\u0441\u0442\u044C \u0441\u043D\u0443"
+round(length(filter(rows, (r) => r.lucid = true)) / length(rows) * 100, 1) + "%" AS "% \u041E\u0421"
 FROM "${dreamsSubfolder}"
 WHERE type = "dream"
 \`\`\`
@@ -871,10 +861,7 @@ ${t("dashboardSectionLucid")}
 \`\`\`dataview
 TABLE WITHOUT ID
 file.link AS "\u0421\u043E\u043D",
-date AS "\u0414\u0430\u0442\u0430",
-lucidity_level AS "\u0420\u0456\u0432\u0435\u043D\u044C \u041E\u0421 (1-5)",
-vividness AS "\u042F\u0441\u043A\u0440\u0430\u0432\u0456\u0441\u0442\u044C",
-dream_signs AS "\u041C\u0430\u0440\u043A\u0435\u0440\u0438 \u0443\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F"
+date AS "\u0414\u0430\u0442\u0430"
 FROM "${dreamsSubfolder}"
 WHERE type = "dream" AND lucid = true
 SORT date DESC
@@ -887,7 +874,6 @@ TABLE WITHOUT ID
 file.link AS "\u0421\u043E\u043D",
 date AS "\u0414\u0430\u0442\u0430",
 choice(lucid, "\u041E\u0421", "\u0417\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0439") AS "\u0422\u0438\u043F",
-vividness AS "\u042F\u0441\u043A\u0440\u0430\u0432\u0456\u0441\u0442\u044C",
 characters AS "\u041F\u0435\u0440\u0441\u043E\u043D\u0430\u0436\u0456",
 places AS "\u041B\u043E\u043A\u0430\u0446\u0456\u0457",
 concepts AS "\u041A\u043E\u043D\u0446\u0435\u043F\u0442\u0438"
@@ -943,36 +929,20 @@ async function exportTemplaterTemplate(app, settings) {
   const content = `---
 type: dream
 date: <% tp.file.creation_date("YYYY-MM-DD") %>
-tags:
-  - dream
 lucid: false
-lucidity_level: 0
-vividness: 3
-sleep_quality: 3
-dream_signs: []
-emotions: []
+entities_checked: false
 characters: []
 places: []
 objects: []
+emotions: []
 symbols: []
 concepts: []
 keywords: []
-entities_checked: false
 ---
 
-# \u0421\u043E\u043D \u0432\u0456\u0434 <% tp.file.title %> (<% tp.file.creation_date("dddd") %>)
-
-## \u{1F4DD} \u0417\u0430\u043F\u0438\u0441 \u0441\u043D\u043E\u0432\u0438\u0434\u0456\u043D\u043D\u044F
+# \u0421\u043E\u043D
 
 > \u0412\u0432\u0435\u0434\u0456\u0442\u044C \u0441\u044E\u0434\u0438 \u0441\u0432\u0456\u0439 \u0442\u0435\u043A\u0441\u0442 \u0441\u043D\u0443...
-
-## \u{1F4CA} \u041C\u0435\u0442\u0430\u0434\u0430\u043D\u0456 \u0442\u0430 \u041E\u0446\u0456\u043D\u043A\u0438
-
-- **\u0422\u0438\u043F \u0441\u043D\u0443**: \u{1F7E5} \u0417\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u0439 / \u{1F7E9} \u0423\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u0438\u0439 (\u041E\u0421)
-- **\u0420\u0456\u0432\u0435\u043D\u044C \u0443\u0441\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043E\u0441\u0442\u0456 (0-5)**: 0
-- **\u042F\u0441\u043A\u0440\u0430\u0432\u0456\u0441\u0442\u044C (1-5)**: 3
-- **\u042F\u043A\u0456\u0441\u0442\u044C \u0441\u043D\u0443 (1-5)**: 3
-- **\u041C\u0430\u0440\u043A\u0435\u0440\u0438 \u0441\u043D\u0443 (Dream Signs)**: -
 
 # AI \u0430\u043D\u0430\u043B\u0456\u0437
 

@@ -3,287 +3,258 @@ import {
 	DreamAnalyzerSettings,
 	VectorDatabaseItem,
 	DreamVectorDatabaseItem,
-	SimilarEntity,
 	DreamConnectionResult,
-	DreamFrontmatter
+	ENTITY_TYPES
 } from "./types";
-import { getBatchEmbeddings, getEmbedding } from "./api";
-import { getLocale } from "./i18n";
 
-let cachedEntityDb: { dbPath: string; data: VectorDatabaseItem[] } | null = null;
-let cachedDreamDb: { dbPath: string; data: DreamVectorDatabaseItem[] } | null = null;
+const VECTOR_DB_FILENAME = "entity_embeddings.json";
+const DREAM_VECTOR_DB_FILENAME = "dream_embeddings.json";
+
+let memoryEntityDb: VectorDatabaseItem[] | null = null;
+let memoryDreamDb: DreamVectorDatabaseItem[] | null = null;
 
 export function clearMemoryCache(): void {
-	cachedEntityDb = null;
-	cachedDreamDb = null;
+	memoryEntityDb = null;
+	memoryDreamDb = null;
 }
 
-export function getDreamsSubfolder(app: App, settings: DreamAnalyzerSettings): string {
-	const base = normalizePath(settings.dreamsFolder.trim() || "Dreams");
-	const lang = getLocale();
-	const subname = lang === "uk" ? "Сни" : "Dreams";
-	return normalizePath(`${base}/${subname}`);
+export function getDreamsSubfolder(app: App, settings?: Partial<DreamAnalyzerSettings>): string {
+	const rawFolder = (settings && typeof settings.dreamsFolder === "string") ? settings.dreamsFolder : "Dreams";
+	const dreamsBase = rawFolder.trim().replace(/\/$/, "") || "Dreams";
+	return `${dreamsBase}/Сни`;
 }
 
-export function getEntitiesSubfolder(app: App, settings: DreamAnalyzerSettings): string {
-	const base = normalizePath(settings.dreamsFolder.trim() || "Dreams");
-	const lang = getLocale();
-	const subname = lang === "uk" ? "Сутності" : "Entities";
-	return normalizePath(`${base}/${subname}`);
+export function getEntitiesSubfolder(app: App, settings?: Partial<DreamAnalyzerSettings>): string {
+	const rawFolder = (settings && typeof settings.dreamsFolder === "string") ? settings.dreamsFolder : "Dreams";
+	const dreamsBase = rawFolder.trim().replace(/\/$/, "") || "Dreams";
+	return `${dreamsBase}/Сутності`;
 }
 
-export function getEmbeddingsPath(app: App, settings: DreamAnalyzerSettings): string {
-	const base = normalizePath(settings.dreamsFolder.trim() || "Dreams");
-	return normalizePath(`${base}/embeddings.json`);
+function getDreamsBase(settings?: Partial<DreamAnalyzerSettings>): string {
+	const rawFolder = (settings && typeof settings.dreamsFolder === "string") ? settings.dreamsFolder : "Dreams";
+	return rawFolder.trim().replace(/\/$/, "") || "Dreams";
 }
 
-export function getDreamEmbeddingsPath(app: App, settings: DreamAnalyzerSettings): string {
-	const base = normalizePath(settings.dreamsFolder.trim() || "Dreams");
-	return normalizePath(`${base}/dream_embeddings.json`);
-}
-
-export async function loadEmbeddingsDatabase(app: App, settings: DreamAnalyzerSettings): Promise<VectorDatabaseItem[]> {
-	const dbPath = getEmbeddingsPath(app, settings);
-	if (cachedEntityDb && cachedEntityDb.dbPath === dbPath) {
-		return cachedEntityDb.data;
+async function ensureFolder(app: App, path: string): Promise<void> {
+	const normalizedPath = normalizePath(path);
+	if (!app.vault.getAbstractFileByPath(normalizedPath)) {
+		await app.vault.createFolder(normalizedPath);
 	}
-	try {
-		const file = app.vault.getAbstractFileByPath(dbPath);
-		if (file instanceof TFile) {
+}
+
+export async function loadEntityEmbeddingsDatabase(app: App, settings: DreamAnalyzerSettings): Promise<VectorDatabaseItem[]> {
+	if (memoryEntityDb !== null) return memoryEntityDb;
+	const dreamsBase = getDreamsBase(settings);
+	const dbPath = `${dreamsBase}/${VECTOR_DB_FILENAME}`;
+
+	const file = app.vault.getAbstractFileByPath(dbPath);
+	if (file instanceof TFile) {
+		try {
 			const content = await app.vault.read(file);
 			const parsed = JSON.parse(content) as VectorDatabaseItem[];
 			if (Array.isArray(parsed)) {
-				cachedEntityDb = { dbPath, data: parsed };
-				return parsed;
+				memoryEntityDb = parsed.filter(item => {
+					if (!item.file) return false;
+					return !!app.vault.getAbstractFileByPath(item.file);
+				});
+				return memoryEntityDb;
 			}
+		} catch {
+			// Memory DB fallback
 		}
-	} catch {
-		// Silent catch for missing or invalid database file
 	}
-	cachedEntityDb = { dbPath, data: [] };
-	return [];
+	memoryEntityDb = [];
+	return memoryEntityDb;
 }
 
-export async function saveEmbeddingsDatabase(
+export async function saveEntityEmbeddingsDatabase(
 	app: App,
 	settings: DreamAnalyzerSettings,
-	data: VectorDatabaseItem[]
+	items: VectorDatabaseItem[]
 ): Promise<void> {
-	const dbPath = getEmbeddingsPath(app, settings);
-	cachedEntityDb = { dbPath, data };
-	const jsonContent = JSON.stringify(data, null, 2);
+	const dreamsBase = getDreamsBase(settings);
+	await ensureFolder(app, dreamsBase);
+	const dbPath = `${dreamsBase}/${VECTOR_DB_FILENAME}`;
+
+	const validItems = items.filter(item => {
+		if (!item.file) return false;
+		return !!app.vault.getAbstractFileByPath(item.file);
+	});
+
+	memoryEntityDb = validItems;
+
+	const content = JSON.stringify(validItems, null, 2);
 	const file = app.vault.getAbstractFileByPath(dbPath);
+
 	if (file instanceof TFile) {
-		await app.vault.modify(file, jsonContent);
+		await app.vault.modify(file, content);
 	} else {
-		await app.vault.create(dbPath, jsonContent);
+		await app.vault.create(dbPath, content);
 	}
 }
 
-export async function loadDreamEmbeddingsDatabase(
-	app: App,
-	settings: DreamAnalyzerSettings
-): Promise<DreamVectorDatabaseItem[]> {
-	const dbPath = getDreamEmbeddingsPath(app, settings);
-	if (cachedDreamDb && cachedDreamDb.dbPath === dbPath) {
-		return cachedDreamDb.data;
-	}
-	try {
-		const file = app.vault.getAbstractFileByPath(dbPath);
-		if (file instanceof TFile) {
+export const saveEmbeddingsDatabase = saveEntityEmbeddingsDatabase;
+
+export async function loadDreamEmbeddingsDatabase(app: App, settings: DreamAnalyzerSettings): Promise<DreamVectorDatabaseItem[]> {
+	if (memoryDreamDb !== null) return memoryDreamDb;
+	const dreamsBase = getDreamsBase(settings);
+	const dbPath = `${dreamsBase}/${DREAM_VECTOR_DB_FILENAME}`;
+
+	const file = app.vault.getAbstractFileByPath(dbPath);
+	if (file instanceof TFile) {
+		try {
 			const content = await app.vault.read(file);
 			const parsed = JSON.parse(content) as DreamVectorDatabaseItem[];
 			if (Array.isArray(parsed)) {
-				// Filter out non-existent dream files
-				const validParsed = parsed.filter(d => {
-					const abstractFile = app.vault.getAbstractFileByPath(d.file);
-					return abstractFile instanceof TFile;
+				memoryDreamDb = parsed.filter(item => {
+					if (!item.file) return false;
+					return !!app.vault.getAbstractFileByPath(item.file);
 				});
-				cachedDreamDb = { dbPath, data: validParsed };
-				return validParsed;
+				return memoryDreamDb;
 			}
+		} catch {
+			// Memory DB fallback
 		}
-	} catch {
-		// Silent catch for missing or invalid dream database file
 	}
-	cachedDreamDb = { dbPath, data: [] };
-	return [];
+	memoryDreamDb = [];
+	return memoryDreamDb;
 }
 
 export async function saveDreamEmbeddingsDatabase(
 	app: App,
 	settings: DreamAnalyzerSettings,
-	data: DreamVectorDatabaseItem[]
+	items: DreamVectorDatabaseItem[]
 ): Promise<void> {
-	const dbPath = getDreamEmbeddingsPath(app, settings);
-	// Filter out non-existent dream files before saving
-	const validData = data.filter(d => {
-		const abstractFile = app.vault.getAbstractFileByPath(d.file);
-		return abstractFile instanceof TFile;
+	const dreamsBase = getDreamsBase(settings);
+	await ensureFolder(app, dreamsBase);
+	const dbPath = `${dreamsBase}/${DREAM_VECTOR_DB_FILENAME}`;
+
+	const validItems = items.filter(item => {
+		if (!item.file) return false;
+		return !!app.vault.getAbstractFileByPath(item.file);
 	});
 
-	cachedDreamDb = { dbPath, data: validData };
-	const jsonContent = JSON.stringify(validData, null, 2);
+	memoryDreamDb = validItems;
+
+	const content = JSON.stringify(validItems, null, 2);
 	const file = app.vault.getAbstractFileByPath(dbPath);
+
 	if (file instanceof TFile) {
-		await app.vault.modify(file, jsonContent);
+		await app.vault.modify(file, content);
 	} else {
-		await app.vault.create(dbPath, jsonContent);
-	}
-}
-
-export async function syncUnindexedDreams(
-	app: App,
-	apiKey: string,
-	settings: DreamAnalyzerSettings
-): Promise<DreamVectorDatabaseItem[]> {
-	let dreamDb = await loadDreamEmbeddingsDatabase(app, settings);
-	const dreamsSubfolder = getDreamsSubfolder(app, settings);
-	const allFiles = app.vault.getMarkdownFiles();
-	const dreamFiles = allFiles.filter(f => f.path.startsWith(dreamsSubfolder));
-
-	const dbMap = new Map<string, DreamVectorDatabaseItem>();
-	for (const item of dreamDb) {
-		if (app.vault.getAbstractFileByPath(item.file) instanceof TFile) {
-			dbMap.set(item.file, item);
-		}
-	}
-
-	const missingFiles: TFile[] = [];
-	for (const file of dreamFiles) {
-		const cache = app.metadataCache.getFileCache(file);
-		const frontmatterObj: Record<string, unknown> | undefined = cache?.frontmatter;
-		if (!frontmatterObj || frontmatterObj.type !== "dream") continue;
-
-		if (!dbMap.has(file.path)) {
-			missingFiles.push(file);
-		}
-	}
-
-	if (missingFiles.length === 0) {
-		return Array.from(dbMap.values());
-	}
-
-	for (const file of missingFiles) {
-		try {
-			const content = await app.vault.read(file);
-			const vec = await getEmbedding(apiKey, settings.embeddingModel, content);
-
-			const cache = app.metadataCache.getFileCache(file);
-			const frontmatterObj: Record<string, unknown> | undefined = cache?.frontmatter;
-
-			const extractEntities = (arr: unknown): string[] => {
-				if (!Array.isArray(arr)) return [];
-				return arr.map(x => {
-					const str = String(x || "").replace(/\[\[/g, "").replace(/\]\]/g, "").trim();
-					return str.charAt(0).toUpperCase() + str.slice(1);
-				}).filter(Boolean);
-			};
-
-			const entities: string[] = frontmatterObj ? [
-				...extractEntities(frontmatterObj.characters),
-				...extractEntities(frontmatterObj.places),
-				...extractEntities(frontmatterObj.objects),
-				...extractEntities(frontmatterObj.emotions),
-				...extractEntities(frontmatterObj.symbols),
-				...extractEntities(frontmatterObj.concepts),
-				...extractEntities(frontmatterObj.keywords)
-			] : [];
-
-			const dreamDate = (frontmatterObj && typeof frontmatterObj.date === "string")
-				? frontmatterObj.date
-				: file.basename;
-
-			const item: DreamVectorDatabaseItem = {
-				id: `dream_${file.basename}`,
-				file: file.path,
-				name: file.basename,
-				date: dreamDate,
-				entities,
-				vector: vec
-			};
-
-			dbMap.set(file.path, item);
-		} catch {
-			// Continue on single file error
-		}
-	}
-
-	const updatedList = Array.from(dbMap.values());
-	await saveDreamEmbeddingsDatabase(app, settings, updatedList);
-	return updatedList;
-}
-
-export async function handleFileRename(
-	app: App,
-	file: TFile,
-	oldPath: string,
-	settings: DreamAnalyzerSettings
-): Promise<void> {
-	try {
-		const entityDb = await loadEmbeddingsDatabase(app, settings);
-		let entityChanged = false;
-		for (const item of entityDb) {
-			if (item.file === oldPath) {
-				item.file = file.path;
-				item.name = file.basename;
-				entityChanged = true;
-			}
-		}
-		if (entityChanged) {
-			await saveEmbeddingsDatabase(app, settings, entityDb);
-		}
-
-		const dreamDb = await loadDreamEmbeddingsDatabase(app, settings);
-		let dreamChanged = false;
-		for (const item of dreamDb) {
-			if (item.file === oldPath) {
-				item.file = file.path;
-				item.name = file.basename;
-				dreamChanged = true;
-			}
-		}
-		if (dreamChanged) {
-			await saveDreamEmbeddingsDatabase(app, settings, dreamDb);
-		}
-	} catch {
-		// Silent catch for rename handling
+		await app.vault.create(dbPath, content);
 	}
 }
 
 export function cosineSimilarity(vecA: number[], vecB: number[]): number {
-	if (!vecA || !vecB || vecA.length === 0 || vecB.length === 0 || vecA.length !== vecB.length) {
-		return 0;
-	}
-	let dotProduct = 0;
+	if (!vecA || !vecB || vecA.length !== vecB.length || vecA.length === 0) return 0;
+
+	let dot = 0;
 	let normA = 0;
 	let normB = 0;
+
 	for (let i = 0; i < vecA.length; i++) {
-		dotProduct += vecA[i] * vecB[i];
+		dot += vecA[i] * vecB[i];
 		normA += vecA[i] * vecA[i];
 		normB += vecB[i] * vecB[i];
 	}
+
 	if (normA === 0 || normB === 0) return 0;
-	return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+	return dot / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-export function searchSimilarEntities(
-	targetVector: number[],
-	database: VectorDatabaseItem[],
-	threshold: number = 0.35,
-	limit: number = 40
-): SimilarEntity[] {
-	if (!targetVector || database.length === 0) return [];
-	const results: SimilarEntity[] = [];
-	for (const item of database) {
-		if (!item.vector || item.vector.length === 0) continue;
-		const sim = cosineSimilarity(targetVector, item.vector);
-		if (sim >= threshold) {
-			results.push({ item, similarity: sim });
+function computeSimpleHash(text: string): string {
+	let hash = 0;
+	for (let i = 0; i < text.length; i++) {
+		const char = text.charCodeAt(i);
+		hash = (hash << 5) - hash + char;
+		hash |= 0;
+	}
+	return hash.toString(36);
+}
+
+export async function updateEntityEmbeddings(
+	app: App,
+	apiKey: string,
+	settings: DreamAnalyzerSettings,
+	forceAll: boolean = false
+): Promise<number> {
+	if (!apiKey) return 0;
+
+	const db = await loadEntityEmbeddingsDatabase(app, settings);
+	const dbMap = new Map<string, VectorDatabaseItem>();
+
+	for (const item of db) {
+		if (item.file && app.vault.getAbstractFileByPath(item.file)) {
+			dbMap.set(item.file, item);
 		}
 	}
-	results.sort((a, b) => b.similarity - a.similarity);
-	return results.slice(0, limit);
+
+	const baseEntitiesFolder = getEntitiesSubfolder(app, settings);
+	const allFiles = app.vault.getMarkdownFiles();
+	const entityFiles = allFiles.filter(f => f.path.startsWith(baseEntitiesFolder) && !f.name.startsWith("!"));
+
+	const getEmbeddingFn = (await import("./api")).getEmbedding;
+
+	let updatedCount = 0;
+	const updatedItems: VectorDatabaseItem[] = [];
+
+	for (const file of entityFiles) {
+		const cache = app.metadataCache.getFileCache(file);
+		const fm = cache?.frontmatter || {};
+
+		if (fm.type !== "entity") continue;
+
+		const name = file.basename;
+		const entityType = (fm.entity_type as string) || "concept";
+		const aliases = Array.isArray(fm.aliases) ? fm.aliases.map(a => String(a)) : [];
+		const description = (fm.description as string) || "";
+
+		const textToHash = `${name}|${entityType}|${aliases.join(",")}|${description}`;
+		const currentHash = computeSimpleHash(textToHash);
+
+		const existing = dbMap.get(file.path);
+
+		if (!forceAll && existing && existing.textHash === currentHash && existing.vector && existing.vector.length > 0) {
+			updatedItems.push(existing);
+			continue;
+		}
+
+		try {
+			const textToEmbed = `Сутність: ${name}. Тип: ${entityType}. Опис: ${description}. Синоніми: ${aliases.join(", ")}`;
+			const vector = await getEmbeddingFn(apiKey, (settings && settings.embeddingModel) || "text-embedding-3-small", textToEmbed);
+
+			const timestamp = Date.now().toString(36);
+			const safeName = name.toLowerCase().replace(/[^a-z0-9а-яєіїґ]/gi, "_");
+			const embeddingId = existing?.id || `emb_${timestamp}_${safeName}`;
+
+			const newItem: VectorDatabaseItem = {
+				id: embeddingId,
+				file: file.path,
+				name,
+				type: entityType,
+				aliases,
+				description,
+				vector,
+				textHash: currentHash
+			};
+
+			updatedItems.push(newItem);
+			updatedCount++;
+
+			await app.fileManager.processFrontMatter(file, (matter: Record<string, unknown>) => {
+				matter["embedding_status"] = "done";
+				matter["embedding_id"] = embeddingId;
+			});
+		} catch {
+			if (existing) {
+				updatedItems.push(existing);
+			}
+		}
+	}
+
+	await saveEntityEmbeddingsDatabase(app, settings, updatedItems);
+	return updatedCount;
 }
 
 export async function getSimilarEntitiesContext(
@@ -292,213 +263,173 @@ export async function getSimilarEntitiesContext(
 	settings: DreamAnalyzerSettings,
 	dreamEmbedding: number[]
 ): Promise<string> {
-	const db = await loadEmbeddingsDatabase(app, settings);
+	if (!dreamEmbedding || dreamEmbedding.length === 0) return "";
+
+	const db = await loadEntityEmbeddingsDatabase(app, settings);
 	if (db.length === 0) return "";
-	const matches = searchSimilarEntities(
-		dreamEmbedding,
-		db,
-		settings.similarityThreshold,
-		settings.similarityLimit
-	);
-	if (matches.length === 0) return "";
-	const lines = matches.map(m => {
-		const cleanAliases = Array.isArray(m.item.aliases) ? m.item.aliases.filter(Boolean) : [];
-		const aliasesText = cleanAliases.length > 0 ? ` (aliases: ${cleanAliases.join(", ")})` : "";
-		return `- ${m.item.name} [Type: ${m.item.type || "concept"}]${aliasesText}: ${m.item.description || "No description"}`;
+
+	const threshold = (settings && typeof settings.similarityThreshold === "number") ? settings.similarityThreshold : 0.35;
+	const limit = (settings && typeof settings.similarityLimit === "number") ? settings.similarityLimit : 40;
+
+	const scored: { item: VectorDatabaseItem; similarity: number }[] = [];
+
+	for (const item of db) {
+		if (!item.vector || item.vector.length === 0) continue;
+		const sim = cosineSimilarity(dreamEmbedding, item.vector);
+		if (sim >= threshold) {
+			scored.push({ item, similarity: sim });
+		}
+	}
+
+	scored.sort((a, b) => b.similarity - a.similarity);
+	const topItems = scored.slice(0, limit);
+
+	if (topItems.length === 0) return "";
+
+	const formatted = topItems.map(s => {
+		const it = s.item;
+		const aliasStr = it.aliases && it.aliases.length > 0 ? ` (синоніми: ${it.aliases.join(", ")})` : "";
+		const descStr = it.description ? ` - ${it.description}` : "";
+		return `- [${it.type}] ${it.name}${aliasStr}${descStr}`;
 	});
-	return lines.join("\n");
+
+	return formatted.join("\n");
 }
 
-export async function updateEntityEmbeddings(
+export async function syncUnindexedDreams(
+	app: App,
+	apiKey: string,
+	settings: DreamAnalyzerSettings
+): Promise<DreamVectorDatabaseItem[]> {
+	const dreamsDb = await loadDreamEmbeddingsDatabase(app, settings);
+	const dbMap = new Map<string, DreamVectorDatabaseItem>();
+
+	for (const item of dreamsDb) {
+		if (item.file && app.vault.getAbstractFileByPath(item.file)) {
+			dbMap.set(item.file, item);
+		}
+	}
+
+	const dreamsFolder = getDreamsSubfolder(app, settings);
+	const allFiles = app.vault.getMarkdownFiles();
+	const dreamFiles = allFiles.filter(f => f.path.startsWith(dreamsFolder) && f.extension === "md");
+
+	const getEmbeddingFn = (await import("./api")).getEmbedding;
+	let isDbChanged = false;
+	const updatedItems: DreamVectorDatabaseItem[] = [];
+
+	for (const file of dreamFiles) {
+		const cache = app.metadataCache.getFileCache(file);
+		const fm = (cache?.frontmatter || {}) as Record<string, unknown>;
+		if (fm.type !== "dream") continue;
+
+		const existing = dbMap.get(file.path);
+		if (existing && existing.vector && existing.vector.length > 0) {
+			updatedItems.push(existing);
+			continue;
+		}
+
+		if (!apiKey) continue;
+
+		try {
+			const dreamContent = await app.vault.read(file);
+			const vector = await getEmbeddingFn(apiKey, (settings && settings.embeddingModel) || "text-embedding-3-small", dreamContent);
+			const dateStr = (fm.date as string) || file.basename;
+
+			const allEntities: string[] = [];
+			for (const t of ENTITY_TYPES) {
+				const list = fm[t.field];
+				if (Array.isArray(list)) {
+					for (const e of list as unknown[]) {
+						const cleanName = String(e).replace(/^\[\[/, "").replace(/\]\]$/, "").trim();
+						if (cleanName) allEntities.push(cleanName);
+					}
+				}
+			}
+
+			const newItem: DreamVectorDatabaseItem = {
+				id: `dream_emb_${Date.now().toString(36)}_${file.basename}`,
+				file: file.path,
+				name: file.basename,
+				date: dateStr,
+				entities: Array.from(new Set(allEntities)),
+				vector
+			};
+
+			updatedItems.push(newItem);
+			isDbChanged = true;
+		} catch {
+			if (existing) {
+				updatedItems.push(existing);
+			}
+		}
+	}
+
+	if (isDbChanged) {
+		await saveDreamEmbeddingsDatabase(app, settings, updatedItems);
+	}
+
+	return updatedItems;
+}
+
+export async function analyzeDreamConnections(
 	app: App,
 	apiKey: string,
 	settings: DreamAnalyzerSettings,
-	forceRebuildAll: boolean = false,
-	specificFilePaths?: string[]
-): Promise<number> {
-	const entitiesFolder = getEntitiesSubfolder(app, settings);
-	const db = forceRebuildAll ? [] : await loadEmbeddingsDatabase(app, settings);
-	const dbMap = new Map<string, VectorDatabaseItem>();
-
-	for (const item of db) {
-		if (item.id && item.id.startsWith("entity_")) {
-			item.id = `emb_${Date.now()}_${item.name ? item.name.toLowerCase() : "entity"}`;
-		}
-		dbMap.set(item.file, item);
-		if (item.name) {
-			dbMap.set(item.name.toLowerCase(), item);
-		}
-	}
-
-	const allFiles = app.vault.getMarkdownFiles();
-	const entityFiles = allFiles.filter(f => f.path.startsWith(entitiesFolder));
-
-	const targetFiles = specificFilePaths && specificFilePaths.length > 0
-		? entityFiles.filter(f => specificFilePaths.includes(f.path))
-		: entityFiles;
-
-	const toProcess: {
-		file: TFile;
-		textToEmbed: string;
-		name: string;
-		type: string;
-		aliases: string[];
-		description: string;
-		existingId?: string;
-	}[] = [];
-
-	for (const file of targetFiles) {
-		const cache = app.metadataCache.getFileCache(file);
-		const frontmatterObj: Record<string, unknown> | undefined = cache?.frontmatter;
-		if (!frontmatterObj || frontmatterObj.type !== "entity") continue;
-
-		const entityName = file.basename;
-		const entityType = typeof frontmatterObj.entity_type === "string" ? frontmatterObj.entity_type : "concept";
-		const rawAliases = Array.isArray(frontmatterObj.aliases) ? frontmatterObj.aliases : [];
-		const aliases = rawAliases.map(x => String(x || "")).filter(Boolean);
-		const description = typeof frontmatterObj.description === "string" ? frontmatterObj.description : "";
-		let existingEmbeddingId = typeof frontmatterObj.embedding_id === "string" ? frontmatterObj.embedding_id : "";
-
-		if (existingEmbeddingId.startsWith("entity_")) {
-			existingEmbeddingId = "";
-		}
-
-		const textToEmbed = `${entityName}. ${description}. Aliases: ${aliases.join(", ")}`;
-
-		const existing = dbMap.get(file.path) || dbMap.get(entityName.toLowerCase());
-		const existingId = (existing && existing.id && !existing.id.startsWith("entity_")) ? existing.id : existingEmbeddingId;
-
-		if (!forceRebuildAll && existing && existing.textHash === simpleHash(textToEmbed) && existingId && !existingId.startsWith("entity_")) {
-			continue;
-		}
-
-		toProcess.push({
-			file,
-			textToEmbed,
-			name: entityName,
-			type: entityType,
-			aliases,
-			description,
-			existingId
-		});
-	}
-
-	if (toProcess.length === 0) return 0;
-
-	const BATCH_SIZE = 20;
-	let processedCount = 0;
-
-	for (let i = 0; i < toProcess.length; i += BATCH_SIZE) {
-		const batch = toProcess.slice(i, i + BATCH_SIZE);
-		const inputs = batch.map(b => b.textToEmbed);
-		const embeddings = await getBatchEmbeddings(apiKey, settings.embeddingModel, inputs);
-
-		for (let j = 0; j < batch.length; j++) {
-			const item = batch[j];
-			const vec = embeddings[j];
-			if (!vec) continue;
-
-			const hash = simpleHash(item.textToEmbed);
-			let generatedId = item.existingId;
-			if (!generatedId || generatedId.startsWith("entity_")) {
-				generatedId = `emb_${Date.now()}_${item.name.toLowerCase()}`;
-			}
-
-			const dbItem: VectorDatabaseItem = {
-				id: generatedId,
-				file: item.file.path,
-				name: item.name,
-				type: item.type,
-				aliases: item.aliases,
-				description: item.description,
-				vector: vec,
-				textHash: hash
-			};
-
-			dbMap.set(item.file.path, dbItem);
-
-			await app.fileManager.processFrontMatter(item.file, (fmFront: DreamFrontmatter) => {
-				fmFront.embedding_status = "done";
-				fmFront.embedding_id = dbItem.id;
-			});
-
-			processedCount++;
-		}
-	}
-
-	const updatedDb = Array.from(new Set(dbMap.values()));
-	await saveEmbeddingsDatabase(app, settings, updatedDb);
-	return processedCount;
-}
-
-function simpleHash(str: string): string {
-	let hash = 0;
-	for (let i = 0; i < str.length; i++) {
-		const char = str.charCodeAt(i);
-		hash = (hash << 5) - hash + char;
-		hash |= 0;
-	}
-	return hash.toString(36);
-}
-
-export function analyzeDreamConnections(
-	app: App,
 	currentDreamFile: TFile,
-	currentVector: number[],
-	currentEntities: string[],
-	dreamDatabase: DreamVectorDatabaseItem[],
-	limit: number = 5
-): DreamConnectionResult[] {
-	if (dreamDatabase.length === 0) return [];
+	currentDreamEmbedding: number[],
+	currentEntities: string[]
+): Promise<DreamConnectionResult[]> {
+	await syncUnindexedDreams(app, apiKey, settings);
+	const dreamsDb = await loadDreamEmbeddingsDatabase(app, settings);
+	if (dreamsDb.length === 0) return [];
+
+	const threshold = (settings && typeof settings.similarityThreshold === "number") ? settings.similarityThreshold : 0.35;
+
+	const currentEntitiesSet = new Set(
+		(currentEntities || []).map(e => e.replace(/^\[\[/, "").replace(/\]\]$/, "").trim().toLowerCase()).filter(Boolean)
+	);
+
 	const results: DreamConnectionResult[] = [];
-	const curEntitySet = new Set(currentEntities.map(e => e.toLowerCase()));
 
-	for (const dream of dreamDatabase) {
-		if (dream.file === currentDreamFile.path || dream.name === currentDreamFile.basename) {
-			continue;
-		}
+	for (const dream of dreamsDb) {
+		if (dream.file === currentDreamFile.path) continue;
 
-		// Verify target dream file actually exists in vault!
 		const targetFile = app.vault.getAbstractFileByPath(dream.file);
-		if (!(targetFile instanceof TFile)) {
-			continue; // Skip deleted or missing dream files
-		}
+		if (!targetFile) continue;
 
-		let vectorSim = 0;
-		if (currentVector && dream.vector && dream.vector.length > 0) {
-			vectorSim = cosineSimilarity(currentVector, dream.vector);
-		}
+		const vecSim = cosineSimilarity(currentDreamEmbedding, dream.vector);
 
-		const otherEntities = (dream.entities || []).map(e => e.toLowerCase());
-		const sharedEntities: string[] = [];
-		for (const entity of otherEntities) {
-			if (curEntitySet.has(entity)) {
-				sharedEntities.push(entity);
+		const dreamEntities = dream.entities || [];
+		const shared: string[] = [];
+
+		for (const entityName of dreamEntities) {
+			const cleanName = entityName.replace(/^\[\[/, "").replace(/\]\]$/, "").trim();
+			if (cleanName && currentEntitiesSet.has(cleanName.toLowerCase())) {
+				shared.push(cleanName);
 			}
 		}
 
-		const entitySim = (dream.entities || []).length > 0
-			? sharedEntities.length / Math.max(curEntitySet.size, dream.entities.length)
-			: 0;
+		const uniqueShared = Array.from(new Set(shared));
+		const sharedCount = uniqueShared.length;
+		const entitySim = Math.min(1.0, sharedCount / Math.max(1, currentEntitiesSet.size));
 
-		const combinedScore = vectorSim > 0
-			? (vectorSim * 0.5) + (entitySim * 0.5)
-			: entitySim;
+		const combinedScore = (vecSim * 0.5) + (entitySim * 0.5);
 
-		if (combinedScore > 0.10 || sharedEntities.length > 0) {
+		if (combinedScore >= threshold) {
 			results.push({
 				dreamFile: dream.file,
 				dreamName: dream.name,
-				date: dream.date || "",
-				vectorSimilarity: vectorSim,
-				sharedEntities: sharedEntities.map(e => e.charAt(0).toUpperCase() + e.slice(1)),
+				date: dream.date,
+				vectorSimilarity: vecSim,
+				sharedEntities: uniqueShared,
 				score: combinedScore
 			});
 		}
 	}
 
 	results.sort((a, b) => b.score - a.score);
-	return results.slice(0, limit);
+	return results.slice(0, 10);
 }
 
 export function formatDreamConnectionsMarkdown(connections: DreamConnectionResult[]): string {
@@ -507,10 +438,14 @@ export function formatDreamConnectionsMarkdown(connections: DreamConnectionResul
 	}
 	const lines = connections.map(conn => {
 		const percent = Math.round(conn.score * 100);
-		const sharedText = conn.sharedEntities.length > 0
-			? ` (спільні сутності: ${conn.sharedEntities.map(e => `[[${e}]]`).join(", ")})`
+		const uniqueEntities = Array.from(new Set(conn.sharedEntities.filter(Boolean)));
+		const sharedText = uniqueEntities.length > 0
+			? ` (спільні сутності: ${uniqueEntities.map(e => `[[${e}]]`).join(", ")})`
 			: "";
-		const dateText = conn.date ? ` [${conn.date}]` : "";
+
+		const hasDateInName = conn.date && conn.dreamName.includes(conn.date);
+		const dateText = (conn.date && !hasDateInName) ? ` (${conn.date})` : "";
+
 		return `- [[${conn.dreamName}]]${dateText} — схожість ${percent}%${sharedText}`;
 	});
 	return lines.join("\n");

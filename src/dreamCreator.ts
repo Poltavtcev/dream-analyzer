@@ -173,10 +173,11 @@ ${t("dashboardSectionStats")}
 \`\`\`dataview
 TABLE WITHOUT ID
 length(rows) AS "Всього снів",
-length(filter(rows, (r) => r.lucid = true)) AS "Усвідомлених (ОС)",
-round(length(filter(rows, (r) => r.lucid = true)) / length(rows) * 100, 1) + "%" AS "% ОС"
+length(filter(rows, (r) => r.lucid)) AS "Усвідомлених (ОС)",
+round(length(filter(rows, (r) => r.lucid)) / length(rows) * 100, 1) + "%" AS "% ОС"
 FROM "${dreamsSubfolder}"
 WHERE type = "dream"
+GROUP BY type
 \`\`\`
 
 ${t("dashboardSectionSigns")}
@@ -256,38 +257,65 @@ LIMIT 10
 }
 
 export async function ensureEntityIndexes(app: App, settings: DreamAnalyzerSettings): Promise<void> {
-	const baseFolder = getEntitiesSubfolder(app, settings);
-	await ensureFolder(app, baseFolder);
-
+	const dreamsBase = settings.dreamsFolder.trim().replace(/\/$/, "") || "Dreams";
 	const lang = getLocale();
-	const indexFileName = lang === "uk" ? "! Індекс.md" : "! Indexes.md";
+	const indexFolderSubname = lang === "uk" ? "Індекс" : "Index";
+	const indexFolderPath = `${dreamsBase}/${indexFolderSubname}`;
 
+	await ensureFolder(app, indexFolderPath);
+
+	const baseEntitiesFolder = getEntitiesSubfolder(app, settings);
+
+	// Clean up old "! Індекс.md" files if created inside category folders by previous versions using trashFile
 	for (const type of ENTITY_TYPES) {
-		const categoryFolder = `${baseFolder}/${type.folder}`;
-		await ensureFolder(app, categoryFolder);
+		const categoryFolder = `${baseEntitiesFolder}/${type.folder}`;
+		const oldPath = `${categoryFolder}/! Індекс.md`;
+		const oldFile = app.vault.getAbstractFileByPath(oldPath);
+		if (oldFile instanceof TFile) {
+			await app.fileManager.trashFile(oldFile);
+		}
+	}
 
-		const indexPath = `${categoryFolder}/${indexFileName}`;
-		const existingFile = app.vault.getAbstractFileByPath(indexPath);
+	const indexFilesInfo = lang === "uk" ? [
+		{ name: "Індекс персонажів.md", header: "# Персонажі", folder: "Персонажі" },
+		{ name: "Індекс місць.md", header: "# Місця", folder: "Місця" },
+		{ name: "Індекс предметів.md", header: "# Предмети", folder: "Предмети" },
+		{ name: "Індекс емоцій.md", header: "# Емоції", folder: "Емоції" },
+		{ name: "Індекс символів.md", header: "# Символи", folder: "Символи" },
+		{ name: "Індекс концептів.md", header: "# Концепти", folder: "Концепти" },
+		{ name: "Всі сутності.md", header: "# Всі сутності", folder: "" }
+	] : [
+		{ name: "Character Index.md", header: "# Characters", folder: "Characters" },
+		{ name: "Place Index.md", header: "# Places", folder: "Places" },
+		{ name: "Object Index.md", header: "# Objects", folder: "Objects" },
+		{ name: "Emotion Index.md", header: "# Emotions", folder: "Emotions" },
+		{ name: "Symbol Index.md", header: "# Symbols", folder: "Symbols" },
+		{ name: "Concept Index.md", header: "# Concepts", folder: "Concepts" },
+		{ name: "All Entities.md", header: "# All Entities", folder: "" }
+	];
 
-		const indexContent = `# Індекс: ${type.folder}
+	for (const info of indexFilesInfo) {
+		const filePath = `${indexFolderPath}/${info.name}`;
+		const targetFromFolder = info.folder ? `${baseEntitiesFolder}/${info.folder}` : baseEntitiesFolder;
+
+		const indexContent = `${info.header}
 
 \`\`\`dataview
-TABLE WITHOUT ID
-file.link AS "Назва",
-aliases AS "Аліаси / Синоніми",
-description AS "Короткий опис",
-dream_count AS "Появ у снах",
+TABLE
+entity_type AS "Тип",
+dream_count AS "Снів",
 last_seen AS "Остання поява"
-FROM "${categoryFolder}"
-WHERE type = "entity" AND file.name != "${indexFileName.replace(".md", "")}"
+FROM "${targetFromFolder}"
+WHERE type = "entity"
 SORT dream_count DESC
 \`\`\`
 `;
 
+		const existingFile = app.vault.getAbstractFileByPath(filePath);
 		if (existingFile instanceof TFile) {
 			await app.vault.modify(existingFile, indexContent);
 		} else {
-			await app.vault.create(indexPath, indexContent);
+			await app.vault.create(filePath, indexContent);
 		}
 	}
 }

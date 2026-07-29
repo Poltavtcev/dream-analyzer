@@ -1,4 +1,4 @@
-import { App, TFile, Notice, moment } from "obsidian";
+import { App, TFile, Notice, moment, normalizePath } from "obsidian";
 import {
 	DreamAnalyzerSettings,
 	DreamAnalysisResult,
@@ -63,6 +63,10 @@ class ProgressNotice {
 		this.updateText();
 	}
 
+	getElapsedSeconds(): number {
+		return Math.round((Date.now() - this.startTime) / 1000);
+	}
+
 	private startTimer() {
 		this.timerId = window.setInterval(() => {
 			this.updateText();
@@ -70,8 +74,13 @@ class ProgressNotice {
 	}
 
 	private updateText() {
-		const elapsedSec = Math.floor((Date.now() - this.startTime) / 1000);
-		this.notice.setMessage(`[${this.step}/${this.totalSteps}] ${this.currentMessage} (${elapsedSec}s)`);
+		const elapsed = this.getElapsedSeconds();
+		const message = `Аналіз сну [${this.step}/${this.totalSteps}]: ${this.currentMessage} (${elapsed}с)`;
+
+		const noticeEl = (this.notice as unknown as { noticeEl: HTMLElement }).noticeEl;
+		if (noticeEl) {
+			noticeEl.setText(message);
+		}
 	}
 
 	close() {
@@ -81,10 +90,36 @@ class ProgressNotice {
 		}
 		this.notice.hide();
 	}
+}
 
-	getElapsedSeconds(): number {
-		return Math.floor((Date.now() - this.startTime) / 1000);
+export function extractDreamTextOnly(fullFileContent: string): string {
+	// Strip YAML frontmatter if present
+	let body = fullFileContent;
+	if (body.startsWith("---")) {
+		const endIdx = body.indexOf("---", 3);
+		if (endIdx !== -1) {
+			body = body.slice(endIdx + 3);
+		}
 	}
+
+	// Cut off previous "# AI аналіз" section if present
+	const aiSectionIdx = body.indexOf("# AI аналіз");
+	if (aiSectionIdx !== -1) {
+		body = body.slice(0, aiSectionIdx);
+	}
+
+	// Remove standard headers like "# Сон" or "# Dream"
+	body = body.replace(/^#\s*Сон\s*$/gm, "");
+	body = body.replace(/^#\s*Dream\s*$/gm, "");
+
+	// Clean up placeholder text if user forgot to remove it
+	body = body.replace(/>\s*Введіть сюди свій текст сну\.\.\./gi, "");
+	body = body.replace(/>\s*Enter your dream text here\.\.\./gi, "");
+
+	// Strip blockquote markers '>' so OpenAI receives clean prose
+	body = body.replace(/^>\s?/gm, "");
+
+	return body.trim();
 }
 
 export async function analyzeDream(app: App, file: TFile, settings: DreamAnalyzerSettings): Promise<void> {
@@ -102,12 +137,19 @@ export async function analyzeDream(app: App, file: TFile, settings: DreamAnalyze
 		return;
 	}
 
+	const fullContent = await app.vault.read(file);
+	const userDreamText = extractDreamTextOnly(fullContent);
+
+	if (!userDreamText || userDreamText.length < 10) {
+		new Notice("Текст сну занадто короткий або відсутній! Заповніть опис сну у нотатці.");
+		return;
+	}
+
 	const progress = new ProgressNotice(5);
 
 	try {
 		progress.setStep(1, "Генерація векторних даних сну...");
-		const dreamContent = await app.vault.read(file);
-		const dreamEmbedding = await getEmbedding(apiKey, settings.embeddingModel, dreamContent);
+		const dreamEmbedding = await getEmbedding(apiKey, settings.embeddingModel, userDreamText);
 
 		progress.setStep(2, "Пошук схожих сутностей...");
 		const similarEntities = await getSimilarEntitiesContext(app, apiKey, settings, dreamEmbedding);
@@ -193,7 +235,7 @@ A short summary of the dream in 2-5 sentences in the dream's language.
 			apiKey,
 			settings.openaiModel,
 			systemPrompt,
-			dreamContent
+			userDreamText
 		);
 
 		const result: DreamAnalysisResult = {
@@ -218,8 +260,7 @@ A short summary of the dream in 2-5 sentences in the dream's language.
 			...result.concepts
 		].map(e => cleanEntityName(e.name)).filter(Boolean);
 
-		const dreamDb = await syncUnindexedDreams(app, apiKey, settings);
-		const connections = analyzeDreamConnections(app, file, dreamEmbedding, currentEntityNames, dreamDb);
+		const connections = await analyzeDreamConnections(app, apiKey, settings, file, dreamEmbedding, currentEntityNames);
 		const connectionsMarkdown = formatDreamConnectionsMarkdown(connections);
 
 		// 1. Оновлюємо frontmatter файлу сну
@@ -264,6 +305,7 @@ ${connectionsMarkdown}
 		const frontmatterObj: Record<string, unknown> | undefined = cache?.frontmatter;
 		const dreamDate = typeof frontmatterObj?.date === "string" ? frontmatterObj.date : createdDate;
 
+		const dreamDb = await syncUnindexedDreams(app, apiKey, settings);
 		const updatedDreamDb = dreamDb.filter(d => d.file !== file.path && d.name !== file.basename);
 		updatedDreamDb.push({
 			id: `dream_${file.basename}`,
@@ -278,7 +320,7 @@ ${connectionsMarkdown}
 		// 4. Пакетне оновлення ембедінгів сутностей у embeddings.json
 		if (settings.autoUpdateEmbeddings && modifiedEntityPaths.length > 0) {
 			progress.setStep(5, "Пакетне оновлення векторних ембедінгів...");
-			await updateEntityEmbeddings(app, apiKey, settings, false, modifiedEntityPaths);
+			await updateEntityEmbeddings(app, apiKey, settings, false);
 		}
 
 		const totalSec = progress.getElapsedSeconds();
@@ -299,48 +341,32 @@ function normalizeEntityArray(value: unknown): EntityItem[] {
 			return { name: cleaned, description: "", aliases: [] };
 		} else if (typeof item === "object" && item !== null) {
 			const obj = item as Record<string, unknown>;
-			const cleaned = cleanEntityName(obj.name);
+			const rawName = typeof obj.name === "string" ? obj.name : "";
+			const cleaned = cleanEntityName(rawName);
+			const description = typeof obj.description === "string" ? obj.description.trim() : "";
 			const aliases = Array.isArray(obj.aliases)
-				? obj.aliases.map(a => cleanEntityName(a)).filter(Boolean)
+				? obj.aliases.map(a => cleanEntityName(String(a))).filter(Boolean)
 				: [];
-			return {
-				name: cleaned,
-				description: typeof obj.description === "string" ? obj.description : "",
-				aliases
-			};
+			return { name: cleaned, description, aliases };
 		}
 		return { name: "", description: "", aliases: [] };
-	})
-	.filter(item => item.name.length > 0 && !isStopEntity(item.name));
+	}).filter(item => Boolean(item.name) && !isStopEntity(item.name));
 }
 
 function normalizeStringArray(value: unknown): string[] {
 	if (!Array.isArray(value)) return [];
-	return value.map(x => cleanEntityName(x)).filter(x => x.length > 0 && !isStopEntity(x));
+	return value
+		.map(item => cleanEntityName(String(item)))
+		.filter(item => Boolean(item) && !isStopEntity(item));
 }
 
-export function cleanEntityName(item: unknown): string {
-	let name = typeof item === "object" && item !== null ? (item as { name?: unknown }).name : item;
-	let str = String(name || "")
-		.replace(/\[\[/g, "")
-		.replace(/\]\]/g, "")
-		.replace(/[/\\:*?"<>|]/g, "")
-		.replace(/\s+/g, " ")
+function cleanEntityName(name: string): string {
+	if (!name) return "";
+	return name
+		.replace(/^\[\[/, "")
+		.replace(/\]\]$/, "")
+		.replace(/[\\/:*?"<>|]/g, "")
 		.trim();
-	if (!str) return "";
-	return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-function findExistingEntityFile(app: App, baseFolder: string, safeName: string): TFile | null {
-	for (const type of ENTITY_TYPES) {
-		const categoryFolderPath = `${baseFolder}/${type.folder}`;
-		const candidatePath = `${categoryFolderPath}/${safeName}.md`;
-		const file = app.vault.getAbstractFileByPath(candidatePath);
-		if (file instanceof TFile) {
-			return file;
-		}
-	}
-	return null;
 }
 
 async function createOrUpdateEntities(
@@ -349,99 +375,82 @@ async function createOrUpdateEntities(
 	dreamFile: TFile,
 	settings: DreamAnalyzerSettings
 ): Promise<string[]> {
-	const dreamName = dreamFile.basename;
-	const createdDate = getMoment().format("YYYY-MM-DD");
-
-	const cache = app.metadataCache.getFileCache(dreamFile);
-	const frontmatterObj: Record<string, unknown> | undefined = cache?.frontmatter;
-	const dreamDate = typeof frontmatterObj?.date === "string" ? frontmatterObj.date : createdDate;
-
-	const baseFolder = getEntitiesSubfolder(app, settings);
-	await ensureFolder(app, baseFolder);
-
 	const modifiedPaths: string[] = [];
+	const baseEntitiesFolder = getEntitiesSubfolder(app, settings);
 
-	for (const type of ENTITY_TYPES) {
-		const folderPath = `${baseFolder}/${type.folder}`;
-		await ensureFolder(app, folderPath);
+	for (const typeInfo of ENTITY_TYPES) {
+		const items = result[typeInfo.field];
+		if (!items || items.length === 0) continue;
 
-		const items: EntityItem[] = type.field === "characters" ? result.characters
-			: type.field === "places" ? result.places
-			: type.field === "objects" ? result.objects
-			: type.field === "emotions" ? result.emotions
-			: type.field === "symbols" ? result.symbols
-			: result.concepts;
+		const targetFolder = `${baseEntitiesFolder}/${typeInfo.folder}`;
+		await ensureFolder(app, targetFolder);
 
 		for (const item of items) {
-			const safeName = cleanEntityName(item.name);
-			if (!safeName || isStopEntity(safeName)) continue;
+			if (isStopEntity(item.name)) continue;
 
-			// Check if entity note with this name ALREADY EXISTS anywhere in baseFolder
-			const existingFile = findExistingEntityFile(app, baseFolder, safeName);
+			const filePath = `${targetFolder}/${item.name}.md`;
+			const existingFile = app.vault.getAbstractFileByPath(filePath);
 
 			if (existingFile instanceof TFile) {
 				await app.fileManager.processFrontMatter(existingFile, (fm: DreamFrontmatter) => {
-					fm.last_seen = dreamDate;
-					fm.embedding_status = "pending";
+					fm.type = "entity";
+					fm.entity_type = typeInfo.entity_type;
+					fm.last_seen = getMoment().format("YYYY-MM-DD");
 
-					const dreamLink = `[[${dreamName}]]`;
-					if (!Array.isArray(fm.created_from)) {
-						fm.created_from = fm.created_from ? [String(fm.created_from)] : [];
+					const dreamsList = Array.isArray(fm.created_from) ? fm.created_from.map(String) : [];
+					const dreamLink = `[[${dreamFile.basename}]]`;
+					if (!dreamsList.includes(dreamLink)) {
+						dreamsList.push(dreamLink);
 					}
-					if (!fm.created_from.includes(dreamLink)) {
-						fm.created_from.push(dreamLink);
-					}
-					fm.dream_count = fm.created_from.length;
+					fm.created_from = dreamsList;
+					fm.dream_count = dreamsList.length;
 
-					if (item.aliases && item.aliases.length > 0) {
-						if (!Array.isArray(fm.aliases)) fm.aliases = fm.aliases ? [String(fm.aliases)] : [];
+					if (item.aliases.length > 0) {
+						const currentAliases = Array.isArray(fm.aliases) ? fm.aliases.map(String) : [];
 						for (const alias of item.aliases) {
-							const cleanAlias = cleanEntityName(alias);
-							if (cleanAlias && !isStopEntity(cleanAlias) && !fm.aliases.includes(cleanAlias)) {
-								fm.aliases.push(cleanAlias);
+							if (!currentAliases.includes(alias)) {
+								currentAliases.push(alias);
 							}
 						}
+						fm.aliases = currentAliases;
+					}
+
+					if (item.description && !fm.description) {
+						fm.description = item.description;
 					}
 				});
-
-				let entityText = await app.vault.read(existingFile);
-				const updatedText = appendDreamAppearance(entityText, dreamName, item.description);
-				if (entityText !== updatedText) {
-					await app.vault.modify(existingFile, updatedText);
-				}
-
 				modifiedPaths.push(existingFile.path);
 			} else {
-				const path = `${folderPath}/${safeName}.md`;
-				const bodyContent = makeEntityBodyContent(
-					app,
-					safeName,
-					item,
-					dreamName,
-					settings
-				);
-				const newFile = await app.vault.create(path, bodyContent);
-				const newEmbeddingId = `emb_${Date.now()}_${safeName.toLowerCase()}`;
+				const frontmatter = `---
+type: entity
+entity_type: ${typeInfo.entity_type}
+created: ${getMoment().format("YYYY-MM-DD")}
+last_seen: ${getMoment().format("YYYY-MM-DD")}
+created_from:
+  - "[[${dreamFile.basename}]]"
+dream_count: 1
+aliases: ${JSON.stringify(item.aliases)}
+description: ${JSON.stringify(item.description)}
+embedding_status: pending
+---
 
-				await app.fileManager.processFrontMatter(newFile, (fm: DreamFrontmatter) => {
-					fm.type = "entity";
-					fm.entity_type = type.entity_type;
-					fm.created = createdDate;
-					fm.last_seen = dreamDate;
-					fm.created_from = [`[[${dreamName}]]`];
-					fm.dream_count = 1;
+# ${item.name}
 
-					const cleanAliases = Array.isArray(item.aliases)
-						? item.aliases.map(x => cleanEntityName(x)).filter(x => x.length > 0 && !isStopEntity(x))
-						: [];
-					fm.aliases = cleanAliases;
-					fm.tags = [type.entity_type];
-					fm.description = item.description || "";
-					fm.embedding_status = "pending";
-					fm.embedding_id = newEmbeddingId;
-				});
+## Опис та сюжетний контекст
 
-				modifiedPaths.push(path);
+${item.description || "Опис буде додано після нових снів."}
+
+## Пов'язані сни
+
+\`\`\`dataview
+TABLE date AS "Дата", choice(lucid, "ОС", "Звичайний") AS "Тип"
+FROM "${getDreamsSubfolder(app, settings)}"
+WHERE type = "dream" AND contains(file.outlinks, [[${item.name}]])
+SORT date DESC
+\`\`\`
+`;
+				const newFile = await app.vault.create(filePath, frontmatter);
+				modifiedPaths.push(newFile.path);
 			}
 		}
 	}
@@ -450,97 +459,8 @@ async function createOrUpdateEntities(
 }
 
 async function ensureFolder(app: App, path: string): Promise<void> {
-	const normalizedPath = path.replace(/\/$/, "");
+	const normalizedPath = normalizePath(path);
 	if (!app.vault.getAbstractFileByPath(normalizedPath)) {
 		await app.vault.createFolder(normalizedPath);
 	}
-}
-
-function makeEntityBodyContent(
-	app: App,
-	name: string,
-	item: EntityItem,
-	dreamName: string,
-	settings: DreamAnalyzerSettings
-): string {
-	const dreamsFolder = getDreamsSubfolder(app, settings);
-	const entitiesSubfolder = getEntitiesSubfolder(app, settings);
-
-	return `# ${name.toLowerCase()}
-
-## Опис
-
-
-## Появи у снах
-
-- [[${dreamName}]]: ${makeInlineText(item.description || "поява у сні")}
-
-## Статистика
-
-\`\`\`dataview
-TABLE WITHOUT ID
-dream_count AS "Появ у снах",
-last_seen AS "Остання поява"
-FROM ""
-WHERE file.path = this.file.path
-\`\`\`
-
-## Сни
-
-\`\`\`dataview
-LIST
-FROM "${dreamsFolder}"
-WHERE contains(characters, this.file.link)
-   OR contains(places, this.file.link)
-   OR contains(objects, this.file.link)
-   OR contains(emotions, this.file.link)
-   OR contains(symbols, this.file.link)
-   OR contains(concepts, this.file.link)
-SORT file.name DESC
-LIMIT 20
-\`\`\`
-
-## Пов'язані сутності
-
-\`\`\`dataview
-TABLE WITHOUT ID
-file.link AS "Сутність",
-entity_type AS "Тип",
-length(filter(created_from, (d) => contains(this.created_from, d))) AS "Спільних снів"
-FROM "${entitiesSubfolder}"
-WHERE length(filter(created_from, (d) => contains(this.created_from, d))) > 0
-AND file.path != this.file.path
-SORT length(filter(created_from, (d) => contains(this.created_from, d))) DESC
-LIMIT 20
-\`\`\`
-
-## Нотатки
-
-`;
-}
-
-function appendDreamAppearance(text: string, dreamName: string, description?: string): string {
-	const line = `- [[${dreamName}]]: ${makeInlineText(description || "поява у сні")}`;
-	const sectionPattern = /## Появи у снах\n([\s\S]*?)(?=\n## |$)/;
-	const match = text.match(sectionPattern);
-
-	if (!match) {
-		return text.replace(
-			/## Статистика/,
-			`## Появи у снах\n\n${line}\n\n## Статистика`
-		);
-	}
-
-	if (match[1].includes(`[[${dreamName}]]`)) {
-		return text;
-	}
-
-	return text.replace(
-		sectionPattern,
-		`## Появи у снах\n${match[1].trim()}\n${line}\n`
-	);
-}
-
-function makeInlineText(text: string): string {
-	return String(text || "").replace(/\s+/g, " ").trim();
 }

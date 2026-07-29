@@ -1,14 +1,6 @@
 import { App, requestUrl } from "obsidian";
 import { DreamAnalyzerSettings } from "./types";
 
-interface SecretStorageApi {
-	getSecret(key: string): Promise<string | undefined>;
-}
-
-interface AppWithSecretStorage extends App {
-	secretStorage?: SecretStorageApi;
-}
-
 interface OpenAiEmbeddingItem {
 	index: number;
 	embedding: number[];
@@ -16,7 +8,7 @@ interface OpenAiEmbeddingItem {
 
 interface OpenAiEmbeddingResponse {
 	data?: OpenAiEmbeddingItem[];
-	error?: { message?: string };
+	error?: { message?: string; code?: string };
 }
 
 interface OpenAiChatResponse {
@@ -25,17 +17,28 @@ interface OpenAiChatResponse {
 			content?: string;
 		};
 	}>;
-	error?: { message?: string };
+	error?: { message?: string; code?: string };
 }
 
 export async function getOpenAiApiKey(app: App, settings: DreamAnalyzerSettings): Promise<string> {
 	let key = (settings.openaiApiKey || "").trim();
 
-	const appWithSecret = app as AppWithSecretStorage;
-	if (key && appWithSecret.secretStorage && typeof appWithSecret.secretStorage.getSecret === "function") {
+	if (!key) {
+		throw new Error("OpenAI API Key не вказано! Вкажіть його у налаштуваннях плагіна.");
+	}
+
+	// 1. If key is already a direct OpenAI API Key starting with sk-, return directly
+	if (key.startsWith("sk-")) {
+		return key;
+	}
+
+	// 2. Try resolving key from Obsidian SecretStorage if key is a secret name
+	const appObj = app as unknown as Record<string, unknown>;
+	const secretStorage = appObj["secretStorage"] as { getSecret?: (k: string) => Promise<string | undefined> } | undefined;
+	if (secretStorage && typeof secretStorage.getSecret === "function") {
 		try {
-			const resolvedSecret = await appWithSecret.secretStorage.getSecret(key);
-			if (resolvedSecret) {
+			const resolvedSecret = await secretStorage.getSecret(key);
+			if (resolvedSecret && resolvedSecret.trim()) {
 				return resolvedSecret.trim();
 			}
 		} catch {
@@ -43,90 +46,97 @@ export async function getOpenAiApiKey(app: App, settings: DreamAnalyzerSettings)
 		}
 	}
 
-	if (!key) {
-		throw new Error("OpenAI API key не вказано у налаштуваннях плагіна!");
-	}
+	// 3. Fallback: return raw key string
 	return key;
 }
 
-export async function getEmbedding(apiKey: string, model: string, text: string): Promise<number[]> {
-	try {
-		const response = await requestUrl({
-			url: "https://api.openai.com/v1/embeddings",
-			method: "POST",
-			headers: {
-				"Authorization": `Bearer ${apiKey}`,
-				"Content-Type": "application/json"
-			},
-			body: JSON.stringify({
-				model: model || "text-embedding-3-small",
-				input: text
-			})
-		});
+async function openAiRequest(
+	url: string,
+	apiKey: string,
+	bodyObj: Record<string, unknown>
+): Promise<{ status: number; text: string; json: unknown }> {
+	const bodyString = JSON.stringify(bodyObj);
+	const headers = {
+		"Authorization": `Bearer ${apiKey}`,
+		"Content-Type": "application/json"
+	};
 
-		if (response.status !== 200) {
-			let errorDetail = response.text;
+	// 1. Try native window.fetch first for uninhibited response body reading
+	if (typeof window !== "undefined" && typeof window.fetch === "function") {
+		try {
+			const res = await window.fetch(url, {
+				method: "POST",
+				headers,
+				body: bodyString
+			});
+
+			const text = await res.text();
+			let parsedJson: unknown = null;
 			try {
-				const errJson = JSON.parse(response.text) as OpenAiEmbeddingResponse;
-				if (errJson.error?.message) {
-					errorDetail = errJson.error.message;
-				}
+				parsedJson = JSON.parse(text) as unknown;
 			} catch {
-				// Silent JSON parse fallback
+				// Ignore parse error
 			}
-			throw new Error(`OpenAI API Error ${response.status}: ${errorDetail}`);
-		}
 
-		const data = JSON.parse(response.text) as OpenAiEmbeddingResponse;
-		if (!data.data || !data.data[0] || !data.data[0].embedding) {
-			throw new Error("Некоректний формат відповіді embeddings від OpenAI");
+			return { status: res.status, text, json: parsedJson };
+		} catch {
+			// Fallback to requestUrl on fetch error
 		}
-		return data.data[0].embedding;
-	} catch (error: unknown) {
-		const msg = error instanceof Error ? error.message : String(error);
-		throw new Error(`Помилка генерації векторного ембедінгу: ${msg}`);
 	}
+
+	// 2. Fallback to Obsidian requestUrl
+	const res = await requestUrl({
+		url,
+		method: "POST",
+		headers,
+		body: bodyString,
+		throwOnError: false
+	});
+
+	return { status: res.status, text: res.text, json: res.json as unknown };
 }
 
-export async function getBatchEmbeddings(apiKey: string, model: string, inputs: string[]): Promise<number[][]> {
-	try {
-		const response = await requestUrl({
-			url: "https://api.openai.com/v1/embeddings",
-			method: "POST",
-			headers: {
-				"Authorization": `Bearer ${apiKey}`,
-				"Content-Type": "application/json"
-			},
-			body: JSON.stringify({
-				model: model || "text-embedding-3-small",
-				input: inputs
-			})
-		});
+export async function getEmbedding(apiKey: string, model: string, text: string): Promise<number[]> {
+	const res = await openAiRequest("https://api.openai.com/v1/embeddings", apiKey, {
+		input: text,
+		model: model || "text-embedding-3-small"
+	});
 
-		if (response.status !== 200) {
-			let errorDetail = response.text;
-			try {
-				const errJson = JSON.parse(response.text) as OpenAiEmbeddingResponse;
-				if (errJson.error?.message) {
-					errorDetail = errJson.error.message;
-				}
-			} catch {
-				// Silent JSON parse fallback
-			}
-			throw new Error(`OpenAI API Error ${response.status}: ${errorDetail}`);
-		}
-
-		const data = JSON.parse(response.text) as OpenAiEmbeddingResponse;
-		if (!data.data || !Array.isArray(data.data)) {
-			throw new Error("Некоректний формат відповіді embeddings від OpenAI");
-		}
-
-		const sorted = data.data.sort((a, b) => a.index - b.index);
-		return sorted.map((item) => item.embedding);
-	} catch (error: unknown) {
-		const msg = error instanceof Error ? error.message : String(error);
-		throw new Error(`Помилка генерації ембедінгів: ${msg}`);
+	if (res.status >= 400) {
+		const json = res.json as OpenAiEmbeddingResponse | null;
+		const msg = json?.error?.message || res.text || `HTTP ${res.status}`;
+		throw new Error(`OpenAI Embedding Error (${res.status}): ${msg}`);
 	}
+
+	const json = res.json as OpenAiEmbeddingResponse | null;
+	if (json && json.data && json.data.length > 0 && json.data[0].embedding) {
+		return json.data[0].embedding;
+	}
+
+	throw new Error("Не вдалося отримати embedding від OpenAI");
+}
+
+export async function getBatchEmbeddings(apiKey: string, model: string, texts: string[]): Promise<number[][]> {
+	if (!texts || texts.length === 0) return [];
+
+	const res = await openAiRequest("https://api.openai.com/v1/embeddings", apiKey, {
+		input: texts,
+		model: model || "text-embedding-3-small"
+	});
+
+	if (res.status >= 400) {
+		const json = res.json as OpenAiEmbeddingResponse | null;
+		const msg = json?.error?.message || res.text || `HTTP ${res.status}`;
+		throw new Error(`OpenAI Batch Embedding Error (${res.status}): ${msg}`);
+	}
+
+	const json = res.json as OpenAiEmbeddingResponse | null;
+	if (json && json.data && Array.isArray(json.data)) {
+		const sorted = [...json.data].sort((a, b) => a.index - b.index);
+		return sorted.map(item => item.embedding);
+	}
+
+	throw new Error("Не вдалося отримати batch embeddings від OpenAI");
 }
 
 export async function requestChatCompletion(
@@ -135,59 +145,40 @@ export async function requestChatCompletion(
 	systemPrompt: string,
 	userPrompt: string
 ): Promise<Record<string, unknown>> {
-	try {
-		const selectedModel = model || "gpt-4o-mini";
-		const payload = {
-			model: selectedModel,
-			messages: [
-				{
-					role: "system",
-					content: systemPrompt
-				},
-				{
-					role: "user",
-					content: userPrompt
-				}
-			],
-			response_format: { type: "json_object" }
-		};
+	const targetModel = (model || "gpt-5-mini").trim();
 
-		const response = await requestUrl({
-			url: "https://api.openai.com/v1/chat/completions",
-			method: "POST",
-			headers: {
-				"Authorization": `Bearer ${apiKey}`,
-				"Content-Type": "application/json"
-			},
-			body: JSON.stringify(payload)
-		});
+	const reqBody: Record<string, unknown> = {
+		model: targetModel,
+		messages: [
+			{ role: "system", content: systemPrompt },
+			{ role: "user", content: userPrompt }
+		],
+		response_format: { type: "json_object" }
+	};
 
-		if (response.status !== 200) {
-			let errorDetail = response.text;
-			try {
-				const errJson = JSON.parse(response.text) as OpenAiEmbeddingResponse;
-				if (errJson.error?.message) {
-					errorDetail = errJson.error.message;
-				}
-			} catch {
-				// Silent JSON parse fallback
-			}
-			throw new Error(`OpenAI API Error ${response.status}: ${errorDetail}`);
-		}
+	// Only attach custom temperature if not gpt-5 or reasoning model
+	if (targetModel.startsWith("gpt-4")) {
+		reqBody.temperature = 0.2;
+	}
 
-		const data = JSON.parse(response.text) as OpenAiChatResponse;
-		const content = data.choices?.[0]?.message?.content;
-		if (!content) {
-			throw new Error("Некоректна відповідь ChatCompletion від OpenAI");
-		}
+	const res = await openAiRequest("https://api.openai.com/v1/chat/completions", apiKey, reqBody);
 
-		const parsed = JSON.parse(content) as unknown;
+	if (res.status >= 400) {
+		const json = res.json as OpenAiChatResponse | null;
+		const msg = json?.error?.message || res.text || `HTTP ${res.status}`;
+		const code = json?.error?.code ? ` (code: ${json.error.code})` : "";
+		throw new Error(`OpenAI Chat Completion Error (${res.status}): ${msg}${code}`);
+	}
+
+	const json = res.json as OpenAiChatResponse | null;
+	if (json && json.choices && json.choices.length > 0 && json.choices[0].message?.content) {
+		const rawContent = json.choices[0].message.content.trim();
+		const parsed = JSON.parse(rawContent) as unknown;
 		if (typeof parsed === "object" && parsed !== null) {
 			return parsed as Record<string, unknown>;
 		}
-		throw new Error("Очікувався JSON об'єкт від OpenAI");
-	} catch (error: unknown) {
-		const msg = error instanceof Error ? error.message : String(error);
-		throw new Error(`Помилка запиту до OpenAI: ${msg}`);
+		throw new Error("Отримано некоректний JSON від OpenAI");
 	}
+
+	throw new Error("Не вдалося отримати відповідь від OpenAI Chat Completion");
 }

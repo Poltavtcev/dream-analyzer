@@ -24,10 +24,9 @@ Automatically analyzes dream entries and generates structured information:
 
 Supports OpenAI models including:
 
-- `gpt-5-mini`
 - `gpt-4o-mini`
 - `gpt-4o`
-- `gpt-4.1-mini`
+- `gpt-5-mini`
 
 ---
 
@@ -44,10 +43,10 @@ Automatically creates and updates entity notes:
 
 Entity notes preserve:
 
-- appearance history
-- related dreams
-- recurring contexts
-- connections between experiences
+- Appearance history
+- Related dreams
+- Recurring contexts
+- Connections between experiences
 
 Includes smart duplicate prevention across categories.
 
@@ -62,23 +61,21 @@ Finds related dreams using combined semantic and entity-based matching:
 
 Displays the most connected dreams based on:
 
-- semantic meaning
-- recurring entities
-- shared themes
+- Semantic meaning
+- Recurring entities
+- Shared themes
 
 ---
 
-### 📊 Dream Analytics Dashboard
+### 📊 Dream Analytics Dashboard & Indexes
 
-Automatically generates a dream dashboard:
+Automatically generates a dream dashboard and separate index notes:
 
-- Lucid dream statistics
+- Journal and lucidity statistics
 - Dream signs and reality check triggers
 - Emotional trends
-- Recurring concepts
-- Creative ideas
-
-Supports multilingual dashboard files.
+- Recurring concepts and creative ideas
+- Separate Index folder (`Index/` or `Індекс/`) for character, place, object, emotion, symbol, and concept tables.
 
 ---
 
@@ -89,7 +86,7 @@ Provides:
 - Dream note templates
 - Templater compatibility
 - Calendar integration
-- Date picker for creating historical dream entries
+- Date picker modal for creating historical dream entries
 
 ---
 
@@ -97,9 +94,9 @@ Provides:
 
 Automatically updates internal references when:
 
-- dream notes are renamed
-- entity notes are renamed
-- files are moved inside the vault
+- Dream notes are renamed
+- Entity notes are renamed
+- Files are moved inside the vault
 
 ---
 
@@ -107,17 +104,44 @@ Automatically updates internal references when:
 
 Includes utilities for:
 
-- database reset
-- cleanup of generated data
-- rebuilding analysis indexes
+- Database reset
+- Cleanup of generated data
+- Rebuilding analysis indexes
 
 Uses native Obsidian APIs for frontmatter processing.
 
 ---
 
+## 🔌 Requirements
+
+For live interactive tables in the Dashboard and Index pages, installing the [Dataview](https://github.com/blacksmithgu/obsidian-dataview) plugin is highly recommended.
+
+---
+
+## ⚙️ Configuration
+
+1. Open Obsidian **Settings** -> **Dream Analyzer**.
+2. Enter your **OpenAI API Key** (or save it securely via Obsidian SecretStorage).
+3. Select your preferred **AI Model** and **Embedding Model**.
+4. Set your base **Dreams Storage Folder** (defaults to `Dreams`).
+
+---
+
 ## 📦 Installation
+
+### Via Obsidian Community Plugins (Upcoming)
+
+Search for **Dream Analyzer** in Obsidian's Community Plugins directory and click **Install**.
 
 ### Manual Installation
 
-1. Download the latest release.
-2. Extract files into:
+1. Download `main.js` and `manifest.json` from the latest GitHub Release.
+2. Create a folder in your vault: `.obsidian/plugins/dream-analyzer/`
+3. Copy `main.js` and `manifest.json` into `.obsidian/plugins/dream-analyzer/`
+4. Reload Obsidian plugins and enable **Dream Analyzer**.
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.

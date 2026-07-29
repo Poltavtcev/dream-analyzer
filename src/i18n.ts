@@ -37,6 +37,9 @@ const strings = {
 		dashboardSectionLucid: "## Усвідомлені сновидіння (ОС)\n*Журнал ваших успішних усвідомлених снів.*",
 		dashboardSectionRecent: "## Останні записи щоденника",
 
+		// Dataview notice
+		dataviewNotice: "Для відображення інтерактивних таблиць у Дашборді та Індексах рекомендовано встановити плагін Dataview.",
+
 		// Ribbon & Commands
 		ribbonAnalyze: "Аналізувати сон (Dream Analyzer)",
 		ribbonCreateDream: "Створити сон на сьогодні",
@@ -58,78 +61,66 @@ const strings = {
 		resetModalConfirmButton: "Скинути все",
 		resetModalCancelButton: "Скасувати",
 		resetSuccess: "Скинуто снів: {dreams}, видалено файлів сутностей: {entities}.",
-		resetSectionTitle: "Скинути та очистити дані",
-		resetSectionDesc: "Видалити всі згенеровані сутності та скинути сни до початкового стану для повторного аналізу",
-		resetButtonText: "Очистити всі сутності та аналіз",
 
-		// Templater Exporter
-		templateExportSuccess: "Шаблон для Templater / Calendar успішно збережено у {path}!",
-		templateExportName: "Шаблон для Templater & Calendar",
-		templateExportDesc: "Зберегти сумісний шаблон нотатки сну у Vault для плагінів Templater та Calendar",
-		templatePathName: "Шлях до файлу шаблону",
-		templatePathDesc: "Файл у сховищі, куди буде записано шаблон (наприклад, Templates/Dream Template.md)",
-		templateExportButtonText: "Створити / оновити файл шаблону",
+		// Notices & Alerts
+		openDreamNoteFirst: "Будь ласка, відкрийте нотатку сну",
+		dreamAlreadyExists: "Нотатка сну на цю дату вже існує",
+		dreamCreated: "Створено нотатку сну",
+		templateExportSuccess: "Шаблон для Templater успішно експортовано в {path}",
 
-		// Notices
-		noActiveNote: "Немає відкритої нотатки сну",
-		openDreamNoteFirst: "Будь ласка, відкрийте нотатку сну для аналізу.",
-		noApiKey: "OpenAI API key не вказано! Будь ласка, вкажіть API ключ у налаштуваннях плагіна Dream Analyzer.",
-		analyzingStep1: "Аналізую сон: генерація векторних даних...",
-		analyzingStep2: "Аналізую сон: пошук схожих сутностей...",
-		analyzingStep3: "Аналізую сон: запит до OpenAI ({model})...",
-		analyzingStep4: "Створення сутностей та розрахунок зв'язків...",
-		analyzingStep5: "Пакетне оновлення векторних ембедінгів...",
-		analysisSuccess: "Сон успішно проаналізовано за {sec}с!",
-		analysisError: "Помилка аналізу сну: ",
-		rebuildStart: "Генерація векторних ембедінгів...",
-		rebuildSuccess: "Готово! Згенеровано/оновлено ембедінгів: {count}",
-		dreamAlreadyExists: "Нотатка сну на цю дату вже існує!",
-		dreamCreated: "Створено нову нотатку сну!",
-
-		// Settings
-		settingsTitle: "Налаштування Dream Analyzer",
+		// Settings Tab
+		settingsTitle: "Налаштування аналізатора снів (Dream Analyzer)",
+		sectionOpenAi: "Параметри OpenAI API",
 		apiKeyName: "OpenAI API Key",
-		apiKeyDesc: "Введіть свій секретний API ключ OpenAI (sk-...)",
-		modelName: "Модель OpenAI Chat",
-		modelDesc: "Виберіть модель AI для аналізу сну",
-		gptDefaultLabel: "GPT-5 mini (За замовчуванням)",
-		sectionJournalFolder: "Структура щоденника снів",
-		sectionVectorSearch: "Векторний пошук та Ембедінги",
-		dreamsFolderName: "Головна папка щоденника снів",
-		dreamsFolderDesc: "Загальна папка (наприклад, Усвідомлені сновидіння або Dreams). Плагін сам створить папки 'Сни', 'Сутності' та Дашборд всередині.",
-		autoEmbeddingsName: "Авто-оновлення ембедінгів",
-		autoEmbeddingsDesc: "Автоматично оновлювати векторні ембедінги після аналізу сну",
-		embeddingModelName: "Модель ембедінгів",
-		embeddingModelDesc: "Модель OpenAI для векторизації (за замовчуванням: text-embedding-3-small)",
-		thresholdName: "Поріг схожості (Similarity Threshold)",
-		thresholdDesc: "Мінімальний поріг схожості для сутностей (від 0.0 до 1.0)",
+		apiKeyDesc: "Введіть свій персональний API ключ OpenAI (або збережіть його в Obsidian SecretStorage). Ключ зберігається надійно.",
+		modelName: "Модель аналізу снів",
+		modelDesc: "Модель OpenAI GPT для аналізу тексу снів та вилучення сутностей.",
+		embeddingModelName: "Модель векторних ембедінгів",
+		embeddingModelDesc: "Модель для розрахунку векторної схожості між снами та сутностями.",
+
+		sectionFolders: "Папки та структури",
+		dreamsFolderName: "Папка зберігання снів та сутностей",
+		dreamsFolderDesc: "Базова папка у ваульті для снів, сутностей та векторних баз.",
+		templatePathName: "Шлях до шаблону Templater",
+		templatePathDesc: "Шлях для експорту шаблону, сумісного з Templater / Calendar.",
+		btnExportTemplate: "Експортувати шаблон для Templater",
+
+		sectionSimilarity: "Параметри схожості та пошуку",
+		thresholdName: "Поріг схожості ембедінгів (0.0 - 1.0)",
+		thresholdDesc: "Мінімальний косинусний коефіцієнт для підтягування схожих сутностей.",
 		limitName: "Ліміт схожих сутностей",
-		limitDesc: "Максимальна кількість схожих сутностей у контексті AI",
-		rebuildButtonName: "Ручне оновлення бази ембедінгів сутностей",
-		rebuildButtonDesc: "Просканувати всі нотатки сутностей та обчислити відсутні ембедінги",
-		rebuildButtonText: "Перебудувати всі ембедінги"
+		limitDesc: "Максимальна кількість сутностей, які передаються у контексті до OpenAI.",
+		autoUpdateName: "Автоматично оновлювати ембедінги",
+		autoUpdateDesc: "Автоматично розраховувати та оновлювати векторні дані сутностей після аналізу сну.",
+
+		sectionMaintenance: "Обслуговування та Скидання",
+		btnRebuildEmbeddings: "Оновити всі ембедінги сутностей",
+		btnResetData: "Скинути всі дані аналізу"
 	},
 	en: {
 		// Dashboard
 		dashboardFileName: "Dream Dashboard.md",
-		dashboardTitle: "# Dream Analytics Dashboard",
-		dashboardCallout: "> [!INFO] Analytics & Statistics\n> This dashboard is automatically generated by **Dream Analyzer**. It contains key Dataview queries for tracking dream stats, Dream Signs (reality checks), emotional trends, and creative ideas.",
-		dashboardSectionStats: "## Journal & Lucid Dreaming Statistics",
-		dashboardSectionSigns: "## Dream Signs & Reality Check Triggers\n*Most frequent symbols, characters, and places — your reality check triggers in dreams.*",
-		dashboardSectionEmotions: "## Emotional Background & Psychological States\n*Emotions and internal mental states most frequently experienced in dreams.*",
-		dashboardSectionCreative: "## Dream World: Concepts & Creative Ideas\n*Abstract concepts, unique locations, and vivid characters with descriptions.*",
+		dashboardTitle: "# Dreams Analytics & Dashboard",
+		dashboardCallout: "> [!INFO] Analytics & Statistics\n> This dashboard was automatically generated by **Dream Analyzer**. It contains Dataview queries for tracking dream statistics, Dream Signs, emotional background, and creative ideas.",
+		dashboardSectionStats: "## Journal & Lucidity Statistics (LD)",
+		dashboardSectionSigns: "## Dream Signs for Lucidity\n*Most frequent symbols, characters, and places — your reality check triggers.*",
+		dashboardSectionEmotions: "## Emotional Background & Psychological States\n*Most frequent emotions and internal states in your dreams.*",
+		dashboardSectionCreative: "## Dream World: Concepts & Creative Ideas\n*Abstract ideas, unique locations, and vivid characters with descriptions.*",
 		dashboardSectionLucid: "## Lucid Dreams (LD)\n*Journal of your successful lucid dreams.*",
-		dashboardSectionRecent: "## Recent Dream Journal Entries",
+		dashboardSectionRecent: "## Recent Journal Entries",
+
+		// Dataview notice
+		dataviewNotice: "It is recommended to install the Dataview plugin to render interactive tables in Dashboard and Indexes.",
 
 		// Ribbon & Commands
-		ribbonAnalyze: "Analyze dream (Dream Analyzer)",
-		ribbonCreateDream: "Create dream note for today",
-		cmdAnalyze: "Analyze active dream",
-		cmdCreateDream: "Create dream note for today",
-		cmdCreateCustomDateDream: "Create dream note for selected date...",
-		cmdRebuildEmbeddings: "Rebuild entity embeddings",
-		cmdResetAllData: "Reset all analyzed data and entities...",
-		contextMenuAnalyze: "Analyze dream",
+		ribbonAnalyze: "Analyze Dream (Dream Analyzer)",
+		ribbonCreateDream: "Create Today's Dream",
+		cmdAnalyze: "Analyze Active Dream Note",
+		cmdCreateDream: "Create Today's Dream Note",
+		cmdCreateCustomDateDream: "Create Dream Note for Selected Date...",
+		cmdRebuildEmbeddings: "Rebuild Entity Embeddings",
+		cmdResetAllData: "Reset All Analysis Data & Entities...",
+		contextMenuAnalyze: "Analyze Dream",
 
 		// Date Modal
 		dateModalTitle: "Select Dream Date",
@@ -137,97 +128,73 @@ const strings = {
 		dateModalButton: "Create / Open Dream",
 
 		// Reset Modal & Settings
-		resetModalTitle: "Reset All Analyzed Data and Entities",
-		resetModalDesc: "This will delete all created entity notes, clear vector database files (embeddings.json), and reset analyzed AI content in all dreams to their initial template state. Your original dream texts will remain untouched.",
-		resetModalConfirmButton: "Reset All",
+		resetModalTitle: "Reset All Entities & Embeddings Database",
+		resetModalDesc: "This will delete all entity notes, clear vector databases (embeddings.json), and reset analyzed AI content in all dreams. Your original dream texts will remain untouched.",
+		resetModalConfirmButton: "Reset Everything",
 		resetModalCancelButton: "Cancel",
 		resetSuccess: "Reset dreams: {dreams}, deleted entity files: {entities}.",
-		resetSectionTitle: "Reset & Clear Data",
-		resetSectionDesc: "Delete all generated entities and reset dream notes to initial template state for re-analysis",
-		resetButtonText: "Clear All Entities & Analysis",
 
-		// Templater Exporter
-		templateExportSuccess: "Templater / Calendar template successfully saved to {path}!",
-		templateExportName: "Templater & Calendar Template",
-		templateExportDesc: "Save a compatible dream note template file in Vault for Templater and Calendar plugins",
-		templatePathName: "Template File Path",
-		templatePathDesc: "Vault file path where template will be written (e.g. Templates/Dream Template.md)",
-		templateExportButtonText: "Create / Update Template File",
+		// Notices & Alerts
+		openDreamNoteFirst: "Please open a dream note first",
+		dreamAlreadyExists: "A dream note for this date already exists",
+		dreamCreated: "Created dream note",
+		templateExportSuccess: "Templater template exported to {path}",
 
-		// Notices
-		noActiveNote: "No active dream note open",
-		openDreamNoteFirst: "Please open a dream note to analyze.",
-		noApiKey: "OpenAI API key is missing! Please enter your API key in Dream Analyzer settings.",
-		analyzingStep1: "Analyzing dream: generating vector embeddings...",
-		analyzingStep2: "Analyzing dream: searching for similar entities...",
-		analyzingStep3: "Analyzing dream: sending request to OpenAI ({model})...",
-		analyzingStep4: "Creating entities and connections...",
-		analyzingStep5: "Batch updating vector embeddings...",
-		analysisSuccess: "Dream analyzed successfully in {sec}s!",
-		analysisError: "Dream analysis error: ",
-		rebuildStart: "Generating vector embeddings...",
-		rebuildSuccess: "Done! Generated/updated embeddings: {count}",
-		dreamAlreadyExists: "Dream note for this date already exists!",
-		dreamCreated: "Created new dream note!",
-
-		// Settings
+		// Settings Tab
 		settingsTitle: "Dream Analyzer Settings",
+		sectionOpenAi: "OpenAI API Parameters",
 		apiKeyName: "OpenAI API Key",
-		apiKeyDesc: "Enter your secret OpenAI API Key (sk-...)",
-		modelName: "OpenAI Chat Model",
-		modelDesc: "Select AI model for dream analysis",
-		gptDefaultLabel: "GPT-5 mini (Default)",
-		sectionJournalFolder: "Dream Journal Folder Structure",
-		sectionVectorSearch: "Vector Search & Embeddings",
-		dreamsFolderName: "Main Dream Journal Folder",
-		dreamsFolderDesc: "Main folder (e.g. Dreams or Lucid Dreaming). The plugin will automatically manage 'Dreams', 'Entities', and Dashboard subfolders inside.",
-		autoEmbeddingsName: "Auto-update Embeddings",
-		autoEmbeddingsDesc: "Automatically update vector embeddings after dream analysis",
-		embeddingModelName: "Embedding Model",
-		embeddingModelDesc: "OpenAI model for vectorization (default: text-embedding-3-small)",
-		thresholdName: "Similarity Threshold",
-		thresholdDesc: "Minimum similarity threshold for entities (from 0.0 to 1.0)",
+		apiKeyDesc: "Enter your personal OpenAI API Key (or store it in Obsidian SecretStorage). Key is kept secure.",
+		modelName: "Dream Analysis Model",
+		modelDesc: "OpenAI GPT model for analyzing dream texts and extracting entities.",
+		embeddingModelName: "Vector Embedding Model",
+		embeddingModelDesc: "Model for calculating vector similarity between dreams and entities.",
+
+		sectionFolders: "Folders & Structure",
+		dreamsFolderName: "Dreams & Entities Storage Folder",
+		dreamsFolderDesc: "Base folder in vault for dreams, entities, and vector databases.",
+		templatePathName: "Templater Template Path",
+		templatePathDesc: "Path for exporting Templater / Calendar compatible template.",
+		btnExportTemplate: "Export Templater Template",
+
+		sectionSimilarity: "Similarity & Search Parameters",
+		thresholdName: "Embedding Similarity Threshold (0.0 - 1.0)",
+		thresholdDesc: "Minimum cosine similarity score for matching existing entities.",
 		limitName: "Similar Entities Limit",
-		limitDesc: "Maximum number of similar entities in AI context",
-		rebuildButtonName: "Manual Entity Embeddings Update",
-		rebuildButtonDesc: "Scan all entity notes and calculate missing embeddings",
-		rebuildButtonText: "Rebuild All Embeddings"
+		limitDesc: "Maximum number of existing entities provided in context to OpenAI.",
+		autoUpdateName: "Auto Update Embeddings",
+		autoUpdateDesc: "Automatically calculate and update vector embeddings after dream analysis.",
+
+		sectionMaintenance: "Maintenance & Reset",
+		btnRebuildEmbeddings: "Rebuild All Entity Embeddings",
+		btnResetData: "Reset All Analysis Data"
 	}
 };
 
-const lists = {
-	uk: {
-		days: ["неділя", "понеділок", "вівторок", "середа", "четвер", "п'ятниця", "субота"],
-		months: [
-			"01 - січень", "02 - лютий", "03 - березень", "04 - квітень",
-			"05 - травень", "06 - червень", "07 - липень", "08 - серпень",
-			"09 - вересень", "10 - жовтень", "11 - листопад", "12 - грудень"
-		]
-	},
-	en: {
-		days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-		months: [
-			"01 - January", "02 - February", "03 - March", "04 - April",
-			"05 - May", "06 - June", "07 - July", "08 - August",
-			"09 - September", "10 - October", "11 - November", "12 - December"
-		]
-	}
-};
+export function t(key: keyof typeof strings["uk"], vars?: Record<string, string | number>): string {
+	const lang = getLocale();
+	const dict = strings[lang] || strings["uk"];
+	let str = dict[key] || strings["uk"][key] || key;
 
-export type TranslationKey = keyof typeof strings["uk"];
-
-export function t(key: TranslationKey, vars?: Record<string, string | number>): string {
-	const locale = getLocale();
-	let template = strings[locale][key] || strings["en"][key] || strings["uk"][key] || "";
 	if (vars) {
 		for (const [k, v] of Object.entries(vars)) {
-			template = template.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
+			str = str.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
 		}
 	}
-	return template;
+	return str;
 }
 
-export function tList(key: "days" | "months"): string[] {
-	const locale = getLocale();
-	return lists[locale][key] || lists["en"][key] || lists["uk"][key] || [];
+export function tList(key: "months" | "days"): string[] {
+	const lang = getLocale();
+	if (key === "months") {
+		return lang === "uk"
+			? ["01 - січень", "02 - лютий", "03 - березень", "04 - квітень", "05 - травень", "06 - червень", "07 - липень", "08 - серпень", "09 - вересень", "10 - жовтень", "11 - листопад", "12 - грудень"]
+			: ["01 - January", "02 - February", "03 - March", "04 - April", "05 - May", "06 - June", "07 - July", "08 - August", "09 - September", "10 - October", "11 - November", "12 - December"];
+	}
+	if (key === "days") {
+		return lang === "uk"
+			? ["неділя", "понеділок", "вівторок", "середа", "четвер", "п’ятниця", "субота"]
+			: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+	}
+	return [];
 }

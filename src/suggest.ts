@@ -1,13 +1,11 @@
-import { AbstractInputSuggest, App, TFolder, TFile, TextComponent } from "obsidian";
+import { AbstractInputSuggest, App, TFolder, TFile } from "obsidian";
 
 export class FolderSuggest extends AbstractInputSuggest<TFolder> {
-	private textComponent: TextComponent;
-	private onSelectCallback: (value: string) => void;
+	private inputEl: HTMLInputElement;
 
-	constructor(app: App, textComponent: TextComponent, onSelectCallback: (value: string) => void) {
-		super(app, textComponent.inputEl);
-		this.textComponent = textComponent;
-		this.onSelectCallback = onSelectCallback;
+	constructor(app: App, inputEl: HTMLInputElement) {
+		super(app, inputEl);
+		this.inputEl = inputEl;
 	}
 
 	getSuggestions(inputStr: string): TFolder[] {
@@ -30,21 +28,19 @@ export class FolderSuggest extends AbstractInputSuggest<TFolder> {
 		el.setText(folder.path);
 	}
 
-	selectSuggestion(folder: TFolder, evt: MouseEvent | KeyboardEvent): void {
-		this.textComponent.setValue(folder.path);
-		this.onSelectCallback(folder.path);
+	selectSuggestion(folder: TFolder): void {
+		this.inputEl.value = folder.path;
+		this.inputEl.dispatchEvent(new Event("input"));
 		this.close();
 	}
 }
 
 export class FileSuggest extends AbstractInputSuggest<TFile> {
-	private textComponent: TextComponent;
-	private onSelectCallback: (value: string) => void;
+	private inputEl: HTMLInputElement;
 
-	constructor(app: App, textComponent: TextComponent, onSelectCallback: (value: string) => void) {
-		super(app, textComponent.inputEl);
-		this.textComponent = textComponent;
-		this.onSelectCallback = onSelectCallback;
+	constructor(app: App, inputEl: HTMLInputElement) {
+		super(app, inputEl);
+		this.inputEl = inputEl;
 	}
 
 	getSuggestions(inputStr: string): TFile[] {
@@ -67,9 +63,9 @@ export class FileSuggest extends AbstractInputSuggest<TFile> {
 		el.setText(file.path);
 	}
 
-	selectSuggestion(file: TFile, evt: MouseEvent | KeyboardEvent): void {
-		this.textComponent.setValue(file.path);
-		this.onSelectCallback(file.path);
+	selectSuggestion(file: TFile): void {
+		this.inputEl.value = file.path;
+		this.inputEl.dispatchEvent(new Event("input"));
 		this.close();
 	}
 }

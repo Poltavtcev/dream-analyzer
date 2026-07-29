@@ -1,8 +1,8 @@
 {
   "id": "dream-analyzer",
   "name": "Dream Analyzer",
-  "version": "1.1.4",
-  "minAppVersion": "0.15.0",
+  "version": "1.0.8",
+  "minAppVersion": "1.8.10",
   "description": "AI-powered dream analysis, entity extraction, vector similarity connections, and lucid dreaming dashboard.",
   "author": "Poltavtcev",
   "authorUrl": "https://github.com/Poltavtcev",

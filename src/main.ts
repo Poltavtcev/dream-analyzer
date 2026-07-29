@@ -14,6 +14,13 @@ export default class DreamAnalyzerPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
+		this.app.workspace.onLayoutReady(() => {
+			const appWithPlugins = this.app as unknown as { plugins?: { enabledPlugins?: Set<string> } };
+			if (appWithPlugins.plugins?.enabledPlugins && !appWithPlugins.plugins.enabledPlugins.has("dataview")) {
+				new Notice(t("dataviewNotice"), 8000);
+			}
+		});
+
 		// Ribbon icon for quick dream analysis
 		this.addRibbonIcon("sparkles", t("ribbonAnalyze"), () => {
 			const activeFile = this.app.workspace.getActiveFile();
@@ -60,7 +67,7 @@ export default class DreamAnalyzerPlugin extends Plugin {
 		// Command 3: Create dream note for custom selected date
 		this.addCommand({
 			id: "create-custom-date-dream-note",
-			name: t("cmdCreateCustomDateDream"),
+			name: t("cmdCreateDreamDate"),
 			callback: () => {
 				new DatePickerModal(this.app, (selectedDate: string) => {
 					void createDreamNoteForDate(this.app, this.settings, selectedDate);
@@ -68,7 +75,7 @@ export default class DreamAnalyzerPlugin extends Plugin {
 			}
 		});
 
-		// Command 4: Rebuild vector embeddings for entities
+		// Command 4: Manual entity embeddings update
 		this.addCommand({
 			id: "rebuild-entity-embeddings",
 			name: t("cmdRebuildEmbeddings"),
@@ -76,72 +83,42 @@ export default class DreamAnalyzerPlugin extends Plugin {
 				void (async () => {
 					try {
 						const apiKey = await getOpenAiApiKey(this.app, this.settings);
-						const notice = new Notice(t("rebuildStart"), 0);
+						new Notice("Розпочато пакетне оновлення ембедінгів...");
 						const count = await updateEntityEmbeddings(this.app, apiKey, this.settings, true);
-						notice.hide();
-						new Notice(t("rebuildSuccess", { count }));
-					} catch (e: unknown) {
-						const msg = e instanceof Error ? e.message : String(e);
-						new Notice("Помилка: " + msg);
+						new Notice(`Оновлено ембедінгів для ${count} сутностей!`);
+					} catch (error: unknown) {
+						const msg = error instanceof Error ? error.message : String(error);
+						new Notice("Помилка оновлення ембедінгів: " + msg);
 					}
 				})();
 			}
 		});
 
-		// Command 5: Reset all analyzed data and entities
+		// Command 5: Clear all entities and analysis data
 		this.addCommand({
-			id: "reset-all-data",
-			name: t("cmdResetAllData"),
+			id: "reset-all-dream-data",
+			name: t("cmdResetData"),
 			callback: () => {
 				new ConfirmResetModal(this.app, () => {
-					void (async () => {
-						try {
-							const notice = new Notice("Очищення даних...", 0);
-							const res = await resetAllDreamData(this.app, this.settings);
-							notice.hide();
-							new Notice(t("resetSuccess", { dreams: res.dreamsReset, entities: res.entitiesDeleted }));
-						} catch (e: unknown) {
-							const msg = e instanceof Error ? e.message : String(e);
-							new Notice("Помилка очищення: " + msg);
-						}
-					})();
+					void resetAllDreamData(this.app, this.settings);
 				}).open();
 			}
 		});
 
-		// Context menu item restricted STRICTLY to dream files inside the 'Сни' / 'Dreams' subfolder
-		this.registerEvent(
-			this.app.workspace.on("file-menu", (menu, file) => {
-				const dreamsSubfolder = getDreamsSubfolder(this.app, this.settings);
-				if (file instanceof TFile && file.extension === "md" && file.path.startsWith(dreamsSubfolder)) {
-					menu.addItem((item) => {
-						item
-							.setTitle(t("contextMenuAnalyze"))
-							.setIcon("sparkles")
-							.onClick(() => {
-								void analyzeDream(this.app, file, this.settings);
-							});
-					});
-				}
-			})
-		);
-
-		// Settings Tab
+		// Register settings tab
 		this.addSettingTab(new DreamAnalyzerSettingTab(this.app, this));
 	}
 
 	onunload() {
-		// Clean unload
+		clearMemoryCache();
 	}
 
 	async loadSettings() {
-		const rawData = (await this.loadData()) as Partial<DreamAnalyzerSettings> | null;
-		this.settings = Object.assign({}, DEFAULT_SETTINGS, rawData || {});
-		clearMemoryCache();
+		const loadedData = (await this.loadData()) as Partial<DreamAnalyzerSettings> | null;
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, loadedData);
 	}
 
 	async saveSettings() {
 		await this.saveData(this.settings);
-		clearMemoryCache();
 	}
 }

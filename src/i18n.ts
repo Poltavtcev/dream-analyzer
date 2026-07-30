@@ -18,6 +18,13 @@ export function getLocale(): Locale {
 		if (momentLang.startsWith("uk") || momentLang.startsWith("ua")) {
 			return "uk";
 		}
+
+		if (typeof navigator !== "undefined" && navigator.language) {
+			const navLang = navigator.language.toLowerCase();
+			if (navLang.startsWith("uk") || navLang.startsWith("ua")) {
+				return "uk";
+			}
+		}
 	} catch {
 		// Silent catch for language detection fallback
 	}
@@ -67,12 +74,27 @@ const strings = {
 		dreamAlreadyExists: "Нотатка сну на цю дату вже існує",
 		dreamCreated: "Створено нотатку сну",
 		templateExportSuccess: "Шаблон для Templater успішно експортовано в {path}",
+		noDreamNoteOpen: "Немає відкритої нотатки сну",
+		dreamTextTooShort: "Текст сну занадто короткий або відсутній! Заповніть опис сну у нотатці.",
+		rebuildStarted: "Розпочато пакетне оновлення ембедінгів...",
+		rebuildSuccess: "Оновлено ембедінги для {count} сутностей!",
+		rebuildError: "Помилка оновлення ембедінгів: {msg}",
+		dreamAnalyzedSuccess: "Сон успішно проаналізовано за {sec}с!",
+
+		// Progress Steps
+		step1VectorGen: "Генерація векторних даних сну...",
+		step2SearchEntities: "Пошук схожих сутностей...",
+		step3OpenAiReq: "Запит до OpenAI ({model})...",
+		step4CreateEntities: "Створення сутностей та розрахунок зв'язків...",
+		step5BatchUpdate: "Пакетне оновлення векторних ембедінгів...",
 
 		// Settings Tab
 		settingsTitle: "Налаштування аналізатора снів (Dream Analyzer)",
 		sectionOpenAi: "Параметри OpenAI API",
 		apiKeyName: "OpenAI API Key",
 		apiKeyDesc: "Введіть свій персональний API ключ OpenAI (або збережіть його в Obsidian SecretStorage). Ключ зберігається надійно.",
+		selectSecretStorageKey: "-- Обрати ключ із SecretStorage --",
+		apiKeyPlaceholder: "sk-... або ім'я секрету з SecretStorage",
 		modelName: "Модель аналізу снів",
 		modelDesc: "Модель OpenAI GPT для аналізу тексу снів та вилучення сутностей.",
 		embeddingModelName: "Модель векторних ембедінгів",
@@ -95,7 +117,9 @@ const strings = {
 
 		sectionMaintenance: "Обслуговування та Скидання",
 		btnRebuildEmbeddings: "Оновити всі ембедінги сутностей",
-		btnResetData: "Скинути всі дані аналізу"
+		resetBlockTitle: "Скидання аналітичних даних",
+		resetBlockDesc: "Видалити всі сутності, оновлені дати та повернути початковий AI-стан снів",
+		btnResetData: "Скинути всі дані"
 	},
 	en: {
 		// Dashboard
@@ -139,12 +163,27 @@ const strings = {
 		dreamAlreadyExists: "A dream note for this date already exists",
 		dreamCreated: "Created dream note",
 		templateExportSuccess: "Templater template exported to {path}",
+		noDreamNoteOpen: "No open dream note",
+		dreamTextTooShort: "Dream text is too short or missing! Please fill in the dream description in the note.",
+		rebuildStarted: "Started batch updating embeddings...",
+		rebuildSuccess: "Updated embeddings for {count} entities!",
+		rebuildError: "Error updating embeddings: {msg}",
+		dreamAnalyzedSuccess: "Dream successfully analyzed in {sec}s!",
+
+		// Progress Steps
+		step1VectorGen: "Generating dream vector embeddings...",
+		step2SearchEntities: "Searching for similar entities...",
+		step3OpenAiReq: "Requesting OpenAI ({model})...",
+		step4CreateEntities: "Creating entities and calculating connections...",
+		step5BatchUpdate: "Batch updating vector embeddings...",
 
 		// Settings Tab
 		settingsTitle: "Dream Analyzer Settings",
 		sectionOpenAi: "OpenAI API Parameters",
 		apiKeyName: "OpenAI API Key",
 		apiKeyDesc: "Enter your personal OpenAI API Key (or store it in Obsidian SecretStorage). Key is kept secure.",
+		selectSecretStorageKey: "-- Select key from SecretStorage --",
+		apiKeyPlaceholder: "sk-... or secret name from SecretStorage",
 		modelName: "Dream Analysis Model",
 		modelDesc: "OpenAI GPT model for analyzing dream texts and extracting entities.",
 		embeddingModelName: "Vector Embedding Model",
@@ -167,14 +206,16 @@ const strings = {
 
 		sectionMaintenance: "Maintenance & Reset",
 		btnRebuildEmbeddings: "Rebuild All Entity Embeddings",
-		btnResetData: "Reset All Analysis Data"
+		resetBlockTitle: "Reset Analytics Data",
+		resetBlockDesc: "Delete all entities, reset timestamps, and return dreams to initial AI state",
+		btnResetData: "Reset All Data"
 	}
 };
 
 export function t(key: keyof typeof strings["uk"], vars?: Record<string, string | number>): string {
 	const lang = getLocale();
-	const dict = strings[lang] || strings["uk"];
-	let str = dict[key] || strings["uk"][key] || key;
+	const dict = strings[lang] || strings["en"];
+	let str = dict[key] || strings["en"][key] || key;
 
 	if (vars) {
 		for (const [k, v] of Object.entries(vars)) {
@@ -186,15 +227,12 @@ export function t(key: keyof typeof strings["uk"], vars?: Record<string, string 
 
 export function tList(key: "months" | "days"): string[] {
 	const lang = getLocale();
-	if (key === "months") {
-		return lang === "uk"
+	if (lang === "uk") {
+		return key === "months"
 			? ["01 - січень", "02 - лютий", "03 - березень", "04 - квітень", "05 - травень", "06 - червень", "07 - липень", "08 - серпень", "09 - вересень", "10 - жовтень", "11 - листопад", "12 - грудень"]
-			: ["01 - January", "02 - February", "03 - March", "04 - April", "05 - May", "06 - June", "07 - July", "08 - August", "09 - September", "10 - October", "11 - November", "12 - December"];
+			: ["неділя", "понеділок", "вівторок", "середа", "четвер", "п’ятниця", "субота"];
 	}
-	if (key === "days") {
-		return lang === "uk"
-			? ["неділя", "понеділок", "вівторок", "середа", "четвер", "п’ятниця", "субота"]
-			: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-	}
-	return [];
+	return key === "months"
+		? ["01 - January", "02 - February", "03 - March", "04 - April", "05 - May", "06 - June", "07 - July", "08 - August", "09 - September", "10 - October", "11 - November", "12 - December"]
+		: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 }

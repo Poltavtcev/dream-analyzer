@@ -40,7 +40,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 			text.inputEl.type = "password";
 			text.inputEl.setCssStyles({ flex: "1", minWidth: "200px" });
 			text
-				.setPlaceholder("sk-... або ім'я секрету з SecretStorage")
+				.setPlaceholder(t("apiKeyPlaceholder"))
 				.setValue(this.plugin.settings.openaiApiKey || "")
 				.onChange((value: string) => {
 					this.plugin.settings.openaiApiKey = value.trim();
@@ -50,7 +50,7 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 
 		// Dropdown for selecting saved secrets from SecretStorage
 		apiKeySetting.addDropdown(async (dropdown) => {
-			dropdown.addOption("", "-- Обрати ключ із SecretStorage --");
+			dropdown.addOption("", t("selectSecretStorageKey"));
 
 			const secretList: string[] = [];
 			const appObj = this.app as unknown as Record<string, unknown>;
@@ -92,8 +92,6 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 				if (uniqueSecrets.includes(curVal)) {
 					dropdown.setValue(curVal);
 				}
-			} else {
-				dropdown.addOption("OPENAI_API_KEY", "OPENAI_API_KEY (Приклад секрету)");
 			}
 
 			dropdown.onChange((val: string) => {
@@ -245,20 +243,20 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 				.onClick(async () => {
 					try {
 						const apiKey = await getOpenAiApiKey(this.app, this.plugin.settings);
-						new Notice("Розпочато пакетне оновлення ембедінгів...");
+						new Notice(t("rebuildStarted"));
 						const count = await updateEntityEmbeddings(this.app, apiKey, this.plugin.settings, true);
-						new Notice(`Оновлено ембедінгів для ${count} сутностей!`);
+						new Notice(t("rebuildSuccess", { count }));
 					} catch (error: unknown) {
 						const msg = error instanceof Error ? error.message : String(error);
-						new Notice("Помилка оновлення ембедінгів: " + msg);
+						new Notice(t("rebuildError", { msg }));
 					}
 				}));
 
 		new Setting(containerEl)
-			.setName("Скидання аналітичних даних")
-			.setDesc("Видалити всі сутності, оновлені дати та повернути початковий AI-стан снів")
+			.setName(t("resetBlockTitle"))
+			.setDesc(t("resetBlockDesc"))
 			.addButton(btn => {
-				btn.setButtonText("Скинути всі дані");
+				btn.setButtonText(t("btnResetData"));
 				btn.buttonEl.addClass("mod-warning");
 				btn.onClick(() => {
 					new ConfirmResetModal(this.app, () => {

@@ -1,45 +1,61 @@
-import { App, Modal, Setting } from "obsidian";
+import { App, TFile, Notice } from "obsidian";
 import { DreamAnalyzerSettings } from "./types";
-import { saveEmbeddingsDatabase, saveDreamEmbeddingsDatabase, getDreamsSubfolder, getEntitiesSubfolder } from "./embeddings";
+import { clearMemoryCache, getDreamsSubfolder, getEntitiesSubfolder, saveEmbeddingsDatabase, saveDreamEmbeddingsDatabase, getFolderMarkdownFiles } from "./embeddings";
 import { t } from "./i18n";
 
-export class ConfirmResetModal extends Modal {
+export class ConfirmResetModal {
+	private app: App;
 	private onConfirm: () => void;
 
 	constructor(app: App, onConfirm: () => void) {
-		super(app);
+		this.app = app;
 		this.onConfirm = onConfirm;
 	}
 
-	onOpen() {
-		const { contentEl } = this;
-		contentEl.createEl("h2", { text: t("resetModalTitle") });
-		contentEl.createEl("p", { text: t("resetModalDesc") });
+	open() {
+		const modalContainer = document.createElement("div");
+		modalContainer.addClass("modal-container");
 
-		new Setting(contentEl)
-			.addButton(btn => {
-				btn.setButtonText(t("resetModalConfirmButton"));
-				const btnRecord = btn as unknown as Record<string, unknown>;
-				if (typeof btnRecord.setDestructive === "function") {
-					(btnRecord.setDestructive as (val: boolean) => void)(true);
-				} else if (typeof btnRecord.setWarning === "function") {
-					(btnRecord.setWarning as () => void)();
-				}
-				btn.onClick(() => {
-					this.close();
-					this.onConfirm();
-				});
-			})
-			.addButton(btn => btn
-				.setButtonText(t("resetModalCancelButton"))
-				.onClick(() => {
-					this.close();
-				}));
-	}
+		const modalBg = document.createElement("div");
+		modalBg.addClass("modal-bg");
+		modalContainer.appendChild(modalBg);
 
-	onClose() {
-		const { contentEl } = this;
-		contentEl.empty();
+		const modalEl = document.createElement("div");
+		modalEl.addClass("modal");
+		modalEl.setCssStyles({ maxWidth: "500px", padding: "24px" });
+
+		const title = document.createElement("h2");
+		title.textContent = t("resetModalTitle");
+		modalEl.appendChild(title);
+
+		const desc = document.createElement("p");
+		desc.textContent = t("resetModalDesc");
+		desc.setCssStyles({ marginTop: "12px", marginBottom: "24px", color: "var(--text-muted)" });
+		modalEl.appendChild(desc);
+
+		const buttonContainer = document.createElement("div");
+		buttonContainer.setCssStyles({ display: "flex", justifyContent: "flex-end", gap: "12px" });
+
+		const cancelBtn = document.createElement("button");
+		cancelBtn.textContent = t("resetModalCancelButton");
+		cancelBtn.addEventListener("click", () => {
+			document.body.removeChild(modalContainer);
+		});
+
+		const confirmBtn = document.createElement("button");
+		confirmBtn.textContent = t("resetModalConfirmButton");
+		confirmBtn.addClass("mod-warning");
+		confirmBtn.addEventListener("click", () => {
+			document.body.removeChild(modalContainer);
+			this.onConfirm();
+		});
+
+		buttonContainer.appendChild(cancelBtn);
+		buttonContainer.appendChild(confirmBtn);
+		modalEl.appendChild(buttonContainer);
+
+		modalContainer.appendChild(modalEl);
+		document.body.appendChild(modalContainer);
 	}
 }
 
@@ -54,8 +70,7 @@ export async function resetAllDreamData(
 	let dreamsReset = 0;
 
 	// 1. Видаляємо всі файли сутностей у папці entitiesFolder через FileManager.trashFile (безпечно до корзини)
-	const allFiles = app.vault.getMarkdownFiles();
-	const entityFiles = allFiles.filter(f => f.path.startsWith(entitiesFolder));
+	const entityFiles = getFolderMarkdownFiles(app, entitiesFolder);
 	for (const file of entityFiles) {
 		try {
 			await app.fileManager.trashFile(file);
@@ -66,7 +81,7 @@ export async function resetAllDreamData(
 	}
 
 	// 2. Скидаємо нотатки снів до початкового стану (обнуляємо frontmatter і прибираємо AI аналіз)
-	const dreamFiles = allFiles.filter(f => f.path.startsWith(dreamsFolder));
+	const dreamFiles = getFolderMarkdownFiles(app, dreamsFolder);
 	for (const file of dreamFiles) {
 		try {
 			await app.fileManager.processFrontMatter(file, (fmRecord: Record<string, unknown>) => {
@@ -83,19 +98,23 @@ export async function resetAllDreamData(
 
 			let content = await app.vault.read(file);
 			if (content.includes("# AI аналіз")) {
-				content = content.replace(/# AI аналіз[\s\S]*/, "# AI аналіз\n\n## Короткий опис\n\n\n## Можливі зв'язки з попередніми снами\n\n-");
-				await app.vault.modify(file, content);
+				content = content.replace(/# AI аналіз[\s\S]*/, "");
+				await app.vault.modify(file, content.trim());
+			} else if (content.includes("# AI Analysis")) {
+				content = content.replace(/# AI Analysis[\s\S]*/, "");
+				await app.vault.modify(file, content.trim());
 			}
-
 			dreamsReset++;
 		} catch (e: unknown) {
 			console.error("Could not reset dream file:", file.path, e);
 		}
 	}
 
-	// 3. Очищаємо векторні бази даних (embeddings.json & dream_embeddings.json)
+	// 3. Очищаємо векторні бази даних
 	await saveEmbeddingsDatabase(app, settings, []);
 	await saveDreamEmbeddingsDatabase(app, settings, []);
+	clearMemoryCache();
 
+	new Notice(t("resetSuccess", { dreams: dreamsReset, entities: entitiesDeleted }));
 	return { dreamsReset, entitiesDeleted };
 }

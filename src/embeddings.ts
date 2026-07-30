@@ -1,4 +1,4 @@
-import { App, TFile, normalizePath } from "obsidian";
+import { App, TFile, TFolder, Vault, normalizePath } from "obsidian";
 import {
 	DreamAnalyzerSettings,
 	VectorDatabaseItem,
@@ -6,6 +6,7 @@ import {
 	DreamConnectionResult,
 	ENTITY_TYPES
 } from "./types";
+import { getLocale } from "./i18n";
 
 const VECTOR_DB_FILENAME = "entity_embeddings.json";
 const DREAM_VECTOR_DB_FILENAME = "dream_embeddings.json";
@@ -18,16 +19,46 @@ export function clearMemoryCache(): void {
 	memoryDreamDb = null;
 }
 
+export function getFolderMarkdownFiles(app: App, folderPath: string): TFile[] {
+	const normalized = normalizePath(folderPath);
+	const folder = app.vault.getAbstractFileByPath(normalized);
+	if (!(folder instanceof TFolder)) return [];
+
+	const result: TFile[] = [];
+	Vault.recurseChildren(folder, (file) => {
+		if (file instanceof TFile && file.extension === "md") {
+			result.push(file);
+		}
+	});
+	return result;
+}
+
 export function getDreamsSubfolder(app: App, settings?: Partial<DreamAnalyzerSettings>): string {
 	const rawFolder = (settings && typeof settings.dreamsFolder === "string") ? settings.dreamsFolder : "Dreams";
 	const dreamsBase = rawFolder.trim().replace(/\/$/, "") || "Dreams";
-	return `${dreamsBase}/Сни`;
+
+	if (app && app.vault) {
+		if (app.vault.getAbstractFileByPath(`${dreamsBase}/Сни`)) return `${dreamsBase}/Сни`;
+		if (app.vault.getAbstractFileByPath(`${dreamsBase}/Dreams`)) return `${dreamsBase}/Dreams`;
+	}
+
+	const lang = getLocale();
+	const subfolder = lang === "uk" ? "Сни" : "Dreams";
+	return `${dreamsBase}/${subfolder}`;
 }
 
 export function getEntitiesSubfolder(app: App, settings?: Partial<DreamAnalyzerSettings>): string {
 	const rawFolder = (settings && typeof settings.dreamsFolder === "string") ? settings.dreamsFolder : "Dreams";
 	const dreamsBase = rawFolder.trim().replace(/\/$/, "") || "Dreams";
-	return `${dreamsBase}/Сутності`;
+
+	if (app && app.vault) {
+		if (app.vault.getAbstractFileByPath(`${dreamsBase}/Сутності`)) return `${dreamsBase}/Сутності`;
+		if (app.vault.getAbstractFileByPath(`${dreamsBase}/Entities`)) return `${dreamsBase}/Entities`;
+	}
+
+	const lang = getLocale();
+	const subfolder = lang === "uk" ? "Сутності" : "Entities";
+	return `${dreamsBase}/${subfolder}`;
 }
 
 function getDreamsBase(settings?: Partial<DreamAnalyzerSettings>): string {
@@ -191,8 +222,7 @@ export async function updateEntityEmbeddings(
 	}
 
 	const baseEntitiesFolder = getEntitiesSubfolder(app, settings);
-	const allFiles = app.vault.getMarkdownFiles();
-	const entityFiles = allFiles.filter(f => f.path.startsWith(baseEntitiesFolder) && !f.name.startsWith("!"));
+	const entityFiles = getFolderMarkdownFiles(app, baseEntitiesFolder).filter(f => !f.name.startsWith("!"));
 
 	const getEmbeddingFn = (await import("./api")).getEmbedding;
 
@@ -311,8 +341,7 @@ export async function syncUnindexedDreams(
 	}
 
 	const dreamsFolder = getDreamsSubfolder(app, settings);
-	const allFiles = app.vault.getMarkdownFiles();
-	const dreamFiles = allFiles.filter(f => f.path.startsWith(dreamsFolder) && f.extension === "md");
+	const dreamFiles = getFolderMarkdownFiles(app, dreamsFolder);
 
 	const getEmbeddingFn = (await import("./api")).getEmbedding;
 	let isDbChanged = false;
@@ -433,20 +462,25 @@ export async function analyzeDreamConnections(
 }
 
 export function formatDreamConnectionsMarkdown(connections: DreamConnectionResult[]): string {
+	const lang = getLocale();
 	if (connections.length === 0) {
-		return "_Поки що не знайдено схожих попередніх снів._";
+		return lang === "uk"
+			? "_Поки що не знайдено схожих попередніх снів._"
+			: "_No similar previous dreams found yet._";
 	}
 	const lines = connections.map(conn => {
 		const percent = Math.round(conn.score * 100);
 		const uniqueEntities = Array.from(new Set(conn.sharedEntities.filter(Boolean)));
+		const sharedLabel = lang === "uk" ? "спільні сутності" : "shared entities";
+		const simLabel = lang === "uk" ? "схожість" : "similarity";
 		const sharedText = uniqueEntities.length > 0
-			? ` (спільні сутності: ${uniqueEntities.map(e => `[[${e}]]`).join(", ")})`
+			? ` (${sharedLabel}: ${uniqueEntities.map(e => `[[${e}]]`).join(", ")})`
 			: "";
 
 		const hasDateInName = conn.date && conn.dreamName.includes(conn.date);
 		const dateText = (conn.date && !hasDateInName) ? ` (${conn.date})` : "";
 
-		return `- [[${conn.dreamName}]]${dateText} — схожість ${percent}%${sharedText}`;
+		return `- [[${conn.dreamName}]]${dateText} — ${simLabel} ${percent}%${sharedText}`;
 	});
 	return lines.join("\n");
 }

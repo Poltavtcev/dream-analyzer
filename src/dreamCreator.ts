@@ -100,6 +100,13 @@ export async function createDreamNoteForDate(
 		return existingFile;
 	}
 
+	const lang = getLocale();
+	const dreamHeader = lang === "uk" ? "# Сон" : "# Dream";
+	const placeholder = lang === "uk" ? "> Введіть сюди свій текст сну..." : "> Enter your dream text here...";
+	const aiHeader = lang === "uk" ? "# AI аналіз" : "# AI Analysis";
+	const summaryHeader = lang === "uk" ? "## Короткий опис" : "## Summary";
+	const connectionsHeader = lang === "uk" ? "## Можливі зв'язки з попередніми снами" : "## Possible Connections";
+
 	const templateContent = `---
 type: dream
 date: ${dateStr}
@@ -114,17 +121,17 @@ concepts: []
 keywords: []
 ---
 
-# Сон
+${dreamHeader}
 
-> Введіть сюди свій текст сну...
+${placeholder}
 
-# AI аналіз
+${aiHeader}
 
-## Короткий опис
+${summaryHeader}
 
 -
 
-## Можливі зв'язки з попередніми снами
+${connectionsHeader}
 
 -
 `;
@@ -150,19 +157,13 @@ export async function createTodayDreamNote(
 
 export async function ensureDreamDashboard(app: App, settings: DreamAnalyzerSettings): Promise<void> {
 	const dreamsBase = settings.dreamsFolder.trim().replace(/\/$/, "") || "Dreams";
-	await ensureFolder(app, dreamsBase);
-
-	const ukDashboardPath = `${dreamsBase}/Дашборд снів.md`;
-	const enDashboardPath = `${dreamsBase}/Dream Dashboard.md`;
-
-	const ukFile = app.vault.getAbstractFileByPath(ukDashboardPath);
-	const enFile = app.vault.getAbstractFileByPath(enDashboardPath);
-
-	const targetPath = (enFile instanceof TFile) ? enDashboardPath : ukDashboardPath;
-	const existingFile = (enFile instanceof TFile) ? enFile : ((ukFile instanceof TFile) ? ukFile : null);
+	const dashboardFileName = t("dashboardFileName");
+	const targetPath = `${dreamsBase}/${dashboardFileName}`;
 
 	const dreamsSubfolder = getDreamsSubfolder(app, settings);
 	const entitiesSubfolder = getEntitiesSubfolder(app, settings);
+
+	const existingFile = app.vault.getAbstractFileByPath(targetPath);
 
 	const content = `${t("dashboardTitle")}
 
@@ -294,6 +295,10 @@ export async function ensureEntityIndexes(app: App, settings: DreamAnalyzerSetti
 		{ name: "All Entities.md", header: "# All Entities", folder: "" }
 	];
 
+	const typeCol = lang === "uk" ? "Тип" : "Type";
+	const dreamsCol = lang === "uk" ? "Снів" : "Dreams";
+	const lastSeenCol = lang === "uk" ? "Остання поява" : "Last Seen";
+
 	for (const info of indexFilesInfo) {
 		const filePath = `${indexFolderPath}/${info.name}`;
 		const targetFromFolder = info.folder ? `${baseEntitiesFolder}/${info.folder}` : baseEntitiesFolder;
@@ -302,9 +307,9 @@ export async function ensureEntityIndexes(app: App, settings: DreamAnalyzerSetti
 
 \`\`\`dataview
 TABLE
-entity_type AS "Тип",
-dream_count AS "Снів",
-last_seen AS "Остання поява"
+entity_type AS "${typeCol}",
+dream_count AS "${dreamsCol}",
+last_seen AS "${lastSeenCol}"
 FROM "${targetFromFolder}"
 WHERE type = "entity"
 SORT dream_count DESC
@@ -328,6 +333,13 @@ export async function exportTemplaterTemplate(app: App, settings: DreamAnalyzerS
 		await ensureFolder(app, parentFolder);
 	}
 
+	const lang = getLocale();
+	const dreamHeader = lang === "uk" ? "# Сон" : "# Dream";
+	const placeholder = lang === "uk" ? "> Введіть сюди свій текст сну..." : "> Enter your dream text here...";
+	const aiHeader = lang === "uk" ? "# AI аналіз" : "# AI Analysis";
+	const summaryHeader = lang === "uk" ? "## Короткий опис" : "## Summary";
+	const connectionsHeader = lang === "uk" ? "## Можливі зв'язки з попередніми снами" : "## Possible Connections";
+
 	const content = `---
 type: dream
 date: <% tp.file.creation_date("YYYY-MM-DD") %>
@@ -342,17 +354,17 @@ concepts: []
 keywords: []
 ---
 
-# Сон
+${dreamHeader}
 
-> Введіть сюди свій текст сну...
+${placeholder}
 
-# AI аналіз
+${aiHeader}
 
-## Короткий опис
+${summaryHeader}
 
 -
 
-## Можливі зв'язки з попередніми снами
+${connectionsHeader}
 
 -
 `;

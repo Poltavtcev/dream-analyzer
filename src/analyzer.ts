@@ -17,6 +17,7 @@ import {
 	getDreamsSubfolder,
 	getEntitiesSubfolder
 } from "./embeddings";
+import { getLocale, t } from "./i18n";
 
 interface TypedMoment {
 	format(fmt: string): string;
@@ -28,8 +29,8 @@ function getMoment(): TypedMoment {
 }
 
 const STOP_ENTITIES_LOWER = new Set([
-	// Ukrainian
-	"оповідач", "я", "сновидець", "моє тіло", "власне тіло", "себе", "автор", "моя особа", "самість",
+	// Ukrainian & Russian
+	"оповідач", "я", "сновидець", "моє тіло", "власне тіло", "себе", "автор", "моя особа", "самість", "рассказчик", "мое тело",
 	// English
 	"narrator", "i", "me", "myself", "dreamer", "my body", "self", "own body"
 ]);
@@ -75,7 +76,7 @@ class ProgressNotice {
 
 	private updateText() {
 		const elapsed = this.getElapsedSeconds();
-		const message = `Аналіз сну [${this.step}/${this.totalSteps}]: ${this.currentMessage} (${elapsed}с)`;
+		const message = `Dream Analyzer [${this.step}/${this.totalSteps}]: ${this.currentMessage} (${elapsed}s)`;
 
 		const noticeEl = (this.notice as unknown as { noticeEl: HTMLElement }).noticeEl;
 		if (noticeEl) {
@@ -102,10 +103,14 @@ export function extractDreamTextOnly(fullFileContent: string): string {
 		}
 	}
 
-	// Cut off previous "# AI аналіз" section if present
-	const aiSectionIdx = body.indexOf("# AI аналіз");
-	if (aiSectionIdx !== -1) {
-		body = body.slice(0, aiSectionIdx);
+	// Cut off previous AI analysis section in Ukrainian or English
+	const aiSectionIdxUk = body.indexOf("# AI аналіз");
+	if (aiSectionIdxUk !== -1) {
+		body = body.slice(0, aiSectionIdxUk);
+	}
+	const aiSectionIdxEn = body.indexOf("# AI Analysis");
+	if (aiSectionIdxEn !== -1) {
+		body = body.slice(0, aiSectionIdxEn);
 	}
 
 	// Remove standard headers like "# Сон" or "# Dream"
@@ -124,7 +129,7 @@ export function extractDreamTextOnly(fullFileContent: string): string {
 
 export async function analyzeDream(app: App, file: TFile, settings: DreamAnalyzerSettings): Promise<void> {
 	if (!file) {
-		new Notice("Немає відкритої нотатки сну");
+		new Notice(t("noDreamNoteOpen"));
 		return;
 	}
 
@@ -133,7 +138,7 @@ export async function analyzeDream(app: App, file: TFile, settings: DreamAnalyze
 		apiKey = await getOpenAiApiKey(app, settings);
 	} catch (error: unknown) {
 		const msg = error instanceof Error ? error.message : String(error);
-		new Notice(msg || "Помилка OpenAI API Key");
+		new Notice(msg || "OpenAI API Key Error");
 		return;
 	}
 
@@ -141,21 +146,21 @@ export async function analyzeDream(app: App, file: TFile, settings: DreamAnalyze
 	const userDreamText = extractDreamTextOnly(fullContent);
 
 	if (!userDreamText || userDreamText.length < 10) {
-		new Notice("Текст сну занадто короткий або відсутній! Заповніть опис сну у нотатці.");
+		new Notice(t("dreamTextTooShort"));
 		return;
 	}
 
 	const progress = new ProgressNotice(5);
 
 	try {
-		progress.setStep(1, "Генерація векторних даних сну...");
+		progress.setStep(1, t("step1VectorGen"));
 		const dreamEmbedding = await getEmbedding(apiKey, settings.embeddingModel, userDreamText);
 
-		progress.setStep(2, "Пошук схожих сутностей...");
+		progress.setStep(2, t("step2SearchEntities"));
 		const similarEntities = await getSimilarEntitiesContext(app, apiKey, settings, dreamEmbedding);
 		const entityContext = similarEntities || "No existing similar entities found.";
 
-		progress.setStep(3, `Запит до OpenAI (${settings.openaiModel})...`);
+		progress.setStep(3, t("step3OpenAiReq", { model: settings.openaiModel }));
 		const systemPrompt = `
 You analyze a personal dream journal for creating a structured Obsidian knowledge base.
 Here is a list of existing entities that might match this dream:
@@ -249,7 +254,7 @@ A short summary of the dream in 2-5 sentences in the dream's language.
 			keywords: normalizeStringArray(rawResult.keywords)
 		};
 
-		progress.setStep(4, "Створення сутностей та розрахунок зв'язків...");
+		progress.setStep(4, t("step4CreateEntities"));
 		const modifiedEntityPaths = await createOrUpdateEntities(app, result, file, settings);
 
 		const currentEntityNames = [
@@ -279,14 +284,19 @@ A short summary of the dream in 2-5 sentences in the dream's language.
 		});
 
 		// 2. У тілі нотатки сну залишаємо ТІЛЬКИ унікальну інформацію сну (Короткий опис та Зв'язки)
-		const aiText = `
-# AI аналіз
+		const lang = getLocale();
+		const aiSectionHeader = lang === "uk" ? "# AI аналіз" : "# AI Analysis";
+		const summarySectionHeader = lang === "uk" ? "## Короткий опис" : "## Summary";
+		const connectionsSectionHeader = lang === "uk" ? "## Можливі зв'язки з попередніми снами" : "## Possible Connections";
 
-## Короткий опис
+		const aiText = `
+${aiSectionHeader}
+
+${summarySectionHeader}
 
 ${result.summary || "-"}
 
-## Можливі зв'язки з попередніми снами
+${connectionsSectionHeader}
 
 ${connectionsMarkdown}
 `;
@@ -294,6 +304,8 @@ ${connectionsMarkdown}
 		let updatedContent = await app.vault.read(file);
 		if (updatedContent.includes("# AI аналіз")) {
 			updatedContent = updatedContent.replace(/# AI аналіз[\s\S]*/, aiText.trim());
+		} else if (updatedContent.includes("# AI Analysis")) {
+			updatedContent = updatedContent.replace(/# AI Analysis[\s\S]*/, aiText.trim());
 		} else {
 			updatedContent += `\n\n${aiText.trim()}`;
 		}
@@ -319,17 +331,17 @@ ${connectionsMarkdown}
 
 		// 4. Пакетне оновлення ембедінгів сутностей у embeddings.json
 		if (settings.autoUpdateEmbeddings && modifiedEntityPaths.length > 0) {
-			progress.setStep(5, "Пакетне оновлення векторних ембедінгів...");
+			progress.setStep(5, t("step5BatchUpdate"));
 			await updateEntityEmbeddings(app, apiKey, settings, false);
 		}
 
 		const totalSec = progress.getElapsedSeconds();
 		progress.close();
-		new Notice(`Сон успішно проаналізовано за ${totalSec}с!`);
+		new Notice(t("dreamAnalyzedSuccess", { sec: totalSec }));
 	} catch (error: unknown) {
 		progress.close();
 		const msg = error instanceof Error ? error.message : String(error);
-		new Notice("Помилка аналізу сну: " + msg);
+		new Notice("Error: " + msg);
 	}
 }
 
@@ -377,13 +389,41 @@ async function createOrUpdateEntities(
 ): Promise<string[]> {
 	const modifiedPaths: string[] = [];
 	const baseEntitiesFolder = getEntitiesSubfolder(app, settings);
+	const lang = getLocale();
+
+	const enFolderNames: Record<string, string> = {
+		"Персонажі": "Characters",
+		"Місця": "Places",
+		"Предмети": "Objects",
+		"Емоції": "Emotions",
+		"Символи": "Symbols",
+		"Концепти": "Concepts"
+	};
 
 	for (const typeInfo of ENTITY_TYPES) {
 		const items = result[typeInfo.field];
 		if (!items || items.length === 0) continue;
 
-		const targetFolder = `${baseEntitiesFolder}/${typeInfo.folder}`;
+		let folderSubName = typeInfo.folder;
+		if (lang === "en") {
+			const altName = enFolderNames[typeInfo.folder] || typeInfo.folder;
+			if (app.vault.getAbstractFileByPath(`${baseEntitiesFolder}/${typeInfo.folder}`)) {
+				folderSubName = typeInfo.folder;
+			} else {
+				folderSubName = altName;
+			}
+		}
+
+		const targetFolder = `${baseEntitiesFolder}/${folderSubName}`;
 		await ensureFolder(app, targetFolder);
+
+		const descHeader = lang === "uk" ? "## Опис та сюжетний контекст" : "## Description & Story Context";
+		const relHeader = lang === "uk" ? "## Пов'язані сни" : "## Related Dreams";
+		const emptyDesc = lang === "uk" ? "Опис буде додано після нових снів." : "Description will be updated after new dreams.";
+		const dateCol = lang === "uk" ? "Дата" : "Date";
+		const typeCol = lang === "uk" ? "Тип" : "Type";
+		const lucidOpt = lang === "uk" ? "ОС" : "Lucid";
+		const regOpt = lang === "uk" ? "Ззвичайний" : "Regular";
 
 		for (const item of items) {
 			if (isStopEntity(item.name)) continue;
@@ -436,14 +476,14 @@ embedding_status: pending
 
 # ${item.name}
 
-## Опис та сюжетний контекст
+${descHeader}
 
-${item.description || "Опис буде додано після нових снів."}
+${item.description || emptyDesc}
 
-## Пов'язані сни
+${relHeader}
 
 \`\`\`dataview
-TABLE date AS "Дата", choice(lucid, "ОС", "Звичайний") AS "Тип"
+TABLE date AS "${dateCol}", choice(lucid, "${lucidOpt}", "${regOpt}") AS "${typeCol}"
 FROM "${getDreamsSubfolder(app, settings)}"
 WHERE type = "dream" AND contains(file.outlinks, [[${item.name}]])
 SORT date DESC

@@ -81,6 +81,10 @@ const strings = {
 		rebuildError: "Помилка оновлення ембедінгів: {msg}",
 		dreamAnalyzedSuccess: "Сон успішно проаналізовано за {sec}с!",
 
+		connDreamSigns: "Спільні Dream Signs",
+		connEmotions: "Емоційний резонанс",
+		connNarrative: "Сюжетна схожість",
+
 		// Progress Steps
 		step1VectorGen: "Генерація векторних даних сну...",
 		step2SearchEntities: "Пошук схожих сутностей...",
@@ -107,9 +111,15 @@ const strings = {
 		templatePathDesc: "Шлях для експорту шаблону, сумісного з Templater / Calendar.",
 		btnExportTemplate: "Експортувати шаблон для Templater",
 
-		sectionSimilarity: "Параметри схожості та пошуку",
-		thresholdName: "Поріг схожості ембедінгів (0.0 - 1.0)",
-		thresholdDesc: "Мінімальний косинусний коефіцієнт для підтягування схожих сутностей.",
+		sectionSimilarity: "Параметри схожості та зв'язків",
+		thresholdName: "Поріг схожості сутностей (старий)",
+		thresholdDesc: "Мінімальний косинусний коефіцієнт для підтягування схожих сутностей (Deprecated).",
+		narrativeThresholdName: "Поріг сюжетної схожості (Narrative)",
+		narrativeThresholdDesc: "Мінімальна векторна схожість (vecSim) для зв'язку снів за сюжетом/атмосферою (0.0 - 1.0).",
+		dreamSignFreqName: "Максимальна частота Dream Sign",
+		dreamSignFreqDesc: "Максимальна кількість снів, у яких може з'являтися об'єкт/персонаж, щоб вважатися унікальним зв'язком.",
+		emotionFreqName: "Максимальна частота емоції",
+		emotionFreqDesc: "Максимальна кількість снів, у яких може зустрічатися емоція, щоб створити емоційний зв'язок.",
 		limitName: "Ліміт схожих сутностей",
 		limitDesc: "Максимальна кількість сутностей, які передаються у контексті до OpenAI.",
 		autoUpdateName: "Автоматично оновлювати ембедінги",
@@ -170,6 +180,10 @@ const strings = {
 		rebuildError: "Error updating embeddings: {msg}",
 		dreamAnalyzedSuccess: "Dream successfully analyzed in {sec}s!",
 
+		connDreamSigns: "Shared Dream Signs",
+		connEmotions: "Emotional Resonance",
+		connNarrative: "Narrative similarity",
+
 		// Progress Steps
 		step1VectorGen: "Generating dream vector embeddings...",
 		step2SearchEntities: "Searching for similar entities...",
@@ -196,9 +210,15 @@ const strings = {
 		templatePathDesc: "Path for exporting Templater / Calendar compatible template.",
 		btnExportTemplate: "Export Templater Template",
 
-		sectionSimilarity: "Similarity & Search Parameters",
-		thresholdName: "Embedding Similarity Threshold (0.0 - 1.0)",
-		thresholdDesc: "Minimum cosine similarity score for matching existing entities.",
+		sectionSimilarity: "Similarity & Connection Parameters",
+		thresholdName: "Entity Similarity Threshold (old)",
+		thresholdDesc: "Minimum cosine similarity score for matching existing entities (Deprecated).",
+		narrativeThresholdName: "Narrative Similarity Threshold",
+		narrativeThresholdDesc: "Minimum vector similarity (vecSim) to connect dreams by plot/atmosphere (0.0 - 1.0).",
+		dreamSignFreqName: "Max Dream Sign Frequency",
+		dreamSignFreqDesc: "Maximum number of dreams an object/character can appear in to be considered a unique connection.",
+		emotionFreqName: "Max Emotion Frequency",
+		emotionFreqDesc: "Maximum number of dreams an emotion can appear in to create an emotional connection.",
 		limitName: "Similar Entities Limit",
 		limitDesc: "Maximum number of existing entities provided in context to OpenAI.",
 		autoUpdateName: "Auto Update Embeddings",

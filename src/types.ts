@@ -46,9 +46,11 @@ export interface DreamConnectionResult {
 	dreamFile: string;
 	dreamName: string;
 	date: string;
-	vectorSimilarity: number;
-	sharedEntities: string[];
-	score: number;
+	signals: {
+		narrative: { matched: boolean; similarity: number };
+		dreamSigns: { matched: boolean; entities: string[] };
+		emotions: { matched: boolean; emotions: string[] };
+	};
 }
 
 export interface DreamAnalyzerSettings {
@@ -57,7 +59,10 @@ export interface DreamAnalyzerSettings {
 	embeddingModel: string;
 	dreamsFolder: string;
 	templateFilePath: string;
-	similarityThreshold: number;
+	similarityThreshold: number; // Deprecated, kept for backward compatibility/migration
+	narrativeThreshold: number;
+	dreamSignMaxFrequency: number;
+	emotionMaxFrequency: number;
 	similarityLimit: number;
 	autoUpdateEmbeddings: boolean;
 }
@@ -69,6 +74,9 @@ export const DEFAULT_SETTINGS: DreamAnalyzerSettings = {
 	dreamsFolder: "Dreams",
 	templateFilePath: "Templates/Dream Template.md",
 	similarityThreshold: 0.35,
+	narrativeThreshold: 0.80,
+	dreamSignMaxFrequency: 4,
+	emotionMaxFrequency: 3,
 	similarityLimit: 40,
 	autoUpdateEmbeddings: true
 };

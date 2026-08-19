@@ -262,10 +262,11 @@ A short summary of the dream in 2-5 sentences in the dream's language.
 			...result.places,
 			...result.objects,
 			...result.symbols,
-			...result.concepts
+			...result.concepts,
+			...result.emotions
 		].map(e => cleanEntityName(e.name)).filter(Boolean);
 
-		const connections = await analyzeDreamConnections(app, apiKey, settings, file, dreamEmbedding, currentEntityNames);
+		const connections = await analyzeDreamConnections(app, apiKey, settings, file, dreamEmbedding, result);
 		const connectionsMarkdown = formatDreamConnectionsMarkdown(connections);
 
 		// 1. Оновлюємо frontmatter файлу сну

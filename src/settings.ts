@@ -185,19 +185,57 @@ export class DreamAnalyzerSettingTab extends PluginSettingTab {
 		simHeading.settingEl.addClass("setting-item-heading");
 
 		new Setting(containerEl)
-			.setName(t("thresholdName"))
-			.setDesc(t("thresholdDesc"))
+			.setName(t("narrativeThresholdName"))
+			.setDesc(t("narrativeThresholdDesc"))
 			.addText(text => {
 				text.inputEl.type = "number";
-				text.inputEl.step = "0.05";
+				text.inputEl.step = "0.01";
 				text.inputEl.min = "0";
 				text.inputEl.max = "1";
 				text
-					.setValue(String(this.plugin.settings.similarityThreshold))
+					.setValue(String(this.plugin.settings.narrativeThreshold))
 					.onChange((value: string) => {
 						const val = parseFloat(value);
 						if (!isNaN(val) && val >= 0 && val <= 1) {
-							this.plugin.settings.similarityThreshold = val;
+							this.plugin.settings.narrativeThreshold = val;
+							void this.plugin.saveSettings();
+						}
+					});
+			});
+
+		new Setting(containerEl)
+			.setName(t("dreamSignFreqName"))
+			.setDesc(t("dreamSignFreqDesc"))
+			.addText(text => {
+				text.inputEl.type = "number";
+				text.inputEl.step = "1";
+				text.inputEl.min = "1";
+				text.inputEl.max = "100";
+				text
+					.setValue(String(this.plugin.settings.dreamSignMaxFrequency))
+					.onChange((value: string) => {
+						const val = parseInt(value, 10);
+						if (!isNaN(val) && val >= 1) {
+							this.plugin.settings.dreamSignMaxFrequency = val;
+							void this.plugin.saveSettings();
+						}
+					});
+			});
+
+		new Setting(containerEl)
+			.setName(t("emotionFreqName"))
+			.setDesc(t("emotionFreqDesc"))
+			.addText(text => {
+				text.inputEl.type = "number";
+				text.inputEl.step = "1";
+				text.inputEl.min = "1";
+				text.inputEl.max = "100";
+				text
+					.setValue(String(this.plugin.settings.emotionMaxFrequency))
+					.onChange((value: string) => {
+						const val = parseInt(value, 10);
+						if (!isNaN(val) && val >= 1) {
+							this.plugin.settings.emotionMaxFrequency = val;
 							void this.plugin.saveSettings();
 						}
 					});

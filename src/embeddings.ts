@@ -407,17 +407,48 @@ export async function analyzeDreamConnections(
 	settings: DreamAnalyzerSettings,
 	currentDreamFile: TFile,
 	currentDreamEmbedding: number[],
-	currentEntities: string[]
+	result: import("./types").DreamAnalysisResult
 ): Promise<DreamConnectionResult[]> {
-	await syncUnindexedDreams(app, apiKey, settings);
-	const dreamsDb = await loadDreamEmbeddingsDatabase(app, settings);
+	const dreamsDb = await syncUnindexedDreams(app, apiKey, settings);
 	if (dreamsDb.length === 0) return [];
 
-	const threshold = (settings && typeof settings.similarityThreshold === "number") ? settings.similarityThreshold : 0.35;
+	const narrativeThreshold = typeof settings.narrativeThreshold === "number" ? settings.narrativeThreshold : 0.80;
+	const dsMaxFreq = typeof settings.dreamSignMaxFrequency === "number" ? settings.dreamSignMaxFrequency : 4;
+	const emoMaxFreq = typeof settings.emotionMaxFrequency === "number" ? settings.emotionMaxFrequency : 3;
 
-	const currentEntitiesSet = new Set(
-		(currentEntities || []).map(e => e.replace(/^\[\[/, "").replace(/\]\]$/, "").trim().toLowerCase()).filter(Boolean)
+	// Prepare current dream entities
+	const cleanName = (name: string) => name.replace(/^\[\[/, "").replace(/\]\]$/, "").trim().toLowerCase();
+
+	const currentSigns = new Set([
+		...(result.characters || []),
+		...(result.places || []),
+		...(result.objects || []),
+		...(result.symbols || []),
+		...(result.concepts || [])
+	].map(e => cleanName(e.name)).filter(Boolean));
+
+	const currentEmotions = new Set(
+		(result.emotions || []).map(e => cleanName(e.name)).filter(Boolean)
 	);
+
+	// Calculate Global Frequency
+	const globalFreq: Record<string, number> = {};
+	for (const dream of dreamsDb) {
+		// If the dream is the current one, we skip it here so we don't double-count
+		// because we will add currentUnique right after.
+		if (dream.file === currentDreamFile.path) continue;
+		
+		const uniqueEntities = new Set((dream.entities || []).map(cleanName).filter(Boolean));
+		for (const e of uniqueEntities) {
+			globalFreq[e] = (globalFreq[e] || 0) + 1;
+		}
+	}
+	
+	// Add current dream unique entities to global frequency
+	const currentUnique = new Set([...currentSigns, ...currentEmotions]);
+	for (const e of currentUnique) {
+		globalFreq[e] = (globalFreq[e] || 0) + 1;
+	}
 
 	const results: DreamConnectionResult[] = [];
 
@@ -428,59 +459,93 @@ export async function analyzeDreamConnections(
 		if (!targetFile) continue;
 
 		const vecSim = cosineSimilarity(currentDreamEmbedding, dream.vector);
+		const narrativeMatched = vecSim >= narrativeThreshold;
 
-		const dreamEntities = dream.entities || [];
-		const shared: string[] = [];
+		const targetEntities = new Set((dream.entities || []).map(cleanName).filter(Boolean));
+		const sharedSigns: string[] = [];
+		const sharedEmotions: string[] = [];
 
-		for (const entityName of dreamEntities) {
-			const cleanName = entityName.replace(/^\[\[/, "").replace(/\]\]$/, "").trim();
-			if (cleanName && currentEntitiesSet.has(cleanName.toLowerCase())) {
-				shared.push(cleanName);
+		for (const targetE of targetEntities) {
+			const freq = globalFreq[targetE] || 1;
+			if (currentSigns.has(targetE) && freq <= dsMaxFreq) {
+				sharedSigns.push(targetE);
+			}
+			if (currentEmotions.has(targetE) && freq <= emoMaxFreq) {
+				sharedEmotions.push(targetE);
 			}
 		}
 
-		const uniqueShared = Array.from(new Set(shared));
-		const sharedCount = uniqueShared.length;
-		const entitySim = Math.min(1.0, sharedCount / Math.max(1, currentEntitiesSet.size));
+		// Filter unique and map back to original capitalization if possible (but we only have lowercased here)
+		// We can find the original capitalization from the dream.entities array
+		const originalCaseMap = new Map<string, string>();
+		for (const e of (dream.entities || [])) {
+			const c = cleanName(e);
+			if (!originalCaseMap.has(c)) {
+				originalCaseMap.set(c, e.replace(/^\[\[/, "").replace(/\]\]$/, "").trim());
+			}
+		}
 
-		const combinedScore = (vecSim * 0.5) + (entitySim * 0.5);
+		const formattedSigns = Array.from(new Set(sharedSigns)).map(e => originalCaseMap.get(e) || e);
+		const formattedEmotions = Array.from(new Set(sharedEmotions)).map(e => originalCaseMap.get(e) || e);
 
-		if (combinedScore >= threshold) {
+		const dreamSignsMatched = formattedSigns.length > 0;
+		const emotionsMatched = formattedEmotions.length > 0;
+
+		if (narrativeMatched || dreamSignsMatched || emotionsMatched) {
 			results.push({
 				dreamFile: dream.file,
 				dreamName: dream.name,
 				date: dream.date,
-				vectorSimilarity: vecSim,
-				sharedEntities: uniqueShared,
-				score: combinedScore
+				signals: {
+					narrative: { matched: narrativeMatched, similarity: vecSim },
+					dreamSigns: { matched: dreamSignsMatched, entities: formattedSigns },
+					emotions: { matched: emotionsMatched, emotions: formattedEmotions }
+				}
 			});
 		}
 	}
 
-	results.sort((a, b) => b.score - a.score);
+	// Sort by number of matched signals, then by vecSim
+	results.sort((a, b) => {
+		const aSignals = (a.signals.narrative.matched ? 1 : 0) + (a.signals.dreamSigns.matched ? 1 : 0) + (a.signals.emotions.matched ? 1 : 0);
+		const bSignals = (b.signals.narrative.matched ? 1 : 0) + (b.signals.dreamSigns.matched ? 1 : 0) + (b.signals.emotions.matched ? 1 : 0);
+		if (aSignals !== bSignals) return bSignals - aSignals;
+		return b.signals.narrative.similarity - a.signals.narrative.similarity;
+	});
+
 	return results.slice(0, 10);
 }
 
 export function formatDreamConnectionsMarkdown(connections: DreamConnectionResult[]): string {
 	const lang = getLocale();
+	const noResultsStr = lang === "uk" ? "_Поки що не знайдено схожих попередніх снів._" : "_No similar previous dreams found yet._";
+	
 	if (connections.length === 0) {
-		return lang === "uk"
-			? "_Поки що не знайдено схожих попередніх снів._"
-			: "_No similar previous dreams found yet._";
+		return noResultsStr;
 	}
-	const lines = connections.map(conn => {
-		const percent = Math.round(conn.score * 100);
-		const uniqueEntities = Array.from(new Set(conn.sharedEntities.filter(Boolean)));
-		const sharedLabel = lang === "uk" ? "спільні сутності" : "shared entities";
-		const simLabel = lang === "uk" ? "схожість" : "similarity";
-		const sharedText = uniqueEntities.length > 0
-			? ` (${sharedLabel}: ${uniqueEntities.map(e => `[[${e}]]`).join(", ")})`
-			: "";
 
+	const connSignsLabel = t("connDreamSigns");
+	const connEmotionsLabel = t("connEmotions");
+	const connNarrativeLabel = t("connNarrative");
+
+	const lines = connections.map(conn => {
 		const hasDateInName = conn.date && conn.dreamName.includes(conn.date);
 		const dateText = (conn.date && !hasDateInName) ? ` (${conn.date})` : "";
+		const link = `- [[${conn.dreamName}]]${dateText} —`;
 
-		return `- [[${conn.dreamName}]]${dateText} — ${simLabel} ${percent}%${sharedText}`;
+		const reasons: string[] = [];
+		if (conn.signals.dreamSigns.matched) {
+			reasons.push(`${connSignsLabel}: ${conn.signals.dreamSigns.entities.map(e => `[[${e}]]`).join(", ")}`);
+		}
+		if (conn.signals.emotions.matched) {
+			reasons.push(`${connEmotionsLabel}: ${conn.signals.emotions.emotions.map(e => `[[${e}]]`).join(", ")}`);
+		}
+		if (conn.signals.narrative.matched) {
+			reasons.push(`${connNarrativeLabel}: ${Math.round(conn.signals.narrative.similarity * 100)}%`);
+		}
+
+		return `${link} ${reasons.join(" · ")}`;
 	});
+
 	return lines.join("\n");
 }

@@ -405,7 +405,7 @@ var strings = {
     btnResetData: "Reset All Data"
   }
 };
-function t2(key, vars) {
+function t(key, vars) {
   const lang = getLocale();
   const dict = strings[lang] || strings["en"];
   let str = dict[key] || strings["en"][key] || key;
@@ -691,8 +691,8 @@ async function syncUnindexedDreams(app, apiKey, settings) {
       const vector = await getEmbeddingFn(apiKey, settings && settings.embeddingModel || "text-embedding-3-small", dreamContent);
       const dateStr = fm.date || file.basename;
       const allEntities = [];
-      for (const t3 of ENTITY_TYPES) {
-        const list = fm[t3.field];
+      for (const t2 of ENTITY_TYPES) {
+        const list = fm[t2.field];
         if (Array.isArray(list)) {
           for (const e of list) {
             const cleanName = String(e).replace(/^\[\[/, "").replace(/\]\]$/, "").trim();
@@ -848,16 +848,16 @@ var DatePickerModal = class extends import_obsidian4.Modal {
   }
   onOpen() {
     const { contentEl } = this;
-    contentEl.createEl("h2", { text: t2("dateModalTitle") });
+    contentEl.createEl("h2", { text: t("dateModalTitle") });
     let selectedDate = getMoment().format("YYYY-MM-DD");
-    new import_obsidian4.Setting(contentEl).setName(t2("dateModalLabel")).addText((text) => {
+    new import_obsidian4.Setting(contentEl).setName(t("dateModalLabel")).addText((text) => {
       text.inputEl.type = "date";
       text.setValue(selectedDate);
       text.onChange((value) => {
         if (value) selectedDate = value;
       });
     });
-    new import_obsidian4.Setting(contentEl).addButton((btn) => btn.setButtonText(t2("dateModalButton")).setCta().onClick(() => {
+    new import_obsidian4.Setting(contentEl).addButton((btn) => btn.setButtonText(t("dateModalButton")).setCta().onClick(() => {
       this.close();
       this.onSubmit(selectedDate);
     }));
@@ -889,7 +889,7 @@ async function createDreamNoteForDate(app, settings, targetDateInput) {
   const filePath = `${monthFolderPath}/${fileName}.md`;
   const existingFile = app.vault.getAbstractFileByPath(filePath);
   if (existingFile instanceof import_obsidian4.TFile) {
-    new import_obsidian4.Notice(t2("dreamAlreadyExists"));
+    new import_obsidian4.Notice(t("dreamAlreadyExists"));
     const leaf2 = app.workspace.getLeaf(true);
     await leaf2.openFile(existingFile);
     return existingFile;
@@ -929,7 +929,7 @@ ${connectionsHeader}
 -
 `;
   const newFile = await app.vault.create(filePath, templateContent);
-  new import_obsidian4.Notice(t2("dreamCreated"));
+  new import_obsidian4.Notice(t("dreamCreated"));
   const leaf = app.workspace.getLeaf(true);
   await leaf.openFile(newFile);
   await ensureDreamDashboard(app, settings);
@@ -941,16 +941,16 @@ async function createTodayDreamNote(app, settings) {
 }
 async function ensureDreamDashboard(app, settings) {
   const dreamsBase = settings.dreamsFolder.trim().replace(/\/$/, "") || "Dreams";
-  const dashboardFileName = t2("dashboardFileName");
+  const dashboardFileName = t("dashboardFileName");
   const targetPath = `${dreamsBase}/${dashboardFileName}`;
   const dreamsSubfolder = getDreamsSubfolder(app, settings);
   const entitiesSubfolder = getEntitiesSubfolder(app, settings);
   const existingFile = app.vault.getAbstractFileByPath(targetPath);
-  const content = `${t2("dashboardTitle")}
+  const content = `${t("dashboardTitle")}
 
-${t2("dashboardCallout")}
+${t("dashboardCallout")}
 
-${t2("dashboardSectionStats")}
+${t("dashboardSectionStats")}
 
 \`\`\`dataview
 TABLE WITHOUT ID
@@ -962,7 +962,7 @@ WHERE type = "dream"
 GROUP BY type
 \`\`\`
 
-${t2("dashboardSectionSigns")}
+${t("dashboardSectionSigns")}
 
 \`\`\`dataview
 TABLE WITHOUT ID
@@ -976,7 +976,7 @@ SORT dream_count DESC
 LIMIT 15
 \`\`\`
 
-${t2("dashboardSectionEmotions")}
+${t("dashboardSectionEmotions")}
 
 \`\`\`dataview
 TABLE WITHOUT ID
@@ -989,7 +989,7 @@ SORT dream_count DESC
 LIMIT 15
 \`\`\`
 
-${t2("dashboardSectionCreative")}
+${t("dashboardSectionCreative")}
 
 \`\`\`dataview
 TABLE WITHOUT ID
@@ -1003,7 +1003,7 @@ SORT dream_count DESC
 LIMIT 20
 \`\`\`
 
-${t2("dashboardSectionLucid")}
+${t("dashboardSectionLucid")}
 
 \`\`\`dataview
 TABLE WITHOUT ID
@@ -1014,7 +1014,7 @@ WHERE type = "dream" AND lucid = true
 SORT date DESC
 \`\`\`
 
-${t2("dashboardSectionRecent")}
+${t("dashboardSectionRecent")}
 
 \`\`\`dataview
 TABLE WITHOUT ID
@@ -1140,7 +1140,7 @@ ${connectionsHeader}
   } else {
     await app.vault.create(templatePath, content);
   }
-  new import_obsidian4.Notice(t2("templateExportSuccess", { path: templatePath }));
+  new import_obsidian4.Notice(t("templateExportSuccess", { path: templatePath }));
 }
 
 // src/resetManager.ts
@@ -1160,21 +1160,21 @@ var ConfirmResetModal = class {
     modalEl.addClass("modal");
     modalEl.setCssStyles({ maxWidth: "500px", padding: "24px" });
     const title = document.createElement("h2");
-    title.textContent = t2("resetModalTitle");
+    title.textContent = t("resetModalTitle");
     modalEl.appendChild(title);
     const desc = document.createElement("p");
-    desc.textContent = t2("resetModalDesc");
+    desc.textContent = t("resetModalDesc");
     desc.setCssStyles({ marginTop: "12px", marginBottom: "24px", color: "var(--text-muted)" });
     modalEl.appendChild(desc);
     const buttonContainer = document.createElement("div");
     buttonContainer.setCssStyles({ display: "flex", justifyContent: "flex-end", gap: "12px" });
     const cancelBtn = document.createElement("button");
-    cancelBtn.textContent = t2("resetModalCancelButton");
+    cancelBtn.textContent = t("resetModalCancelButton");
     cancelBtn.addEventListener("click", () => {
       document.body.removeChild(modalContainer);
     });
     const confirmBtn = document.createElement("button");
-    confirmBtn.textContent = t2("resetModalConfirmButton");
+    confirmBtn.textContent = t("resetModalConfirmButton");
     confirmBtn.addClass("mod-warning");
     confirmBtn.addEventListener("click", () => {
       document.body.removeChild(modalContainer);
@@ -1231,7 +1231,7 @@ async function resetAllDreamData(app, settings) {
   await saveEmbeddingsDatabase(app, settings, []);
   await saveDreamEmbeddingsDatabase(app, settings, []);
   clearMemoryCache();
-  new import_obsidian5.Notice(t2("resetSuccess", { dreams: dreamsReset, entities: entitiesDeleted }));
+  new import_obsidian5.Notice(t("resetSuccess", { dreams: dreamsReset, entities: entitiesDeleted }));
   return { dreamsReset, entitiesDeleted };
 }
 
@@ -1307,21 +1307,21 @@ var DreamAnalyzerSettingTab = class extends import_obsidian7.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    const titleSetting = new import_obsidian7.Setting(containerEl).setName(t2("settingsTitle"));
+    const titleSetting = new import_obsidian7.Setting(containerEl).setName(t("settingsTitle"));
     titleSetting.settingEl.addClass("setting-item-heading");
-    const apiKeySetting = new import_obsidian7.Setting(containerEl).setName(t2("apiKeyName")).setDesc(t2("apiKeyDesc"));
+    const apiKeySetting = new import_obsidian7.Setting(containerEl).setName(t("apiKeyName")).setDesc(t("apiKeyDesc"));
     apiKeySetting.settingEl.setCssStyles({ display: "flex", flexDirection: "column", alignItems: "stretch" });
     apiKeySetting.controlEl.setCssStyles({ marginTop: "8px", display: "flex", gap: "8px", width: "100%", flexWrap: "wrap" });
     apiKeySetting.addText((text) => {
       text.inputEl.type = "password";
       text.inputEl.setCssStyles({ flex: "1", minWidth: "200px" });
-      text.setPlaceholder(t2("apiKeyPlaceholder")).setValue(this.plugin.settings.openaiApiKey || "").onChange((value) => {
+      text.setPlaceholder(t("apiKeyPlaceholder")).setValue(this.plugin.settings.openaiApiKey || "").onChange((value) => {
         this.plugin.settings.openaiApiKey = value.trim();
         void this.plugin.saveSettings();
       });
     });
     apiKeySetting.addDropdown(async (dropdown) => {
-      dropdown.addOption("", t2("selectSecretStorageKey"));
+      dropdown.addOption("", t("selectSecretStorageKey"));
       const secretList = [];
       const appObj = this.app;
       const secretStorage = appObj ? appObj["secretStorage"] : void 0;
@@ -1367,17 +1367,17 @@ var DreamAnalyzerSettingTab = class extends import_obsidian7.PluginSettingTab {
         }
       });
     });
-    new import_obsidian7.Setting(containerEl).setName(t2("modelName")).setDesc(t2("modelDesc")).addDropdown((dropdown) => dropdown.addOption("gpt-5-mini", "GPT-5 Mini (Fast & Smart)").addOption("gpt-4o-mini", "GPT-4o Mini (Default)").addOption("gpt-4o", "GPT-4o (High Accuracy)").setValue(this.plugin.settings.openaiModel || "gpt-5-mini").onChange((value) => {
+    new import_obsidian7.Setting(containerEl).setName(t("modelName")).setDesc(t("modelDesc")).addDropdown((dropdown) => dropdown.addOption("gpt-5-mini", "GPT-5 Mini (Fast & Smart)").addOption("gpt-4o-mini", "GPT-4o Mini (Default)").addOption("gpt-4o", "GPT-4o (High Accuracy)").setValue(this.plugin.settings.openaiModel || "gpt-5-mini").onChange((value) => {
       this.plugin.settings.openaiModel = value;
       void this.plugin.saveSettings();
     }));
-    new import_obsidian7.Setting(containerEl).setName(t2("embeddingModelName")).setDesc(t2("embeddingModelDesc")).addDropdown((dropdown) => dropdown.addOption("text-embedding-3-small", "text-embedding-3-small (Default)").addOption("text-embedding-3-large", "text-embedding-3-large (High Precision)").addOption("text-embedding-ada-002", "text-embedding-ada-002 (Legacy)").setValue(this.plugin.settings.embeddingModel || "text-embedding-3-small").onChange((value) => {
+    new import_obsidian7.Setting(containerEl).setName(t("embeddingModelName")).setDesc(t("embeddingModelDesc")).addDropdown((dropdown) => dropdown.addOption("text-embedding-3-small", "text-embedding-3-small (Default)").addOption("text-embedding-3-large", "text-embedding-3-large (High Precision)").addOption("text-embedding-ada-002", "text-embedding-ada-002 (Legacy)").setValue(this.plugin.settings.embeddingModel || "text-embedding-3-small").onChange((value) => {
       this.plugin.settings.embeddingModel = value;
       void this.plugin.saveSettings();
     }));
-    const folderHeading = new import_obsidian7.Setting(containerEl).setName(t2("sectionFolders"));
+    const folderHeading = new import_obsidian7.Setting(containerEl).setName(t("sectionFolders"));
     folderHeading.settingEl.addClass("setting-item-heading");
-    new import_obsidian7.Setting(containerEl).setName(t2("dreamsFolderName")).setDesc(t2("dreamsFolderDesc")).addText((text) => {
+    new import_obsidian7.Setting(containerEl).setName(t("dreamsFolderName")).setDesc(t("dreamsFolderDesc")).addText((text) => {
       text.setPlaceholder("Dreams").setValue(this.plugin.settings.dreamsFolder).onChange((value) => {
         const cleanVal = (0, import_obsidian7.normalizePath)(value.trim() || "Dreams");
         this.plugin.settings.dreamsFolder = cleanVal;
@@ -1385,7 +1385,7 @@ var DreamAnalyzerSettingTab = class extends import_obsidian7.PluginSettingTab {
       });
       new FolderSuggest(this.app, text.inputEl);
     });
-    const templateSetting = new import_obsidian7.Setting(containerEl).setName(t2("templatePathName")).setDesc(t2("templatePathDesc"));
+    const templateSetting = new import_obsidian7.Setting(containerEl).setName(t("templatePathName")).setDesc(t("templatePathDesc"));
     templateSetting.settingEl.setCssStyles({ display: "flex", flexDirection: "column", alignItems: "stretch" });
     templateSetting.controlEl.setCssStyles({ marginTop: "8px", display: "flex", gap: "8px", width: "100%" });
     templateSetting.addText((text) => {
@@ -1396,12 +1396,12 @@ var DreamAnalyzerSettingTab = class extends import_obsidian7.PluginSettingTab {
         void this.plugin.saveSettings();
       });
       new FileSuggest(this.app, text.inputEl);
-    }).addButton((btn) => btn.setButtonText(t2("btnExportTemplate")).onClick(async () => {
+    }).addButton((btn) => btn.setButtonText(t("btnExportTemplate")).onClick(async () => {
       await exportTemplaterTemplate(this.app, this.plugin.settings);
     }));
-    const simHeading = new import_obsidian7.Setting(containerEl).setName(t2("sectionSimilarity"));
+    const simHeading = new import_obsidian7.Setting(containerEl).setName(t("sectionSimilarity"));
     simHeading.settingEl.addClass("setting-item-heading");
-    new import_obsidian7.Setting(containerEl).setName(t2("narrativeThresholdName")).setDesc(t2("narrativeThresholdDesc")).addText((text) => {
+    new import_obsidian7.Setting(containerEl).setName(t("narrativeThresholdName")).setDesc(t("narrativeThresholdDesc")).addText((text) => {
       text.inputEl.type = "number";
       text.inputEl.step = "0.01";
       text.inputEl.min = "0";
@@ -1414,7 +1414,7 @@ var DreamAnalyzerSettingTab = class extends import_obsidian7.PluginSettingTab {
         }
       });
     });
-    new import_obsidian7.Setting(containerEl).setName(t2("dreamSignFreqName")).setDesc(t2("dreamSignFreqDesc")).addText((text) => {
+    new import_obsidian7.Setting(containerEl).setName(t("dreamSignFreqName")).setDesc(t("dreamSignFreqDesc")).addText((text) => {
       text.inputEl.type = "number";
       text.inputEl.step = "1";
       text.inputEl.min = "1";
@@ -1427,7 +1427,7 @@ var DreamAnalyzerSettingTab = class extends import_obsidian7.PluginSettingTab {
         }
       });
     });
-    new import_obsidian7.Setting(containerEl).setName(t2("emotionFreqName")).setDesc(t2("emotionFreqDesc")).addText((text) => {
+    new import_obsidian7.Setting(containerEl).setName(t("emotionFreqName")).setDesc(t("emotionFreqDesc")).addText((text) => {
       text.inputEl.type = "number";
       text.inputEl.step = "1";
       text.inputEl.min = "1";
@@ -1440,7 +1440,7 @@ var DreamAnalyzerSettingTab = class extends import_obsidian7.PluginSettingTab {
         }
       });
     });
-    new import_obsidian7.Setting(containerEl).setName(t2("limitName")).setDesc(t2("limitDesc")).addText((text) => {
+    new import_obsidian7.Setting(containerEl).setName(t("limitName")).setDesc(t("limitDesc")).addText((text) => {
       text.inputEl.type = "number";
       text.inputEl.step = "1";
       text.inputEl.min = "1";
@@ -1453,25 +1453,25 @@ var DreamAnalyzerSettingTab = class extends import_obsidian7.PluginSettingTab {
         }
       });
     });
-    new import_obsidian7.Setting(containerEl).setName(t2("autoUpdateName")).setDesc(t2("autoUpdateDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.autoUpdateEmbeddings).onChange((value) => {
+    new import_obsidian7.Setting(containerEl).setName(t("autoUpdateName")).setDesc(t("autoUpdateDesc")).addToggle((toggle) => toggle.setValue(this.plugin.settings.autoUpdateEmbeddings).onChange((value) => {
       this.plugin.settings.autoUpdateEmbeddings = value;
       void this.plugin.saveSettings();
     }));
-    const maintHeading = new import_obsidian7.Setting(containerEl).setName(t2("sectionMaintenance"));
+    const maintHeading = new import_obsidian7.Setting(containerEl).setName(t("sectionMaintenance"));
     maintHeading.settingEl.addClass("setting-item-heading");
-    new import_obsidian7.Setting(containerEl).setName(t2("btnRebuildEmbeddings")).addButton((btn) => btn.setButtonText(t2("btnRebuildEmbeddings")).onClick(async () => {
+    new import_obsidian7.Setting(containerEl).setName(t("btnRebuildEmbeddings")).addButton((btn) => btn.setButtonText(t("btnRebuildEmbeddings")).onClick(async () => {
       try {
         const apiKey = await getOpenAiApiKey(this.app, this.plugin.settings);
-        new import_obsidian7.Notice(t2("rebuildStarted"));
+        new import_obsidian7.Notice(t("rebuildStarted"));
         const count = await updateEntityEmbeddings(this.app, apiKey, this.plugin.settings, true);
-        new import_obsidian7.Notice(t2("rebuildSuccess", { count }));
+        new import_obsidian7.Notice(t("rebuildSuccess", { count }));
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        new import_obsidian7.Notice(t2("rebuildError", { msg }));
+        new import_obsidian7.Notice(t("rebuildError", { msg }));
       }
     }));
-    new import_obsidian7.Setting(containerEl).setName(t2("resetBlockTitle")).setDesc(t2("resetBlockDesc")).addButton((btn) => {
-      btn.setButtonText(t2("btnResetData"));
+    new import_obsidian7.Setting(containerEl).setName(t("resetBlockTitle")).setDesc(t("resetBlockDesc")).addButton((btn) => {
+      btn.setButtonText(t("btnResetData"));
       btn.buttonEl.addClass("mod-warning");
       btn.onClick(() => {
         new ConfirmResetModal(this.app, () => {
@@ -1581,7 +1581,7 @@ function extractDreamTextOnly(fullFileContent) {
 }
 async function analyzeDream(app, file, settings) {
   if (!file) {
-    new import_obsidian8.Notice(t2("noDreamNoteOpen"));
+    new import_obsidian8.Notice(t("noDreamNoteOpen"));
     return;
   }
   let apiKey;
@@ -1595,17 +1595,17 @@ async function analyzeDream(app, file, settings) {
   const fullContent = await app.vault.read(file);
   const userDreamText = extractDreamTextOnly(fullContent);
   if (!userDreamText || userDreamText.length < 10) {
-    new import_obsidian8.Notice(t2("dreamTextTooShort"));
+    new import_obsidian8.Notice(t("dreamTextTooShort"));
     return;
   }
   const progress = new ProgressNotice(5);
   try {
-    progress.setStep(1, t2("step1VectorGen"));
+    progress.setStep(1, t("step1VectorGen"));
     const dreamEmbedding = await getEmbedding(apiKey, settings.embeddingModel, userDreamText);
-    progress.setStep(2, t2("step2SearchEntities"));
+    progress.setStep(2, t("step2SearchEntities"));
     const similarEntities = await getSimilarEntitiesContext(app, apiKey, settings, dreamEmbedding);
     const entityContext = similarEntities || "No existing similar entities found.";
-    progress.setStep(3, t2("step3OpenAiReq", { model: settings.openaiModel }));
+    progress.setStep(3, t("step3OpenAiReq", { model: settings.openaiModel }));
     const systemPrompt = `
 You analyze a personal dream journal for creating a structured Obsidian knowledge base.
 Here is a list of existing entities that might match this dream:
@@ -1696,7 +1696,7 @@ A short summary of the dream in 2-5 sentences in the dream's language.
       concepts: normalizeEntityArray(rawResult.concepts),
       keywords: normalizeStringArray(rawResult.keywords)
     };
-    progress.setStep(4, t2("step4CreateEntities"));
+    progress.setStep(4, t("step4CreateEntities"));
     const modifiedEntityPaths = await createOrUpdateEntities(app, result, file, settings);
     const currentEntityNames = [
       ...result.characters,
@@ -1762,12 +1762,12 @@ ${aiText.trim()}`;
     });
     await saveDreamEmbeddingsDatabase(app, settings, updatedDreamDb);
     if (settings.autoUpdateEmbeddings && modifiedEntityPaths.length > 0) {
-      progress.setStep(5, t2("step5BatchUpdate"));
+      progress.setStep(5, t("step5BatchUpdate"));
       await updateEntityEmbeddings(app, apiKey, settings, false);
     }
     const totalSec = progress.getElapsedSeconds();
     progress.close();
-    new import_obsidian8.Notice(t2("dreamAnalyzedSuccess", { sec: totalSec }));
+    new import_obsidian8.Notice(t("dreamAnalyzedSuccess", { sec: totalSec }));
   } catch (error) {
     progress.close();
     const msg = error instanceof Error ? error.message : String(error);
@@ -1913,23 +1913,23 @@ var DreamAnalyzerPlugin = class extends import_obsidian9.Plugin {
     this.app.workspace.onLayoutReady(() => {
       const appWithPlugins = this.app;
       if (appWithPlugins.plugins?.enabledPlugins && !appWithPlugins.plugins.enabledPlugins.has("dataview")) {
-        new import_obsidian9.Notice(t2("dataviewNotice"), 8e3);
+        new import_obsidian9.Notice(t("dataviewNotice"), 8e3);
       }
     });
-    this.addRibbonIcon("sparkles", t2("ribbonAnalyze"), () => {
+    this.addRibbonIcon("sparkles", t("ribbonAnalyze"), () => {
       const activeFile = this.app.workspace.getActiveFile();
       if (activeFile) {
         void analyzeDream(this.app, activeFile, this.settings);
       } else {
-        new import_obsidian9.Notice(t2("openDreamNoteFirst"));
+        new import_obsidian9.Notice(t("openDreamNoteFirst"));
       }
     });
-    this.addRibbonIcon("calendar-plus", t2("ribbonCreateDream"), () => {
+    this.addRibbonIcon("calendar-plus", t("ribbonCreateDream"), () => {
       void createTodayDreamNote(this.app, this.settings);
     });
     this.addCommand({
       id: "analyze-current-dream",
-      name: t2("cmdAnalyze"),
+      name: t("cmdAnalyze"),
       checkCallback: (checking) => {
         const activeFile = this.app.workspace.getActiveFile();
         const dreamsSubfolder = getDreamsSubfolder(this.app, this.settings);
@@ -1945,14 +1945,14 @@ var DreamAnalyzerPlugin = class extends import_obsidian9.Plugin {
     });
     this.addCommand({
       id: "create-today-dream-note",
-      name: t2("cmdCreateDream"),
+      name: t("cmdCreateDream"),
       callback: () => {
         void createTodayDreamNote(this.app, this.settings);
       }
     });
     this.addCommand({
       id: "create-custom-date-dream-note",
-      name: t2("cmdCreateDreamDate"),
+      name: t("cmdCreateDreamDate"),
       callback: () => {
         new DatePickerModal(this.app, (selectedDate) => {
           void createDreamNoteForDate(this.app, this.settings, selectedDate);
@@ -1961,7 +1961,7 @@ var DreamAnalyzerPlugin = class extends import_obsidian9.Plugin {
     });
     this.addCommand({
       id: "rebuild-entity-embeddings",
-      name: t2("cmdRebuildEmbeddings"),
+      name: t("cmdRebuildEmbeddings"),
       callback: () => {
         void (async () => {
           try {
@@ -1978,7 +1978,7 @@ var DreamAnalyzerPlugin = class extends import_obsidian9.Plugin {
     });
     this.addCommand({
       id: "reset-all-dream-data",
-      name: t2("cmdResetData"),
+      name: t("cmdResetData"),
       callback: () => {
         new ConfirmResetModal(this.app, () => {
           void resetAllDreamData(this.app, this.settings);

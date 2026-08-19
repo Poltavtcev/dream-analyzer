@@ -6,7 +6,7 @@ import {
 	DreamConnectionResult,
 	ENTITY_TYPES
 } from "./types";
-import { getLocale } from "./i18n";
+import { getLocale, t } from "./i18n";
 
 const VECTOR_DB_FILENAME = "entity_embeddings.json";
 const DREAM_VECTOR_DB_FILENAME = "dream_embeddings.json";
